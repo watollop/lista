@@ -25,7 +25,7 @@ interface Props {
 }
 
 const DATES: Array<[DateFilter, string]> = [
-  ['today', 'Hoy'], ['week', 'Semana'], ['month', 'Mes'], ['quarter', 'Trimestre'], ['year', 'Año'],
+  ['today', 'Hoy'], ['week', 'Semana'], ['month', 'Mes'],
   ['overdue', 'Vencidas'], ['nodate', 'Sin fecha'],
 ];
 

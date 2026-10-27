@@ -171,7 +171,7 @@ export function formatLine(t: {
     t.title,
     ...missing('#', t.topicNames),
     ...missing('@', t.peopleNames),
-    t.priority ? `!${t.priority}` : '',
+    t.priority ? `!${['alta', 'media', 'baja'][t.priority - 1]}` : '',
     t.recurrence ? formatRecurrence(t.recurrence) : '',
     t.due ? `vence:${t.period ? periodToken(t.period, t.due) : t.due}` : '',
   ].filter(Boolean).join(' ');

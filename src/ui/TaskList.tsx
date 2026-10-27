@@ -86,8 +86,8 @@ export function TaskList(props: Props) {
       </h2>
       <ul class="list">
         {s.items.map((g) => [
-          <Row key={g.task.id} task={g.task} {...rowProps} />,
-          ...g.children.map((c) => <Row key={c.id} task={c} sub {...rowProps} />),
+          <Row key={g.task.id} task={g.task} section={s.key} {...rowProps} />,
+          ...g.children.map((c) => <Row key={c.id} task={c} sub section={s.key} {...rowProps} />),
         ])}
         {!s.items.length && <li class="drop-empty">Suelta aquí</li>}
       </ul>
@@ -109,8 +109,8 @@ export function TaskList(props: Props) {
   );
 }
 
-function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd }:
-  Props & { task: Task; sub?: boolean; onDragStart: (id: ID) => void; onDragEnd: () => void }) {
+function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd }:
+  Props & { task: Task; sub?: boolean; section: SectionKey; onDragStart: (id: ID) => void; onDragEnd: () => void }) {
   const isEditing = editing === task.id;
   const ref = useRef<HTMLLIElement>(null);
   const swipe = useSwipe(() => onToggle(task.id), () => onDelete(task.id), !isEditing);
@@ -155,7 +155,8 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
             </button>
             <div class="meta">
               <TaskChips due={task.due} period={task.period} done={!!task.done} priority={task.priority} recurrence={task.recurrence}
-                topics={task.topics} people={task.people} names={names} today={today} onTap={onChip} title={task.title} />
+                topics={task.topics} people={task.people} names={names} today={today} onTap={onChip} title={task.title}
+                hideDue={!task.done && ((section === 'today' && task.due === today && !task.period) || (section === 'tomorrow' && !task.period) || (section === 'week' && task.period === 'week'))} />
             </div>
           </>
         )}
@@ -176,6 +177,9 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
     </li>
   );
 }
+
+/** Pantalla táctil: el editor muestra menos acciones (borrar se hace deslizando). */
+const touch = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 
 const SWIPE_MIN = 72; // px; o un tercio del ancho de la fila si es mayor
 
@@ -289,7 +293,7 @@ function Editor({ task, names, onSave, onCancel, onDelete }: {
         {task.due && (prefersApple() ? (
           <>
             <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToAppleCalendar(task)}><CalendarIcon />Calendario</button>
-            <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToGoogleCalendar(task)}>Google</button>
+            {!touch() && <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToGoogleCalendar(task)}>Google</button>}
           </>
         ) : (
           <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToGoogleCalendar(task)}><CalendarIcon />Google Calendar</button>

@@ -18,10 +18,11 @@ interface Props {
   today: ISODate;
   onTap?: ChipTap;
   title?: string; // los #temas/@personas ya escritos en el título no se repiten como chip
+  hideDue?: boolean; // el bloque de la lista ya indica la fecha (Hoy, Mañana, Esta semana)
 }
 
 /** Chips discretos de una tarea. Con onTap, tocar #tema/@persona/!prio filtra por él. */
-export function TaskChips({ due, period, done, priority, recurrence, topics, people, names, today, onTap, title }: Props) {
+export function TaskChips({ due, period, done, priority, recurrence, topics, people, names, today, onTap, title, hideDue }: Props) {
   const inline = new Set(title ? inlineTags(title).map((t) => t.sym + normalizeKey(t.name)) : []);
   const overdue = !done && due !== null && due < today;
   const tag = (cls: string, content: preact.ComponentChildren, tap?: () => void, label?: string) =>
@@ -30,7 +31,7 @@ export function TaskChips({ due, period, done, priority, recurrence, topics, peo
       : <span class={`chip ${cls}`} aria-label={label} title={label}>{content}</span>;
   return (
     <>
-      {due && tag(overdue ? 'warn' : '', period ? formatPeriod(period, due, today) : formatDue(due, today),
+      {due && !hideDue && tag(overdue ? 'warn' : '', period ? formatPeriod(period, due, today) : formatDue(due, today),
         // Tocar la fecha filtra por su bloque: el del periodo en curso o el más estrecho que la contiene.
         onTap && (() => onTap('date', period && isCurrentPeriod(period, due, today) ? period : dateFilterFor(due, today))))}
       {recurrence && tag('', <><RepeatIcon /> {formatRecurrence(recurrence)}</>, undefined, 'Se repite')}

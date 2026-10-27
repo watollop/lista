@@ -103,7 +103,6 @@ input:focus-visible { outline: none; } /* los campos ya marcan el foco con su l√
   justify-content: space-between;
 }
 .brand { font-size: 13px; font-weight: 500; letter-spacing: 0.3em; text-transform: uppercase; }
-.kbd-hint { display: none; color: var(--faint); margin-right: 8px; }
 .bar-right { display: flex; align-items: center; gap: 18px; }
 .link { min-height: 44px; min-width: 44px; padding: 0 2px; color: var(--muted); transition: color .15s; }
 .link.on { color: var(--fg); }
@@ -444,7 +443,6 @@ kbd {
   .title, .edit { font-size: 17px; line-height: 22px; }
   .row { padding-top: 15px; padding-bottom: 15px; }
   .toast { bottom: 32px; }
-  .kbd-hint { display: inline; }
   .chip { font-size: 12px; height: 24px; }
 }
 
@@ -923,3 +921,5 @@ section.droppable.drop-on { background: var(--surface); }
 section.droppable.drop-on .section { color: var(--fg); }
 .drop-empty { padding: 14px 0; font-size: 13px; color: var(--faint); border-bottom: 1px dashed var(--line); list-style: none; }
 .side-list li.drop-on .side-item { background: var(--surface); color: var(--fg); }
+
+.fold-body { padding: 16px 0 6px; }

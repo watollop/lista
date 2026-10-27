@@ -30,7 +30,6 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <span class="label">Ajustes</span>
           <button class="link on" onClick={onClose}>Cerrar</button>
         </div>
-        <h2>Lista</h2>
         <Account sync={sync} state={state} />
         <Appearance />
         <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
@@ -228,6 +227,7 @@ function DangerSection({ repo, sync, state, toast }: { repo: Repo; sync: Sync; s
 
 /** Apuntar sin abrir la app: Atajo de iOS con Siri, «Compartir» en Android o un enlace. */
 function CaptureSection({ toast }: { toast: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
   const link = `${location.origin}${location.pathname}?nueva=`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch { toast(link); }
@@ -235,6 +235,12 @@ function CaptureSection({ toast }: { toast: (m: string) => void }) {
   return (
     <section>
       <span class="label">Apuntar sin abrir la app</span>
+      <p>Con Siri en el iPhone, desde «Compartir» en Android o con un enlace.</p>
+      <button class={`ent-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>Cómo configurarlo</span>
+        <span class="ent-head-count"><span class="caret" aria-hidden="true" /></span>
+      </button>
+      {open && <div class="fold-body">
       <ul class="howto">
         <li><b>iPhone, con Siri.</b> En la app Atajos crea un atajo con «Dictar texto» y «Abrir URL» con el enlace de abajo seguido del texto dictado. Llámalo «Apuntar en Lista» y di «Oye Siri, apuntar en Lista». Se abre en el navegador: inicia sesión también allí para que llegue a la app.</li>
         <li><b>Android.</b> Desde cualquier app, «Compartir» → Lista (con la app instalada).</li>
@@ -242,6 +248,7 @@ function CaptureSection({ toast }: { toast: (m: string) => void }) {
       </ul>
       <code class="howto-link">{link}<span>Llamar a Ana mañana</span></code>
       <div class="row-btns"><button class="btn" onClick={copy}>Copiar enlace</button></div>
+      </div>}
     </section>
   );
 }
