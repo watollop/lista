@@ -5,6 +5,8 @@ import { normalizeKey, parseLine } from '../parser';
 import { todayISO } from '../lib/date';
 import { TaskChips } from './Chips';
 import { TitleText } from './TaskList';
+import { SEARCH_FROM, byUse } from './byUse';
+import { fold } from '../lib/text';
 import { EntityEditor } from './EntityEditor';
 
 const SYNTAX: Array<[string, string, string[]]> = [
@@ -194,30 +196,48 @@ function Appearance() {
   );
 }
 
-/** Temas y personas con sus pendientes; tocar una fila abre el editor. */
+/** Temas y personas: dos filas plegadas; se abre una cada vez. Dentro, los más usados arriba y búsqueda si hay muchos. */
 function EntitiesSection({ topics, people, pending, onEdit }: {
   topics: Entity[]; people: Entity[]; pending: Map<string, number>;
   onEdit: (kind: EntityKind, key: string) => void;
 }) {
+  const [open, setOpen] = useState<EntityKind | null>(null);
+  const [q, setQ] = useState('');
+  const toggle = (kind: EntityKind) => { setOpen(open === kind ? null : kind); setQ(''); };
+
   const group = (title: string, kind: EntityKind, list: Entity[]) => {
     if (!list.length) return null;
     const sym = kind === 'topic' ? '#' : '@';
+    const isOpen = open === kind;
+    const shown = isOpen ? byUse(list, sym, pending).filter((e) => !q || fold(e.name).includes(fold(q))) : [];
     return (
       <div class="ent-group">
-        <h3 class="label">{title}</h3>
-        <ul class="ent-list">
-          {list.map((e) => {
-            const n = pending.get(sym + e.key) ?? 0;
-            return (
-              <li key={e.key}>
-                <button class={`ent-row ${n ? '' : 'zero'}`} onClick={() => onEdit(kind, e.key)}>
-                  <span class="ent-name">{sym}{e.name}</span>
-                  <span class="ent-count">{n ? `· ${n} ${n === 1 ? 'tarea' : 'tareas'}` : 'sin tareas'}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <button class={`ent-head ${isOpen ? 'open' : ''}`} aria-expanded={isOpen} onClick={() => toggle(kind)}>
+          <span>{title}</span>
+          <span class="ent-head-count">{list.length}<span class="caret" aria-hidden="true" /></span>
+        </button>
+        {isOpen && (
+          <>
+            {list.length > SEARCH_FROM && (
+              <input class="ent-search" type="search" placeholder={`Buscar ${title.toLowerCase()}`} value={q}
+                aria-label={`Buscar ${title.toLowerCase()}`} onInput={(e) => setQ(e.currentTarget.value)} />
+            )}
+            <ul class="ent-list">
+              {shown.map((e) => {
+                const n = pending.get(sym + e.key) ?? 0;
+                return (
+                  <li key={e.key}>
+                    <button class={`ent-row ${n ? '' : 'zero'}`} onClick={() => onEdit(kind, e.key)}>
+                      <span class="ent-name">{sym}{e.name}</span>
+                      <span class="ent-count">{n ? `${n} ${n === 1 ? 'tarea' : 'tareas'}` : 'sin tareas'}</span>
+                    </button>
+                  </li>
+                );
+              })}
+              {!shown.length && <li class="ent-empty">Sin resultados</li>}
+            </ul>
+          </>
+        )}
       </div>
     );
   };
