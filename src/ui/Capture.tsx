@@ -52,6 +52,9 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     await onAdd([parsed]);
   };
 
+  // En pantallas muy estrechas (SE 1ª gen.) el ejemplo completo se corta: se muestra una versión corta.
+  const narrow = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 359px)').matches;
+
   const onKeyDown = (e: KeyboardEvent) => {
     if (composing.current || e.isComposing) return;
     if (suggestions.length) {
@@ -92,7 +95,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
         <input
           ref={inputRef}
           value={value}
-          placeholder="Nueva tarea… #tema @persona mañana !alta"
+          placeholder={narrow ? 'Nueva tarea… #tema @persona' : 'Nueva tarea… #tema @persona mañana !alta'}
           aria-label="Nueva tarea"
           autocomplete="off"
           enterkeyhint="enter" // la tecla azul dice "intro": no se confunde con el ✓ de iOS, que solo cierra el teclado
