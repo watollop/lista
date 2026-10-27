@@ -19,6 +19,11 @@ const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-
 const device = () => (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 'móvil' : 'ordenador');
 
 const SLIDES = [
+  {
+    title: 'Una lista. Nada más.',
+    text: () => 'Sin IA, sin anuncios y sin avisos que te persigan. Escribes lo que tienes pendiente y te olvidas. Sencilla, rápida y tuya.',
+    Demo: CoverDemo,
+  },
   { title: 'Escribe en una línea', text: () => 'Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', Demo: TypingDemo },
   { title: 'Completa y filtra', text: () => 'Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas.', Demo: SwipeDemo },
   {
@@ -53,7 +58,7 @@ function GoogleG({ class: cls }: { class?: string }) {
 
 const FOCUSABLE = 'button:not([disabled])';
 
-/** Bienvenida en tres pasos la primera vez; desde Ajustes → Cómo funciona, versión extendida con la referencia. */
+/** Bienvenida (portada y tres pasos) la primera vez; desde Ajustes → Cómo funciona, versión extendida con la referencia. */
 export function Onboarding({ onClose, signIn, extended }: Props) {
   const [slides] = useState<Slide[]>(() => (extended ? [...SLIDES, ...EXTRA.filter((s) => !s.keyboard || hasKeyboard())] : SLIDES));
   const [i, setI] = useState(0);
@@ -286,6 +291,18 @@ function DevicesDemo() {
         <span class="local">Solo en este {where}</span>
         <span class="synced">Sincronizado · solo tú lo ves</span>
       </div>
+    </div>
+  );
+}
+
+/** Portada: el nombre y tres tareas que se marcan despacio, una a una. */
+function CoverDemo() {
+  return (
+    <div class={`cover ${reduced() ? 'still' : ''}`}>
+      <span class="cover-brand">Lista</span>
+      <span class="cover-lines" aria-hidden="true">
+        {[0, 1, 2].map((k) => <span key={k} class={`cover-line l${k}`}><i /><b /></span>)}
+      </span>
     </div>
   );
 }

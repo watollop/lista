@@ -882,6 +882,30 @@ input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1); opaci
 .dict-item .meta { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; }
 .dict-x { width: 32px; height: 32px; color: var(--faint); }
 
+/* ---------- bienvenida: portada ---------- */
+.cover { display: grid; justify-items: center; gap: 28px; }
+.cover-brand { font-size: 30px; font-weight: 500; letter-spacing: .4em; text-transform: uppercase; margin-right: -.4em; }
+.cover-lines { display: grid; gap: 12px; width: 180px; }
+.cover-line { display: flex; align-items: center; gap: 10px; }
+.cover-line i {
+  flex: none; width: 13px; height: 13px; border: 1px solid var(--fg); border-radius: var(--radius);
+  display: grid; place-items: center; background: var(--bg);
+}
+.cover-line i::after { content: ''; width: 3px; height: 7px; border: solid var(--bg); border-width: 0 1px 1px 0; transform: translateY(-1px) rotate(45deg); }
+.cover-line b { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+.cover-line.l1 b { flex: .7; }
+.cover-line.l2 b { flex: .85; }
+/* Ciclo lento de 7,5 s: cada línea se marca a su tiempo y todo vuelve a empezar con calma. */
+.cover-line i { animation: cover-check 7.5s ease infinite; }
+.cover-line b { animation: cover-fade 7.5s ease infinite; }
+.cover-line.l1 i, .cover-line.l1 b { animation-delay: 1.2s; }
+.cover-line.l2 i, .cover-line.l2 b { animation-delay: 2.4s; }
+@keyframes cover-check { 0%, 12% { background: var(--bg); } 18%, 80% { background: var(--fg); } 92%, 100% { background: var(--bg); } }
+@keyframes cover-fade { 0%, 12% { opacity: 1; } 18%, 80% { opacity: .35; } 92%, 100% { opacity: 1; } }
+.cover.still * { animation: none !important; }
+.cover.still .cover-line i { background: var(--fg); }
+.cover.still .cover-line b { opacity: .35; }
+
 /* ---------- arrastrar tareas a otro día ---------- */
 .row.dragging {
   transform: translate(var(--drag-x, 0px), var(--drag-y, 0px)) scale(1.02);
