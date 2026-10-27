@@ -1,0 +1,29 @@
+src/lib/calendar.test.ts
+  s_c0c1af889a85ab::t_d2df6bae973504 1-39
+src/lib/calendar.ts
+  s_c0c1af889a85ab::t_8542ef1d6c198e 1-58
+src/ui/TaskList.tsx
+  s_c0c1af889a85ab::t_aea94db9076142 6,140-144,265-272,280-289
+src/ui/calendar.ts
+  s_c0c1af889a85ab::t_cd5375b3e2e3fe 1-29
+src/ui/styles.css
+  s_c0c1af889a85ab::t_7fbe71804d0879 853-857
+README.md
+  s_c0c1af889a85ab::t_c79fcd01c790b9 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c76118e7b461e144737b0595d0ab385097dde539",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
