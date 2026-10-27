@@ -1,0 +1,21 @@
+src/parser/dates.ts
+  s_c0c1af889a85ab::t_b2978aa29b7e5b 161-162
+src/parser/parser.test.ts
+  s_c0c1af889a85ab::t_3af4f59ced085a 161-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4303d9121431eef0e9db1399eafddb9c69a02cd8",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
