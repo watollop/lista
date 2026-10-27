@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { RemoteItem, Repo, SyncState } from '../types';
-import { createSync } from './index';
+import { createSync, pollInterval } from './index';
 
 const CFG = { url: 'https://test.supabase.co', anonKey: 'anon-key' };
 const BASE_TS = Date.parse('2026-10-27T10:00:00Z');
@@ -538,5 +538,14 @@ describe('sync: estado', () => {
     unsub();
     expect(seen).toContain('idle');
     expect(seen).toContain('syncing');
+  });
+});
+
+describe('refresco periódico', () => {
+  it('30 s con actividad reciente, 2 min tras 5 min sin cambios', () => {
+    expect(pollInterval(0)).toBe(30_000);
+    expect(pollInterval(4 * 60_000)).toBe(30_000);
+    expect(pollInterval(5 * 60_000)).toBe(120_000);
+    expect(pollInterval(60 * 60_000)).toBe(120_000);
   });
 });
