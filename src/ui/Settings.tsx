@@ -43,8 +43,8 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <span class="label">Ayuda</span>
           <p>Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.</p>
           <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
+          <CaptureFold toast={toast} />
         </section>
-        <CaptureSection toast={toast} />
         <BackupSection repo={repo} toast={toast} />
         <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
         <footer class="credit">
@@ -225,19 +225,17 @@ function DangerSection({ repo, sync, state, toast }: { repo: Repo; sync: Sync; s
   );
 }
 
-/** Apuntar sin abrir la app: Atajo de iOS con Siri, «Compartir» en Android o un enlace. */
-function CaptureSection({ toast }: { toast: (m: string) => void }) {
+/** Apuntar sin abrir la app (Siri, «Compartir» en Android o un enlace): plegado dentro de Ayuda. */
+function CaptureFold({ toast }: { toast: (m: string) => void }) {
   const [open, setOpen] = useState(false);
   const link = `${location.origin}${location.pathname}?nueva=`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch { toast(link); }
   };
   return (
-    <section>
-      <span class="label">Apuntar sin abrir la app</span>
-      <p>Con Siri en el iPhone, desde «Compartir» en Android o con un enlace.</p>
+    <div class="help-fold">
       <button class={`ent-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>Cómo configurarlo</span>
+        <span>Apuntar sin abrir la app</span>
         <span class="ent-head-count"><span class="caret" aria-hidden="true" /></span>
       </button>
       {open && <div class="fold-body">
@@ -249,7 +247,7 @@ function CaptureSection({ toast }: { toast: (m: string) => void }) {
       <code class="howto-link">{link}<span>Llamar a Ana mañana</span></code>
       <div class="row-btns"><button class="btn" onClick={copy}>Copiar enlace</button></div>
       </div>}
-    </section>
+    </div>
   );
 }
 

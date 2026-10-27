@@ -923,3 +923,6 @@ section.droppable.drop-on .section { color: var(--fg); }
 .side-list li.drop-on .side-item { background: var(--surface); color: var(--fg); }
 
 .fold-body { padding: 16px 0 6px; }
+
+.help-fold { margin-top: 18px; border-top: 1px solid var(--line); }
+.help-fold .ent-head { font-size: 14px; color: var(--muted); }
