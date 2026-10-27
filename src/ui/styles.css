@@ -550,7 +550,7 @@ kbd {
 .intro-card h2 { font-size: 24px; font-weight: 300; margin: 22px 0 8px; }
 .intro-card p { font-size: 15px; color: var(--muted); min-height: 3em; }
 .intro-stage {
-  height: 190px;
+  height: 270px;
   position: relative;
   overflow: hidden;
   background: var(--surface);
@@ -590,22 +590,27 @@ kbd {
 .demo-repeat.on { opacity: 1; transform: none; }
 @keyframes blink { 50% { opacity: 0; } }
 
-/* demo 2: deslizar y filtrar (ciclo de 7 s) */
-.demo-list { width: 100%; height: 182px; position: relative; align-self: center; }
+/* demo 2: lista por días; deslizar y filtrar por persona (ciclo de 7 s) */
+.demo-list { width: 100%; height: 246px; position: relative; align-self: center; }
+.demo-day {
+  height: 22px; display: flex; align-items: flex-end; padding-bottom: 3px;
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+  border-bottom: 1px solid var(--line);
+}
 .demo-row {
   display: flex; align-items: center; gap: 12px;
-  height: 36px; padding: 0 2px;
+  height: 30px; padding: 0 2px;
   border-bottom: 1px solid var(--line);
   font-size: 14px;
-  overflow: hidden;
+  overflow: hidden; white-space: nowrap;
 }
-.demo-row .chip { margin-left: auto; }
-.demo-check i { display: grid; place-items: center; width: 15px; height: 15px; border: 1px solid var(--fg); border-radius: var(--radius); background: var(--bg); }
-.demo-check i::after { content: ''; width: 4px; height: 8px; border: solid var(--bg); border-width: 0 1px 1px 0; transform: translateY(-1px) rotate(45deg); }
-.demo-row.a { animation: demo-slide 7s ease infinite, demo-hide 7s ease infinite; }
-.demo-row.hide:not(.a) { animation: demo-hide 7s ease infinite; }
-.demo-row.a .demo-check i { animation: demo-fill 7s steps(1) infinite; }
-.demo-row.a .demo-title { animation: demo-strike 7s steps(1) infinite; }
+.demo-title .tag { color: var(--muted); border-radius: var(--radius); padding: 1px 2px; margin: 0 -2px; }
+.demo-check i { display: grid; place-items: center; width: 14px; height: 14px; border: 1px solid var(--fg); border-radius: var(--radius); background: var(--bg); }
+.demo-check i::after { content: ''; width: 4px; height: 7px; border: solid var(--bg); border-width: 0 1px 1px 0; transform: translateY(-1px) rotate(45deg); }
+.demo-row.b { animation: demo-slide 7s ease infinite, demo-hide 7s ease infinite; }
+.demo-row.hide:not(.b) { animation: demo-hide 7s ease infinite; }
+.demo-row.b .demo-check i { animation: demo-fill 7s steps(1) infinite; }
+.demo-row.b .demo-title { animation: demo-strike 7s steps(1) infinite; }
 .demo-tap { animation: demo-on 7s steps(1) infinite; }
 .demo-finger {
   position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;
@@ -617,21 +622,22 @@ kbd {
 @keyframes demo-slide { 0%, 6% { transform: none; } 20% { transform: translateX(34%); } 25%, 100% { transform: none; } }
 @keyframes demo-fill { 0% { background: var(--bg); } 23% { background: var(--fg); } 96% { background: var(--bg); } }
 @keyframes demo-strike { 0% { color: var(--fg); text-decoration: none; } 23% { color: var(--faint); text-decoration: line-through; } 96% { color: var(--fg); text-decoration: none; } }
-@keyframes demo-on { 0% { background: var(--bg); color: var(--muted); } 42% { background: var(--fg); color: var(--bg); } 96% { background: var(--bg); color: var(--muted); } }
+@keyframes demo-on { 0% { background: none; color: var(--muted); } 42% { background: var(--fg); color: var(--bg); } 96% { background: none; color: var(--muted); } }
 @keyframes demo-hide {
-  0%, 44% { height: 36px; opacity: 1; border-bottom-width: 1px; }
+  0%, 44% { height: 30px; opacity: 1; border-bottom-width: 1px; }
   54%, 90% { height: 0; opacity: 0; border-bottom-width: 0; }
-  98%, 100% { height: 36px; opacity: 1; border-bottom-width: 1px; }
+  98%, 100% { height: 30px; opacity: 1; border-bottom-width: 1px; }
 }
+/* Fila b (Comprar pan) a 67 px; @ana de la fila a a 37 px y ~108 px del borde. */
 @keyframes demo-finger {
-  0% { left: 22%; top: 18px; opacity: 0; }
-  6% { left: 22%; top: 18px; opacity: 1; }
-  20% { left: 56%; top: 18px; opacity: 1; }
-  24% { left: 56%; top: 18px; opacity: 0; }
-  34% { left: calc(100% - 38px); top: 54px; opacity: 0; transform: none; }
-  39% { left: calc(100% - 38px); top: 54px; opacity: 1; transform: scale(.75); }
-  44% { left: calc(100% - 38px); top: 54px; opacity: 1; transform: none; }
-  52%, 100% { left: calc(100% - 38px); top: 18px; opacity: 0; }
+  0% { left: 22%; top: 67px; opacity: 0; }
+  6% { left: 22%; top: 67px; opacity: 1; }
+  20% { left: 56%; top: 67px; opacity: 1; }
+  24% { left: 56%; top: 67px; opacity: 0; }
+  34% { left: 108px; top: 37px; opacity: 0; transform: none; }
+  39% { left: 108px; top: 37px; opacity: 1; transform: scale(.75); }
+  44% { left: 108px; top: 37px; opacity: 1; transform: none; }
+  52%, 100% { left: 108px; top: 37px; opacity: 0; }
 }
 .demo-list.still * { animation: none !important; }
 .demo-list.still .demo-row.hide { display: none; }
