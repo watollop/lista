@@ -17,7 +17,15 @@ const LAST_SYNC_KEY = 'sync.lastSync';
 const REFRESH_MARGIN_MS = 60_000;
 const OVERLAP_MS = 5_000; // solapamiento del pull: los commits pueden llegar fuera de orden
 const DEBOUNCE_MS = 1_500;
-const INTERVAL_MS = 60_000;
+// Refresco periódico adaptativo (solo con la app visible y sesión iniciada).
+const TICK_MS = 10_000;
+const POLL_ACTIVE_MS = 30_000; // con actividad reciente
+const POLL_IDLE_MS = 120_000; // tras un rato sin cambios
+const IDLE_AFTER_MS = 5 * 60_000;
+
+/** Cada cuánto refrescar según el tiempo transcurrido desde el último cambio (local o remoto). */
+export const pollInterval = (sinceActivity: number): number =>
+  sinceActivity < IDLE_AFTER_MS ? POLL_ACTIVE_MS : POLL_IDLE_MS;
 
 /** Configuración desde VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (null si falta alguna). */
 export function syncConfigFromEnv(): SyncConfig | null {
@@ -72,6 +80,8 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
 
   let session: Session | null = null;
   let lastSync: number | null = null;
+  let lastAttempt = 0; // último intento de sync (para el refresco periódico)
+  let lastActivity = now(); // último cambio local o remoto, o vuelta a la app
   let state: SyncState;
   // Incrementa en cada cambio de sesión (login/logout) para descartar resultados de syncs antiguos.
   let epoch = 0;
@@ -129,6 +139,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
 
     const pending = await repo.pendingChanges();
     if (pending.length > 0) {
+      lastActivity = now();
       await pushItems(c, s, pending, fetchImpl);
       await repo.markPushed(pending);
     }
@@ -136,7 +147,10 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     const stored = await repo.getMeta<string>(CURSOR_KEY);
     const since = typeof stored === 'string' && stored ? overlapSince(stored) : null;
     const { items, cursor } = await pullItems(c, s, since, fetchImpl);
-    if (items.length > 0) await repo.applyRemote(items as RemoteItem[]);
+    if (items.length > 0) {
+      lastActivity = now();
+      await repo.applyRemote(items as RemoteItem[]);
+    }
     if (cursor !== null) await repo.setMeta(CURSOR_KEY, cursor);
   }
 
@@ -146,6 +160,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     if (!c || !s0) return;
     const myEpoch = epoch;
     const email = s0.email;
+    lastAttempt = now();
     setState({ status: 'syncing', email });
 
     try {
@@ -288,6 +303,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   };
 
   const onRepoChange = (): void => {
+    lastActivity = now();
     if (running) {
       changedDuringRun = true; // se resuelve al terminar el sync en curso
       return;
@@ -303,11 +319,13 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     typeof document !== 'undefined' && document.visibilityState === 'visible';
 
   const onVisibility = (): void => {
-    if (isVisible()) trigger();
+    if (!isVisible()) return;
+    lastActivity = now();
+    trigger();
   };
 
   const onTick = (): void => {
-    if (isVisible()) trigger();
+    if (isVisible() && session && now() - lastAttempt >= pollInterval(now() - lastActivity)) trigger();
   };
 
   function start(): void {
@@ -321,7 +339,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', onVisibility);
     }
-    interval = setInterval(onTick, INTERVAL_MS);
+    interval = setInterval(onTick, TICK_MS);
     if (session) trigger();
     void handleRedirect();
   }
