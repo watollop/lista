@@ -154,6 +154,12 @@ describe('prioridad', () => {
   it('la última gana', () => {
     expect(parseLine('x !1 !3', now).priority).toBe(3);
   });
+  it('!alta !media !baja equivalen a !1 !2 !3', () => {
+    expect(parseLine('x !alta', now).priority).toBe(1);
+    expect(parseLine('x !Media', now).priority).toBe(2);
+    expect(parseLine('x !baja', now)).toMatchObject({ priority: 3, title: 'x' });
+    expect(parseLine('x !bajada', now).priority).toBeNull();
+  });
   it('!4 no es prioridad', () => {
     const l = parseLine('x !4', now);
     expect(l.priority).toBeNull();

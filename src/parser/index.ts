@@ -66,8 +66,9 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
   }
 
   let priority: Priority | null = null;
-  for (const m of w.matchAll(/(?<!\S)!([123])(?![\p{L}\p{N}_])/gu)) {
-    priority = Number(m[1]) as Priority;
+  const PRIO_WORDS: Record<string, Priority> = { alta: 1, media: 2, baja: 3 };
+  for (const m of w.matchAll(/(?<!\S)!([123]|alta|media|baja)(?![\p{L}\p{N}_])/giu)) {
+    priority = (PRIO_WORDS[m[1].toLowerCase()] ?? Number(m[1])) as Priority;
     take('priority', m.index!, m.index! + m[0].length);
   }
 
