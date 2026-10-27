@@ -56,6 +56,7 @@ export function Sidebar(p: Props) {
       <Group title="Fecha">
         {DATES.map(([d, l]) => (
           <Item key={d} on={f.dates.includes(d)} count={p.counts[d]} warn={d === 'overdue' && p.counts.overdue > 0}
+            drop={d === 'today' ? 'today' : d === 'week' ? 'week' : d === 'nodate' ? 'nodate' : undefined}
             onClick={() => set({ dates: toggleIn(f.dates, d) })}>{l}</Item>
         ))}
         <Item on={f.status === 'done'} onClick={() => set({ status: f.status === 'done' ? 'open' : 'done' })}>Hechas</Item>
@@ -210,10 +211,11 @@ function EntityItem({ kind, ent, all, pending, on, onToggle, onRename, onDelete 
   );
 }
 
-function Item({ on, count, warn, onClick, children }:
-  { on: boolean; count?: number; warn?: boolean; onClick: () => void; children: preact.ComponentChildren }) {
+function Item({ on, count, warn, drop, onClick, children }:
+  { on: boolean; count?: number; warn?: boolean; drop?: string; onClick: () => void; children: preact.ComponentChildren }) {
+  // drop: también se puede soltar ahí una tarea arrastrada desde la lista (Hoy, Semana, Sin fecha).
   return (
-    <li>
+    <li data-drop={drop}>
       <button class={`side-item ${on ? 'on' : ''} ${warn ? 'warn' : ''}`} aria-pressed={on} onClick={onClick}>
         <span>{children}</span>
         {count ? <span class="side-count">{count}</span> : null}

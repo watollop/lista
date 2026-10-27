@@ -5,6 +5,8 @@ import { TaskChips, type ChipTap } from './Chips';
 import { isCurrentPeriod, periodEnd } from '../lib/period';
 import { addToAppleCalendar, addToCalendar, addToGoogleCalendar, prefersApple } from './calendar';
 import { addDays } from '../lib/date';
+import { useDrag, dragging } from './drag';
+import type { DropTarget } from '../lib/reschedule';
 
 export interface Group { task: Task; children: Task[] }
 
@@ -23,6 +25,7 @@ interface Props {
   doneToday: Set<ID>; // completadas hoy: se quedan en su sitio hasta que cambia el día
   pastMode: boolean; // vista de pendientes: las completadas antes de hoy van a "Pasadas", arriba
   anchorKey: string; // al cambiar (filtro), se vuelve a colocar la vista en el presente
+  onMove: (id: ID, target: DropTarget) => void; // tarea arrastrada a otro bloque
 }
 
 type SectionKey = 'past' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'next' | 'nodate' | 'done';
@@ -31,6 +34,8 @@ const SECTION_LABEL: Record<SectionKey, string> = {
   next: 'Próximas', nodate: 'Sin fecha', done: 'Completadas',
 };
 const SECTION_ORDER = Object.keys(SECTION_LABEL) as SectionKey[];
+/** Bloques donde se puede soltar una tarea arrastrada (mientras se arrastra se muestran aunque estén vacíos). */
+const DROP: SectionKey[] = ['today', 'tomorrow', 'week', 'next', 'nodate'];
 
 function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>, pastMode: boolean): SectionKey {
   if (t.done && !doneToday.has(t.id)) return pastMode ? 'past' : 'done';
@@ -45,12 +50,14 @@ function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>, pastMode: boolea
 
 export function TaskList(props: Props) {
   const { groups, today } = props;
+  const [dragId, setDragId] = useState<ID | null>(null);
   const byKey = new Map<SectionKey, Group[]>();
   for (const g of groups) {
     const key = sectionOf(g.task, today, props.doneToday, props.pastMode);
     byKey.set(key, [...(byKey.get(key) ?? []), g]);
   }
-  const sections = SECTION_ORDER.filter((k) => byKey.has(k)).map((key) => ({ key, items: byKey.get(key)! }));
+  const shown = (k: SectionKey) => byKey.has(k) || (dragId !== null && props.pastMode && DROP.includes(k));
+  const sections = SECTION_ORDER.filter(shown).map((key) => ({ key, items: byKey.get(key) ?? [] }));
   // Dentro de cada bloque, las pendientes arriba y las ya hechas (hoy) abajo, conservando el orden.
   for (const s of sections) {
     if (s.key !== 'past') s.items = [...s.items.filter((g) => !g.task.done), ...s.items.filter((g) => g.task.done)];
@@ -69,17 +76,20 @@ export function TaskList(props: Props) {
     window.scrollTo({ top: nowRef.current.getBoundingClientRect().top + window.scrollY - header });
   });
 
+  const drop = (k: SectionKey) => (dragId !== null && DROP.includes(k) ? k : undefined);
+  const rowProps = { ...props, onDragStart: setDragId, onDragEnd: () => setDragId(null) };
   const render = (s: { key: SectionKey; items: Group[] }) => (
-    <section key={s.key} class={s.key === 'past' ? 'past' : ''}>
+    <section key={s.key} class={`${s.key === 'past' ? 'past' : ''} ${drop(s.key) ? 'droppable' : ''}`} data-drop={drop(s.key)}>
       <h2 class={`section ${s.key === 'overdue' ? 'warn' : ''}`}>
         <span>{SECTION_LABEL[s.key]}</span>
         <span>{s.items.length}</span>
       </h2>
       <ul class="list">
         {s.items.map((g) => [
-          <Row key={g.task.id} task={g.task} {...props} />,
-          ...g.children.map((c) => <Row key={c.id} task={c} sub {...props} />),
+          <Row key={g.task.id} task={g.task} {...rowProps} />,
+          ...g.children.map((c) => <Row key={c.id} task={c} sub {...rowProps} />),
         ])}
+        {!s.items.length && <li class="drop-empty">Suelta aquí</li>}
       </ul>
     </section>
   );
@@ -99,11 +109,20 @@ export function TaskList(props: Props) {
   );
 }
 
-function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip }:
-  Props & { task: Task; sub?: boolean }) {
+function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd }:
+  Props & { task: Task; sub?: boolean; onDragStart: (id: ID) => void; onDragEnd: () => void }) {
   const isEditing = editing === task.id;
   const ref = useRef<HTMLLIElement>(null);
   const swipe = useSwipe(() => onToggle(task.id), () => onDelete(task.id), !isEditing);
+  const drag = useDrag(task.id, !isEditing && !task.done, () => onDragStart(task.id), (target) => {
+    onDragEnd();
+    if (target) onMove(task.id, target);
+  });
+  // Ambos gestos escuchan los mismos eventos: el arrastre (mantener pulsado) y el deslizamiento lateral.
+  const both = (k: keyof typeof drag.handlers) => (e: never) => {
+    (drag.handlers[k] as (e: never) => void)(e);
+    (swipe.handlers as Record<string, ((e: never) => void) | undefined>)[k]?.(e);
+  };
   useEffect(() => {
     if (selected === task.id) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
@@ -111,12 +130,16 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
   return (
     <li
       ref={ref}
-      class={`row ${sub ? 'sub' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''}`}
+      class={`row ${sub ? 'sub' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
       data-id={task.id}
       data-swipe={task.done ? 'Pendiente' : 'Hecha'}
       data-swipe-left="Borrar"
-      style={swipe.style}
-      {...swipe.handlers}
+      style={{ ...swipe.style, ...drag.style }}
+      onPointerDown={both('onPointerDown')}
+      onPointerMove={both('onPointerMove')}
+      onPointerUp={both('onPointerUp')}
+      onPointerCancel={both('onPointerCancel')}
+      onClickCapture={both('onClickCapture')}
     >
       <button class="check" aria-label={task.done ? 'Marcar pendiente' : 'Completar'} onClick={() => onToggle(task.id)}>
         <i />
@@ -173,6 +196,7 @@ function useSwipe(onRight: () => void, onLeft: () => void, enabled: boolean) {
     onPointerMove: (e: PointerEvent) => {
       const s = start.current;
       if (!s) return;
+      if (dragging.id) { reset(); return; } // se está arrastrando la tarea a otro bloque
       const x = e.clientX - s.x;
       const y = e.clientY - s.y;
       if (!moved.current) {

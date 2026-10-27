@@ -905,3 +905,21 @@ input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1); opaci
 .cover.still * { animation: none !important; }
 .cover.still .cover-line i { background: var(--fg); }
 .cover.still .cover-line b { opacity: .35; }
+
+/* ---------- arrastrar tareas a otro día ---------- */
+.row.dragging {
+  transform: translate(var(--drag-x, 0px), var(--drag-y, 0px)) scale(1.02);
+  z-index: 20; pointer-events: none;
+  max-width: 420px; padding-left: 12px; padding-right: 12px; /* tarjeta compacta mientras se arrastra */
+  background: var(--bg);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .15);
+  border-radius: var(--radius);
+  opacity: .96;
+}
+/* Mientras se arrastra, la tarea puede salir de la lista (p. ej. hacia la barra lateral) sin recortarse. */
+.list:has(.row.dragging) { overflow: visible; }
+section.droppable { transition: background .12s; border-radius: var(--radius); }
+section.droppable.drop-on { background: var(--surface); }
+section.droppable.drop-on .section { color: var(--fg); }
+.drop-empty { padding: 14px 0; font-size: 13px; color: var(--faint); border-bottom: 1px dashed var(--line); list-style: none; }
+.side-list li.drop-on .side-item { background: var(--surface); color: var(--fg); }

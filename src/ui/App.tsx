@@ -4,6 +4,7 @@ import { applyFilter, counts, emptyFilter, groupTasks, isEmptyFilter, toggleIn }
 import { formatDue, parseBlock } from '../parser';
 import { toISODate } from '../lib/date';
 import { externalCapture } from '../lib/capture';
+import { DROP_LABEL, scheduleFor, type DropTarget } from '../lib/reschedule';
 import { useData, useKeyboardInset, useSyncState, useToday, useWide } from './hooks';
 import { Capture } from './Capture';
 import { FilterBar } from './FilterBar';
@@ -162,6 +163,17 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     showToast({ msg: 'Tarea borrada', action: { label: 'Deshacer', run: () => repo.restoreTask(id) } });
   };
 
+  // Tarea arrastrada a otro bloque (Hoy, Mañana, Esta semana, Próximas, Sin fecha): cambia su fecha.
+  const move = async (id: ID, target: DropTarget) => {
+    const t = data.tasks.find((x) => x.id === id);
+    if (!t) return;
+    const next = scheduleFor(target, today);
+    if (next.due === t.due && (next.period ?? null) === (t.period ?? null)) return;
+    const before = { due: t.due, period: t.period ?? null };
+    await repo.updateTask(id, next);
+    showToast({ msg: `Movida a ${DROP_LABEL[target]}`, action: { label: 'Deshacer', run: () => repo.updateTask(id, before) } });
+  };
+
   const save = async (id: ID, line: ParsedLine) => {
     setEditing(null);
     await repo.replaceParsed(id, line);
@@ -318,7 +330,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           <TaskList
             groups={groups} names={names} today={today} selected={selected} editing={editing}
             onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onDelete={remove} onChip={chipTap}
-            doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)}
+            doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)} onMove={move}
           />
         )}
       </main>
