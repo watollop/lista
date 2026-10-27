@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Filter, Task } from '../types';
 import {
+  dateFilterFor,
   emptyFilter,
   isEmptyFilter,
   toggleIn,
@@ -258,6 +259,13 @@ describe('periodos en filtros', () => {
     expect(ids('month')).toEqual(['oct']);
     expect(ids('quarter')).toEqual(['oct', 'nov']);
     expect(ids('year')).toEqual(['oct', 'nov']);
+  });
+  it('dateFilterFor elige el bloque más estrecho', () => {
+    expect(dateFilterFor('2026-10-20', TODAY)).toBe('overdue');
+    expect(dateFilterFor(TODAY, TODAY)).toBe('today');
+    expect(dateFilterFor('2026-10-30', TODAY)).toBe('week');
+    expect(dateFilterFor('2026-11-15', TODAY)).toBe('quarter');
+    expect(dateFilterFor('2027-02-01', TODAY)).toBe('year');
   });
 });
 

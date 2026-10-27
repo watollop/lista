@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { Entity, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../types';
+import type { DateFilter, Entity, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../types';
 import { applyFilter, counts, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
 import { formatDue } from '../parser';
 import { toISODate } from '../lib/date';
@@ -122,6 +122,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     if (type === 'topic') setFilter({ ...filter, topics: toggleIn(filter.topics, key as string) });
     if (type === 'person') setFilter({ ...filter, people: toggleIn(filter.people, key as string) });
     if (type === 'priority') setFilter({ ...filter, priorities: toggleIn(filter.priorities, key as Priority) });
+    if (type === 'date') setFilter({ ...filter, dates: toggleIn(filter.dates, key as DateFilter) });
   };
 
   const saveFilter = async (name: string) => {
