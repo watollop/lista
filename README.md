@@ -33,6 +33,8 @@ Revisar informe @ana #marketing mañana !1 cada lunes
 
 Al pegar varias líneas se crea una tarea por línea.
 
+**Sin abrir la app**: `https://<tu-dominio>/?nueva=Llamar a Ana mañana !alta` apunta la tarea al abrirse (sirve para un Atajo de iOS con Siri: «Dictar texto» + «Abrir URL»). En Android, con la app instalada, aparece en «Compartir». En iPhone el enlace se abre en el navegador, que guarda sus datos aparte de la app instalada: hay que iniciar sesión también allí para que llegue por sincronización.
+
 ## Uso
 
 - **Editar**: toca una tarea para editarla con la misma sintaxis.

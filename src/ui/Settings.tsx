@@ -45,6 +45,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <p>Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.</p>
           <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
         </section>
+        <CaptureSection toast={toast} />
         <BackupSection repo={repo} toast={toast} />
         <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
         <footer class="credit">
@@ -221,6 +222,26 @@ function DangerSection({ repo, sync, state, toast }: { repo: Repo; sync: Sync; s
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+/** Apuntar sin abrir la app: Atajo de iOS con Siri, «Compartir» en Android o un enlace. */
+function CaptureSection({ toast }: { toast: (m: string) => void }) {
+  const link = `${location.origin}${location.pathname}?nueva=`;
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch { toast(link); }
+  };
+  return (
+    <section>
+      <span class="label">Apuntar sin abrir la app</span>
+      <ul class="howto">
+        <li><b>iPhone, con Siri.</b> En la app Atajos crea un atajo con «Dictar texto» y «Abrir URL» con el enlace de abajo seguido del texto dictado. Llámalo «Apuntar en Lista» y di «Oye Siri, apuntar en Lista». Se abre en el navegador: inicia sesión también allí para que llegue a la app.</li>
+        <li><b>Android.</b> Desde cualquier app, «Compartir» → Lista (con la app instalada).</li>
+        <li><b>Ordenador.</b> Cualquier enlace con el texto detrás apunta la tarea al abrirlo.</li>
+      </ul>
+      <code class="howto-link">{link}<span>Llamar a Ana mañana</span></code>
+      <div class="row-btns"><button class="btn" onClick={copy}>Copiar enlace</button></div>
     </section>
   );
 }
