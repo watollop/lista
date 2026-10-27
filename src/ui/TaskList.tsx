@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { Entity, ID, ISODate, ParsedLine, Task } from '../types';
 import { formatLine, inlineTags, normalizeKey, parseLine } from '../parser';
 import { TaskChips, type ChipTap } from './Chips';
-import { isCurrentPeriod } from '../lib/period';
+import { isCurrentPeriod, periodEnd } from '../lib/period';
+import { addDays } from '../lib/date';
 
 export interface Group { task: Task; children: Task[] }
 
@@ -19,51 +20,80 @@ interface Props {
   onDelete: (id: ID) => void;
   onChip: ChipTap;
   doneToday: Set<ID>; // completadas hoy: se quedan en su sitio hasta que cambia el día
+  pastMode: boolean; // vista de pendientes: las completadas antes de hoy van a "Pasadas", arriba
+  anchorKey: string; // al cambiar (filtro), se vuelve a colocar la vista en el presente
 }
 
-type SectionKey = 'overdue' | 'today' | 'next' | 'week' | 'month' | 'quarter' | 'year' | 'nodate' | 'done';
+type SectionKey = 'past' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'next' | 'nodate' | 'done';
 const SECTION_LABEL: Record<SectionKey, string> = {
-  overdue: 'Vencidas', today: 'Hoy', next: 'Próximas',
-  week: 'Esta semana', month: 'Este mes', quarter: 'Este trimestre', year: 'Este año',
-  nodate: 'Sin fecha', done: 'Completadas',
+  past: 'Pasadas', overdue: 'Vencidas', today: 'Hoy', tomorrow: 'Mañana', week: 'Esta semana',
+  next: 'Próximas', nodate: 'Sin fecha', done: 'Completadas',
 };
 const SECTION_ORDER = Object.keys(SECTION_LABEL) as SectionKey[];
 
-function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>): SectionKey {
-  if (t.done && !doneToday.has(t.id)) return 'done';
+function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>, pastMode: boolean): SectionKey {
+  if (t.done && !doneToday.has(t.id)) return pastMode ? 'past' : 'done';
   if (!t.due) return 'nodate';
   if (t.due < today) return 'overdue';
-  // Fechas de periodo en curso ("esta semana", "este Q"…) en su bloque; las de periodos futuros, en Próximas.
-  if (t.period && isCurrentPeriod(t.period, t.due, today)) return t.period;
-  return t.due === today ? 'today' : 'next';
+  // "Esta semana" llega hasta el viernes e incluye las de periodo "esta semana"; mes/Q/año van a Próximas.
+  if (t.period) return t.period === 'week' && isCurrentPeriod('week', t.due, today) ? 'week' : 'next';
+  if (t.due === today) return 'today';
+  if (t.due === addDays(today, 1)) return 'tomorrow';
+  return t.due <= periodEnd('week', today) ? 'week' : 'next';
 }
 
 export function TaskList(props: Props) {
   const { groups, today } = props;
   const byKey = new Map<SectionKey, Group[]>();
   for (const g of groups) {
-    const key = sectionOf(g.task, today, props.doneToday);
+    const key = sectionOf(g.task, today, props.doneToday, props.pastMode);
     byKey.set(key, [...(byKey.get(key) ?? []), g]);
   }
   const sections = SECTION_ORDER.filter((k) => byKey.has(k)).map((key) => ({ key, items: byKey.get(key)! }));
   // Dentro de cada bloque, las pendientes arriba y las ya hechas (hoy) abajo, conservando el orden.
-  for (const s of sections) s.items = [...s.items.filter((g) => !g.task.done), ...s.items.filter((g) => g.task.done)];
+  for (const s of sections) {
+    if (s.key !== 'past') s.items = [...s.items.filter((g) => !g.task.done), ...s.items.filter((g) => g.task.done)];
+  }
+  const pastSection = sections[0]?.key === 'past' ? sections.shift()! : null;
+
+  // Las pasadas quedan por encima de la vista: al cargar o cambiar de filtro se coloca el presente arriba.
+  const nowRef = useRef<HTMLDivElement>(null);
+  const anchored = useRef('');
+  useLayoutEffect(() => {
+    const key = `${props.anchorKey}|${!!pastSection}`;
+    if (anchored.current === key || !nowRef.current) return;
+    anchored.current = key;
+    if (!pastSection) return;
+    const header = (document.querySelector('.top') as HTMLElement | null)?.offsetHeight ?? 0;
+    window.scrollTo({ top: nowRef.current.getBoundingClientRect().top + window.scrollY - header });
+  });
+
+  const render = (s: { key: SectionKey; items: Group[] }) => (
+    <section key={s.key} class={s.key === 'past' ? 'past' : ''}>
+      <h2 class={`section ${s.key === 'overdue' ? 'warn' : ''}`}>
+        <span>{SECTION_LABEL[s.key]}</span>
+        <span>{s.items.length}</span>
+      </h2>
+      <ul class="list">
+        {s.items.map((g) => [
+          <Row key={g.task.id} task={g.task} {...props} />,
+          ...g.children.map((c) => <Row key={c.id} task={c} sub {...props} />),
+        ])}
+      </ul>
+    </section>
+  );
+
   return (
     <>
-      {sections.map((s) => (
-        <section key={s.key}>
-          <h2 class={`section ${s.key === 'overdue' ? 'warn' : ''}`}>
-            <span>{SECTION_LABEL[s.key]}</span>
-            <span>{s.items.length}</span>
-          </h2>
-          <ul class="list">
-            {s.items.map((g) => [
-              <Row key={g.task.id} task={g.task} {...props} />,
-              ...g.children.map((c) => <Row key={c.id} task={c} sub {...props} />),
-            ])}
-          </ul>
-        </section>
-      ))}
+      {pastSection && render(pastSection)}
+      <div ref={nowRef} class={pastSection ? 'now has-past' : 'now'}>
+        {pastSection && (
+          <button class="past-hint label" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            ↑ {pastSection.items.length} {pastSection.items.length === 1 ? 'pasada' : 'pasadas'}
+          </button>
+        )}
+        {sections.map(render)}
+      </div>
     </>
   );
 }

@@ -15,6 +15,7 @@ import { INTRO_KEY, Onboarding } from './Onboarding';
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 
 const FILTER_KEY = 'lista.filter';
+const PAST_DAYS = 30;
 const loadFilter = (): Filter => {
   try { return { ...emptyFilter(), ...JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') }; } catch { return emptyFilter(); }
 };
@@ -80,7 +81,16 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     }
     return shown;
   }, [data.tasks, filter, today, doneToday]);
-  const groups = useMemo(() => groupTasks(visible), [visible]);
+
+  // Pasadas: completadas antes de hoy (últimos PAST_DAYS días), arriba de la lista y fuera de la vista inicial.
+  const past = useMemo(() => {
+    if (filter.status !== 'open') return [];
+    const since = Date.now() - PAST_DAYS * 864e5;
+    return applyFilter(data.tasks, { ...filter, status: 'done' }, today)
+      .filter((t) => !doneToday.has(t.id) && (t.doneAt ?? 0) >= since)
+      .sort((a, b) => (a.doneAt ?? 0) - (b.doneAt ?? 0));
+  }, [data.tasks, filter, today, doneToday]);
+  const groups = useMemo(() => [...groupTasks(past), ...groupTasks(visible)], [past, visible]);
   const flat = useMemo(() => groups.flatMap((g) => [g.task, ...g.children]), [groups]);
   const tally = useMemo(() => counts(data.tasks, today), [data.tasks, today]);
 
@@ -224,7 +234,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           <TaskList
             groups={groups} names={names} today={today} selected={selected} editing={editing}
             onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onDelete={remove} onChip={chipTap}
-            doneToday={doneToday}
+            doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)}
           />
         )}
       </main>

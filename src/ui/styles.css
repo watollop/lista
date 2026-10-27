@@ -603,3 +603,10 @@ button.chip { min-height: 22px; }
 @keyframes demo-sync-out { 0%, 40% { opacity: 1; } 52%, 92% { opacity: 0; } 100% { opacity: 1; } }
 .demo-devices.still * { animation: none !important; }
 .demo-devices.still .demo-captions .local, .demo-devices.still .demo-lock { opacity: 0; }
+
+/* ---------- pasadas: por encima de la vista inicial ---------- */
+.past .list, .past .section { opacity: .75; }
+/* El presente ocupa al menos una pantalla para que las pasadas puedan quedar fuera de la vista. */
+.now.has-past { min-height: calc(100dvh - 120px); }
+.past-hint { display: block; margin: 10px auto 0; color: var(--faint); min-height: 32px; }
+@media (hover: hover) { .past-hint:hover { color: var(--fg); } }
