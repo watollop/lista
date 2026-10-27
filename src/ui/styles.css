@@ -230,6 +230,27 @@ button.chip { min-height: 22px; }
   opacity: var(--swipe, 0);
   pointer-events: none;
 }
+.row::after {
+  content: attr(data-swipe-left);
+  position: absolute;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--warn);
+  opacity: var(--swipe-l, 0);
+  pointer-events: none;
+}
+/* Papelera: solo con ratón; aparece al pasar por la fila o con la fila seleccionada. */
+.trash { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .trash {
+    display: grid; place-items: center; flex: none;
+    width: 28px; height: 28px; margin: -4px -4px -4px 0;
+    color: var(--faint); opacity: 0; transition: opacity .12s, color .12s;
+  }
+  .row:hover .trash, .row.sel .trash, .trash:focus-visible { opacity: 1; }
+  .trash:hover { color: var(--warn); }
+}
 .row.sel { box-shadow: inset 2px 0 0 var(--fg); padding-left: 10px; margin-left: -10px; }
 .row.sub.sel { padding-left: 44px; }
 .row.done .title { color: var(--faint); text-decoration: line-through; text-decoration-thickness: 1px; }
