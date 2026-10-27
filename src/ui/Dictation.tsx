@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Entity, ISODate, ParsedLine } from '../types';
 import { normalizeKey, parseLine } from '../parser';
-import { splitDictation } from '../lib/speech';
+import { collapseResults, dictationItems } from '../lib/speech';
 import { TaskChips } from './Chips';
 
 // Reconocimiento de voz del navegador (Chrome/Android: Google; Safari/iOS: Apple). Sin tipos en lib.dom.
@@ -33,12 +33,18 @@ interface Props {
 }
 
 /** Dictado: hablas tareas seguidas (pausa, punto o «siguiente» entre ellas) y se añaden de una vez. */
+const PAUSE_MS = 1100; // silencio entre resultados que separa una tarea de la siguiente
+
 export function Dictation({ names, today, onAdd, onClose }: Props) {
-  const [items, setItems] = useState<string[]>([]);
-  const [interim, setInterim] = useState('');
+  // Tareas de sesiones anteriores («Seguir hablando») y de la sesión en curso, que se recalcula entera en cada
+  // resultado: algunos navegadores (Chrome en Android, Safari) repiten el texto acumulado como resultados nuevos.
+  const [done, setDone] = useState<string[]>([]);
+  const [live, setLive] = useState<string[]>([]);
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
   const rec = useRef<Recognition | null>(null);
+  const items = [...done, ...live].filter((t) => !removed.has(t));
 
   const start = () => {
     const C = Ctor();
@@ -47,19 +53,28 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
     r.lang = 'es-ES';
     r.continuous = true;
     r.interimResults = true;
+    // Cortes por pausa, en nº de palabras: si pasa PAUSE_MS sin resultados, lo siguiente es otra tarea.
+    const cuts: number[] = [];
+    let last = 0;
+    let words = 0;
+    let current: string[] = [];
     r.onresult = (e) => {
-      let partial = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const res = e.results[i];
-        if (res.isFinal) {
-          const found = splitDictation(res[0].transcript);
-          if (found.length) setItems((xs) => [...xs, ...found]);
-        } else partial += res[0].transcript;
-      }
-      setInterim(partial);
+      const now = Date.now();
+      if (last && now - last > PAUSE_MS && words) cuts.push(words);
+      last = now;
+      const phrases = collapseResults(Array.from(e.results, (res) => res[0].transcript));
+      words = phrases.join(' ').split(/\s+/).filter(Boolean).length;
+      current = dictationItems(phrases, cuts);
+      setLive(current);
     };
     r.onerror = (e) => { if (e.error !== 'aborted') setError(ERRORS[e.error] ?? 'No se ha podido dictar.'); };
-    r.onend = () => { setListening(false); setInterim(''); };
+    r.onend = () => {
+      // Lo de esta sesión pasa a fijo; «Seguir hablando» empieza una sesión nueva.
+      setDone((d) => [...d, ...current]);
+      setLive([]);
+      current = [];
+      setListening(false);
+    };
     setError('');
     setListening(true);
     rec.current = r;
@@ -100,11 +115,10 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
                       today={today} title={p.title} />
                   </span>
                 </div>
-                <button class="dict-x" aria-label={`Quitar «${p.title}»`} onClick={() => setItems((xs) => xs.filter((_, k) => k !== i))}>×</button>
+                <button class="dict-x" aria-label={`Quitar «${p.title}»`} onClick={() => setRemoved((r) => new Set(r).add(t))}>×</button>
               </li>
             );
           })}
-          {interim && <li class="dict-interim">{interim}…</li>}
         </ul>
         {error && <p class="err">{error}</p>}
         <div class="ent-actions">

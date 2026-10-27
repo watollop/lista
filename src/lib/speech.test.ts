@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitDictation, spokenToSyntax } from './speech';
+import { collapseResults, dictationItems, splitDictation, spokenToSyntax } from './speech';
 import { parseLine } from '../parser';
 
 const now = new Date(2026, 9, 27, 10); // martes 27-oct-2026
@@ -21,5 +21,26 @@ describe('dictado', () => {
     expect(parseLine(t, now)).toMatchObject({
       title: 'Revisar ventas #trabajo', priority: 1, topics: ['trabajo'], recurrence: { unit: 'week', weekday: 1 },
     });
+  });
+});
+
+describe('resultados del reconocedor', () => {
+  it('iOS: resultados acumulados no se duplican (el caso real)', () => {
+    const ios = ['Llamar', 'Llamar a', 'Llamar a la', 'Llamar a la peluquería', 'Llamar a la peluquería mañana'];
+    expect(collapseResults(ios)).toEqual(['Llamar a la peluquería mañana']);
+    expect(dictationItems(collapseResults(ios), [])).toEqual(['Llamar a la peluquería mañana']);
+  });
+  it('iOS: una pausa larga corta en dos tareas aunque el texto siga acumulado', () => {
+    const ios = ['Llamar a la peluquería mañana', 'Llamar a la peluquería mañana comprar pan'];
+    // la pausa se detectó cuando había 5 palabras
+    expect(dictationItems(collapseResults(ios), [5])).toEqual(['Llamar a la peluquería mañana', 'Comprar pan']);
+  });
+  it('Chrome: un resultado por frase', () => {
+    const chrome = ['llamar a Ana mañana', 'comprar pan el viernes'];
+    expect(collapseResults(chrome)).toEqual(chrome);
+    expect(dictationItems(chrome, [4])).toEqual(['Llamar a Ana mañana', 'Comprar pan el viernes']);
+  });
+  it('mayúsculas y puntuación de iOS no rompen el acumulado', () => {
+    expect(collapseResults(['comprar pan', 'Comprar pan.'])).toEqual(['Comprar pan.']);
   });
 });
