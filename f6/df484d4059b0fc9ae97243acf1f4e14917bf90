@@ -1,0 +1,31 @@
+public/_headers
+  s_c0c1af889a85ab::t_0313a7ba2b349e 21
+src/lib/speech.test.ts
+  s_c0c1af889a85ab::t_2e11fb17741b98 1-25
+src/lib/speech.ts
+  s_c0c1af889a85ab::t_b9981083d8bde2 1-28
+src/ui/Dictation.tsx
+  s_c0c1af889a85ab::t_0979963894af6b 1-130
+src/ui/styles.css
+  s_c0c1af889a85ab::t_045c767bb0e138 868-884
+README.md
+  s_c0c1af889a85ab::t_8f1430721197c8 36-37
+src/ui/Capture.tsx
+  s_c0c1af889a85ab::t_c0efa8e7d598ee 5,22-25,100,104,116-124,140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f6df484d4059b0fc9ae97243acf1f4e14917bf90",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
