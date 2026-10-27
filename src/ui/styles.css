@@ -421,7 +421,7 @@ button.chip { min-height: 22px; }
 .syn code.chip { font-family: inherit; font-size: 13px; height: 26px; color: var(--fg); }
 /* Atajos: solo con teclado y ratón. */
 .kbd-only { display: none; }
-@media (hover: hover) and (pointer: fine) { .sheet section.kbd-only { display: block; } }
+@media (hover: hover) and (pointer: fine) { .sheet .kbd-only { display: block; } }
 .keys { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; align-items: center; font-size: 14px; }
 .keys > div { display: contents; }
 .keys dt { display: flex; gap: 4px; }
@@ -853,3 +853,7 @@ kbd {
 .ent-empty { padding: 12px 0; font-size: 14px; color: var(--faint); }
 /* La ✕ nativa de los campos de búsqueda, en gris en vez del azul del sistema. */
 input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1); opacity: .5; }
+
+/* ---------- Ajustes: ayuda plegable ---------- */
+.help-folds { margin-top: 18px; border-top: 1px solid var(--line); }
+.fold-body { padding: 16px 0 6px; }
