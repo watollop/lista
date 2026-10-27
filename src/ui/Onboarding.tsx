@@ -16,7 +16,7 @@ const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-
 
 const SLIDES = [
   { title: 'Escribe en una línea', text: 'Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', Demo: TypingDemo },
-  { title: 'Completa y filtra', text: 'Desliza a la derecha para completar. Toca un tema y verás solo sus tareas.', Demo: SwipeDemo },
+  { title: 'Completa y filtra', text: 'Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas.', Demo: SwipeDemo },
   {
     title: 'Tus datos, contigo',
     text: 'Todo se guarda en tu dispositivo y funciona sin conexión, sin cuenta. Si quieres, entra con Google para sincronizar móvil y ordenador: solo tú puedes ver tu lista.',
@@ -108,24 +108,30 @@ function TypingDemo() {
   );
 }
 
-/** Una tarea se desliza y queda hecha; al tocar #trabajo se pliegan las demás. */
+/** Lista por días: una tarea se desliza y queda hecha; al tocar @ana se pliegan las que no son suyas. */
 function SwipeDemo() {
-  const rows: Array<[string, string, string]> = [
-    ['a', 'Llamar a Ana', 'hoy'],
-    ['b', 'Enviar propuesta', '#trabajo'],
-    ['c', 'Comprar pan', '#casa'],
-    ['d', 'Preparar reunión', '#trabajo'],
-    ['e', 'Pedir cita médico', '#personal'],
+  // [clave, día (cabecera antes de la fila), texto, ¿es de @ana?]
+  const rows: Array<[string, string | null, string, boolean]> = [
+    ['a', 'Hoy', 'Llamar a @ana', true],
+    ['b', null, 'Comprar pan #casa', false],
+    ['c', 'Mañana', 'Enviar propuesta a @ana', true],
+    ['d', null, 'Pagar luz #casa', false],
+    ['e', 'Esta semana', 'Preparar reunión #trabajo', false],
+    ['f', null, 'Revisar notas con @ana', true],
   ];
+  const text = (t: string, tap: boolean) =>
+    t.split(/(\s+)/).map((w, i) => (/^[#@]/.test(w)
+      ? <span key={i} class={`tag ${tap && w === '@ana' ? 'demo-tap' : ''}`}>{w}</span>
+      : w));
   return (
     <div class={`demo-list ${reduced() ? 'still' : ''}`}>
-      {rows.map(([k, title, chip]) => (
-        <div key={k} class={`demo-row ${k} ${chip === '#trabajo' ? 'keep' : 'hide'}`}>
+      {rows.map(([k, day, title, ana]) => [
+        day && <div key={day} class="demo-day">{day}</div>,
+        <div key={k} class={`demo-row ${k} ${ana ? 'keep' : 'hide'}`}>
           <span class="demo-check"><i /></span>
-          <span class="demo-title">{title}</span>
-          <span class={`chip ${k === 'b' ? 'demo-tap' : ''}`}>{chip}</span>
-        </div>
-      ))}
+          <span class="demo-title">{text(title, k === 'a')}</span>
+        </div>,
+      ])}
       <span class="demo-finger" />
     </div>
   );
