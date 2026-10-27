@@ -405,20 +405,6 @@ button.chip { min-height: 22px; }
 }
 .btn.solid { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .row-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-.syn-example { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 18px; }
-.syn-input { font-size: 15px; font-weight: 300; padding-bottom: 10px; border-bottom: 1px solid var(--fg); }
-.syn-input::after { content: '↵'; float: right; color: var(--faint); }
-.syn-result { padding-top: 12px; }
-.syn-title { display: block; font-size: 16px; }
-.syn-title .tag { color: var(--muted); }
-.syn-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-.syn-example .chip:not(.warn) { background: var(--bg); }
-.syn > div { padding: 10px 0; border-bottom: 1px solid var(--line); }
-.syn > div:last-child { border-bottom: 0; }
-.syn dt { font-size: 14px; color: var(--fg); margin-bottom: 7px; }
-.syn dt small { margin-left: 8px; font-size: 13px; color: var(--faint); }
-.syn dd { display: flex; flex-wrap: wrap; gap: 6px; }
-.syn code.chip { font-family: inherit; font-size: 13px; height: 26px; color: var(--fg); }
 /* Atajos: solo con teclado y ratón. */
 .kbd-only { display: none; }
 @media (hover: hover) and (pointer: fine) { .sheet .kbd-only { display: block; } }
@@ -854,6 +840,13 @@ kbd {
 /* La ✕ nativa de los campos de búsqueda, en gris en vez del azul del sistema. */
 input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1); opacity: .5; }
 
-/* ---------- Ajustes: ayuda plegable ---------- */
-.help-folds { margin-top: 18px; border-top: 1px solid var(--line); }
-.fold-body { padding: 16px 0 6px; }
+
+/* ---------- bienvenida: slides de referencia ---------- */
+.ref { width: 100%; display: grid; gap: 16px; }
+.ref-group { display: grid; gap: 7px; }
+.ref-group > .label { color: var(--faint); }
+.ref-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ref .chip { font-family: inherit; font-size: 13px; height: 26px; background: var(--bg); color: var(--fg); }
+.ref .chip.warn { color: var(--warn); }
+.ref-pair { display: inline-flex; gap: 3px; margin-right: 6px; }
+.ref-keys { width: 100%; }

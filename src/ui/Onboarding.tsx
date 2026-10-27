@@ -11,6 +11,7 @@ export const INTRO_KEY = 'lista.intro';
 interface Props {
   onClose: () => void;
   signIn?: () => void; // solo si se puede entrar con Google
+  extended?: boolean; // desde Ajustes: añade las slides de referencia (fechas, prioridad y repetición, teclado)
 }
 
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -24,8 +25,21 @@ const SLIDES = [
     title: 'Tus datos, contigo',
     text: () => `Todo se guarda solo en este ${device()} y funciona sin conexión, sin cuenta. Si quieres tenerlo también en otros dispositivos, entra con Google para sincronizar.`,
     Demo: DevicesDemo,
+    google: true,
   },
 ];
+
+/** Con ratón (ordenador) se enseñan también los atajos de teclado. */
+const hasKeyboard = () => typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+/** Versión extendida (Ajustes → Cómo funciona): la referencia de todo lo que se puede escribir. */
+const EXTRA = [
+  { title: 'Fechas como las dirías', text: () => 'Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', Demo: DatesDemo },
+  { title: 'Prioridad y repetición', text: () => 'Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla.', Demo: PrioRepeatDemo },
+  { title: 'Atajos de teclado', text: () => 'Sin soltar el teclado: escribe, muévete por la lista, completa y filtra.', Demo: KeysDemo, keyboard: true },
+];
+
+type Slide = { title: string; text: () => string; Demo: () => preact.JSX.Element; google?: boolean; keyboard?: boolean };
 
 /** Icono de Google monocromo (solo la G, trazo fino, currentColor). */
 function GoogleG({ class: cls }: { class?: string }) {
@@ -39,11 +53,12 @@ function GoogleG({ class: cls }: { class?: string }) {
 
 const FOCUSABLE = 'button:not([disabled])';
 
-/** Bienvenida en tres pasos. Se muestra la primera vez y desde Ajustes → Cómo funciona. */
-export function Onboarding({ onClose, signIn }: Props) {
+/** Bienvenida en tres pasos la primera vez; desde Ajustes → Cómo funciona, versión extendida con la referencia. */
+export function Onboarding({ onClose, signIn, extended }: Props) {
+  const [slides] = useState<Slide[]>(() => (extended ? [...SLIDES, ...EXTRA.filter((s) => !s.keyboard || hasKeyboard())] : SLIDES));
   const [i, setI] = useState(0);
-  const last = i === SLIDES.length - 1;
-  const { Demo } = SLIDES[i];
+  const last = i === slides.length - 1;
+  const { Demo } = slides[i];
   const next = () => (last ? onClose() : setI(i + 1));
   const prev = () => setI(Math.max(0, i - 1));
   const card = useRef<HTMLDivElement>(null);
@@ -95,7 +110,7 @@ export function Onboarding({ onClose, signIn }: Props) {
           else if (dx > 0 && i > 0) prev();
         }}>
         <div class="bar">
-          <span class="label" aria-live="polite">{i + 1} / {SLIDES.length}</span>
+          <span class="label" aria-live="polite">{i + 1} / {slides.length}</span>
           <button class="link" onClick={onClose}>Saltar</button>
         </div>
         <div class="intro-stage" key={i}>
@@ -103,7 +118,7 @@ export function Onboarding({ onClose, signIn }: Props) {
         </div>
         {/* Los textos se apilan en la misma celda: la tarjeta mide siempre lo mismo entre slides. */}
         <div class="intro-copy">
-          {SLIDES.map((s, k) => (
+          {slides.map((s, k) => (
             <div key={k} class={`intro-text ${k === i ? 'on' : ''}`} aria-hidden={k !== i}>
               <h2>{s.title}</h2>
               <p>{s.text()}</p>
@@ -112,7 +127,7 @@ export function Onboarding({ onClose, signIn }: Props) {
         </div>
         <div class="intro-foot">
           <span class="intro-dots">
-            {SLIDES.map((_, k) => (
+            {slides.map((_, k) => (
               <button key={k} class={k === i ? 'on' : ''} aria-label={`Ir a la diapositiva ${k + 1}`}
                 aria-current={k === i ? 'step' : undefined} onClick={() => setI(k)}>
                 <i />
@@ -120,8 +135,8 @@ export function Onboarding({ onClose, signIn }: Props) {
             ))}
           </span>
           <span class="row-btns">
-            {last && signIn && <button class="btn btn-google" onClick={() => { onClose(); signIn(); }}><GoogleG />Entrar con Google</button>}
-            <button class="btn solid" onClick={next} ref={primary}>{last ? 'Empezar' : 'Siguiente'}</button>
+            {slides[i].google && signIn && <button class="btn btn-google" onClick={() => { onClose(); signIn(); }}><GoogleG />Entrar con Google</button>}
+            <button class="btn solid" onClick={next} ref={primary}>{last ? (extended ? 'Listo' : 'Empezar') : 'Siguiente'}</button>
           </span>
         </div>
       </div>
@@ -272,5 +287,68 @@ function DevicesDemo() {
         <span class="synced">Sincronizado · solo tú lo ves</span>
       </div>
     </div>
+  );
+}
+
+/* ---------- slides de referencia (versión extendida) ---------- */
+
+const chips = (list: string[]) => <span class="ref-chips">{list.map((c) => <code key={c} class="chip">{c}</code>)}</span>;
+
+/** Fechas y periodos que entiende la caja de captura. */
+function DatesDemo() {
+  return (
+    <div class="ref">
+      <div class="ref-group"><span class="label">Día</span>{chips(['hoy', 'mañana', 'pasado', 'el viernes', '15 nov', 'en 3 días'])}</div>
+      <div class="ref-group"><span class="label">Periodo</span>{chips(['esta semana', 'este mes', 'este trimestre', 'este año'])}</div>
+      <div class="ref-group"><span class="label">Exacta</span>{chips(['vence:15/11', 'vence:2026-11-15'])}</div>
+    </div>
+  );
+}
+
+/** Prioridades con su icono y repeticiones. */
+function PrioRepeatDemo() {
+  const prio: Array<[string, 1 | 2 | 3]> = [['!alta', 1], ['!media', 2], ['!baja', 3]];
+  return (
+    <div class="ref">
+      <div class="ref-group">
+        <span class="label">Prioridad</span>
+        <span class="ref-chips">
+          {prio.map(([w, p]) => (
+            <span key={w} class="ref-pair"><code class="chip">{w}</code><span class={`chip ${p === 1 ? 'warn' : ''}`}><PriorityIcon p={p} /></span></span>
+          ))}
+        </span>
+      </div>
+      <div class="ref-group">
+        <span class="label">Repetir</span>
+        <span class="ref-chips">
+          {['cada día', 'cada lunes', 'cada mes', 'cada año'].map((c) => <span key={c} class="chip"><RepeatIcon /> {c}</span>)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const KEYS: Array<[string[], string]> = [
+  [['⌘K', '/', 'n'], 'escribir tarea'],
+  [['j', 'k'], 'moverse por la lista'],
+  [['x'], 'completar'],
+  [['e'], 'editar'],
+  [['⌫'], 'borrar'],
+  [['h', 's', 'v'], 'hoy · semana · vencidas'],
+  [['f'], 'buscar'],
+  [['esc'], 'limpiar filtro'],
+];
+
+/** Atajos de teclado (solo en ordenador). */
+function KeysDemo() {
+  return (
+    <dl class="keys ref-keys">
+      {KEYS.map(([keys, what]) => (
+        <div key={what}>
+          <dt>{keys.map((k) => <kbd key={k}>{k}</kbd>)}</dt>
+          <dd>{what}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

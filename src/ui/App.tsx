@@ -34,7 +34,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const [editing, setEditing] = useState<ID | null>(null);
   const [sheetEnt, setSheetEnt] = useState<{ kind: EntityKind; key: string } | null>(null); // editor de tema/persona en móvil
   const [settings, setSettings] = useState(false);
-  const [intro, setIntro] = useState(() => { try { return !localStorage.getItem(INTRO_KEY); } catch { return false; } });
+  // 'first': primera vez (3 slides); 'full': desde Ajustes, con las slides de referencia.
+  const [intro, setIntro] = useState<false | 'first' | 'full'>(() => { try { return localStorage.getItem(INTRO_KEY) ? false : 'first'; } catch { return false; } });
   const [googleOk, setGoogleOk] = useState(false);
   useEffect(() => { if (intro && syncState.status === 'signedOut') sync.googleEnabled().then(setGoogleOk); }, [intro, syncState.status]);
   const closeIntro = () => {
@@ -329,10 +330,10 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         <Settings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
           topics={data.topics} people={data.people} pending={pending}
           onRename={renameEntity} onDelete={deleteEntity}
-          onIntro={() => { setSettings(false); setIntro(true); }} />
+          onIntro={() => { setSettings(false); setIntro('full'); }} />
       )}
       {intro && (
-        <Onboarding onClose={closeIntro}
+        <Onboarding onClose={closeIntro} extended={intro === 'full'}
           signIn={googleOk && syncState.status === 'signedOut' ? () => sync.signInWithGoogle() : undefined} />
       )}
     </div>
