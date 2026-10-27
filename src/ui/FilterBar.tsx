@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import type { DateFilter, Entity, Filter, ID, Priority, SavedFilter } from '../types';
+import type { DateFilter, Entity, EntityKind, Filter, ID, Priority, SavedFilter } from '../types';
 import { emptyFilter, isEmptyFilter, toggleIn } from '../filters';
 import { PRIORITY_LABEL, PriorityName } from './Priority';
 
@@ -7,15 +7,18 @@ interface Props {
   filter: Filter;
   setFilter: (f: Filter) => void;
   saved: SavedFilter[];
-  topics: Entity[];
+  topics: Entity[]; // solo los que tienen pendientes o están en el filtro
   people: Entity[];
   names: Map<string, Entity>;
+  pending: Map<string, number>; // '#clave' | '@clave' -> pendientes
   counts: Record<DateFilter | 'open', number>;
   open: boolean; // fila de búsqueda visible
   setOpen: (v: boolean) => void;
   searchRef: { current: HTMLInputElement | null };
   onSave: (name: string) => void;
   onDeleteSaved: (id: ID) => void;
+  onEditEntity: (kind: EntityKind, key: string) => void; // la hoja de edición la pinta App
+  onDeleteEntity: (kind: EntityKind, key: string) => void;
 }
 
 type Menu = 'date' | 'topic' | 'person' | 'prio' | 'saved';
@@ -42,8 +45,9 @@ export function FilterBar(p: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('');
+  const [editing, setEditing] = useState(false); // modo edición de temas/personas
   const set = (patch: Partial<Filter>) => setFilter({ ...f, ...patch });
-  const toggleMenu = (m: Menu) => setMenu(menu === m ? null : m);
+  const toggleMenu = (m: Menu) => { setEditing(false); setMenu(menu === m ? null : m); };
   const active = !isEmptyFilter(f);
   const current = p.saved.find((s) => sameFilter(f, s.filter));
 
@@ -63,6 +67,38 @@ export function FilterBar(p: Props) {
     if (name.trim()) p.onSave(name.trim());
     setName('');
     setNaming(false);
+  };
+
+  // Chips de temas o personas. En modo edición: nº de pendientes, tocar edita y la ✕ borra.
+  const entityChips = (kind: EntityKind) => {
+    const sym = kind === 'topic' ? '#' : '@';
+    const list = kind === 'topic' ? p.topics : p.people;
+    const sel = kind === 'topic' ? f.topics : f.people;
+    if (!list.length) {
+      return <span class="label hint">{kind === 'topic'
+        ? 'Aún no hay temas · escribe #tema en una tarea'
+        : 'Aún no hay personas · escribe @persona en una tarea'}</span>;
+    }
+    return (
+      <>
+        {list.map((t) => editing ? (
+          <span key={t.key} class="pair">
+            <button class="chip" onClick={() => p.onEditEntity(kind, t.key)}>
+              {sym}{t.name}<sup>{p.pending.get(sym + t.key) ?? 0}</sup>
+            </button>
+            <button class="chip" aria-label={`Borrar ${sym}${t.name}`} onClick={() => p.onDeleteEntity(kind, t.key)}>×</button>
+          </span>
+        ) : (
+          <Chip key={t.key} on={sel.includes(t.key)}
+            onClick={() => set(kind === 'topic' ? { topics: toggleIn(f.topics, t.key) } : { people: toggleIn(f.people, t.key) })}>
+            {sym}{t.name}
+          </Chip>
+        ))}
+        {editing
+          ? <button class="link on" onClick={() => setEditing(false)}>Listo</button>
+          : <button class="link" onClick={() => setEditing(true)}>Editar</button>}
+      </>
+    );
   };
 
   return (
@@ -96,16 +132,8 @@ export function FilterBar(p: Props) {
               <Chip on={f.status === 'done'} onClick={() => set({ status: f.status === 'done' ? 'open' : 'done' })}>Hechas</Chip>
             </>
           )}
-          {menu === 'topic' && (p.topics.length
-            ? p.topics.map((t) => (
-              <Chip key={t.key} on={f.topics.includes(t.key)} onClick={() => set({ topics: toggleIn(f.topics, t.key) })}>#{t.name}</Chip>
-            ))
-            : <span class="label hint">Aún no hay temas · escribe #tema en una tarea</span>)}
-          {menu === 'person' && (p.people.length
-            ? p.people.map((t) => (
-              <Chip key={t.key} on={f.people.includes(t.key)} onClick={() => set({ people: toggleIn(f.people, t.key) })}>@{t.name}</Chip>
-            ))
-            : <span class="label hint">Aún no hay personas · escribe @persona en una tarea</span>)}
+          {menu === 'topic' && entityChips('topic')}
+          {menu === 'person' && entityChips('person')}
           {menu === 'prio' && ([1, 2, 3] as Priority[]).map((n) => (
             <Chip key={n} on={f.priorities.includes(n)} onClick={() => set({ priorities: toggleIn(f.priorities, n) })}><PriorityName p={n} /></Chip>
           ))}

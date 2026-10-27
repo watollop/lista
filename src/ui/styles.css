@@ -685,3 +685,68 @@ kbd {
 .credit .heart { color: var(--warn); }
 .credit a { display: grid; place-items: center; width: 44px; height: 44px; color: var(--muted); }
 @media (hover: hover) { .credit a:hover { color: var(--fg); } }
+
+/* ---------- editar temas y personas ---------- */
+/* Editor inline (escritorio): el símbolo delante, línea inferior como los demás campos. */
+.ent-inline {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 3px;
+  border-bottom: 1px solid var(--fg);
+  padding: 4px 0;
+}
+.ent-inline input { flex: 1; min-width: 0; font-size: 15px; padding: 2px 0; }
+.ent-sym { color: var(--muted); flex: none; }
+.ent-hint { flex-basis: 100%; display: block; font-size: 12px; color: var(--muted); }
+.side-ent { position: relative; }
+/* Lápiz y papelera: solo con ratón; sustituyen al número mientras se pasa por encima. */
+.side-acts { display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); gap: 2px; }
+.side-act {
+  display: grid; place-items: center; width: 28px; height: 28px;
+  border-radius: var(--radius); color: var(--faint);
+}
+@media (hover: hover) {
+  .side-ent:hover .side-acts { display: flex; }
+  .side-ent:hover .side-item { padding-right: 66px; }
+  .side-ent:hover .side-count { visibility: hidden; }
+  .side-act:hover { color: var(--fg); }
+  .side-act.del:hover { color: var(--warn); }
+  .ent-row:hover .ent-name { text-decoration: underline; text-underline-offset: 3px; }
+}
+/* Hoja inferior (móvil): sobre la captura, con el teclado en cuenta. */
+.ent-back {
+  position: fixed; inset: 0; z-index: 25;
+  background: rgb(0 0 0 / .4);
+  animation: fade .15s ease;
+}
+.ent-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  transform: translateY(calc(-1 * var(--kb)));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  padding: 18px calc(var(--gutter) + var(--sar)) calc(20px + var(--sab)) calc(var(--gutter) + var(--sal));
+}
+.ent-sheet > .label { display: block; color: var(--faint); margin-bottom: 12px; }
+.ent-field {
+  display: flex; align-items: baseline; gap: 2px;
+  border-bottom: 1px solid var(--fg);
+  padding: 6px 0;
+  font-size: 18px;
+}
+.ent-field input { flex: 1; min-width: 0; font-size: 18px; }
+.ent-sheet .ent-hint { margin-top: 8px; font-size: 13px; }
+.ent-actions { display: flex; align-items: center; gap: 20px; margin-top: 16px; }
+.ent-actions .btn { flex: none; }
+.ent-actions .link:last-child { margin-left: auto; }
+.ent-sheet .btn:disabled { opacity: .35; }
+/* Ajustes: lista de temas y personas con su recuento. */
+.ent-group { margin-top: 14px; }
+.ent-group > .label { display: block; color: var(--faint); margin-bottom: 4px; }
+.ent-list { list-style: none; border-top: 1px solid var(--line); }
+.ent-list li { border-bottom: 1px solid var(--line); }
+.ent-row {
+  width: 100%; min-height: 44px;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 10px 0; text-align: left; font-size: 15px; color: var(--fg);
+}
+.ent-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ent-count { flex: none; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.ent-row.zero, .ent-row.zero .ent-count { color: var(--faint); }
