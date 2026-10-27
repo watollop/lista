@@ -77,8 +77,8 @@ describe('fechas naturales', () => {
     ['en 3 días', '', '2026-10-30'],
     ['dentro de 2 semanas', '', '2026-11-10'],
     ['hoy', '', '2026-10-27'],
-    ['la próxima semana', '', '2026-11-02'],
-    ['la semana que viene', '', '2026-11-02'],
+    ['la próxima semana', '', '2026-11-06'],
+    ['la semana que viene', '', '2026-11-06'],
     ['fin de mes', '', '2026-10-31'],
     ['el 3', '', '2026-11-03'],
     ['el 30', '', '2026-10-30'],
@@ -155,6 +155,41 @@ describe('temas y personas', () => {
   it('# dentro de palabra no cuenta', () => {
     const l = parseLine('casa(#aura)', now);
     expect(l.topics).toEqual([]);
+  });
+});
+
+describe('periodos', () => {
+  // now = martes 27-oct-2026
+  const per = (t: string) => { const l = parseLine(t, now); return [l.title, l.due, l.period]; };
+  it('esta semana (viernes), este mes, este Q, este año', () => {
+    expect(per('Informe esta semana')).toEqual(['Informe', '2026-10-30', 'week']);
+    expect(per('Informe este mes')).toEqual(['Informe', '2026-10-31', 'month']);
+    expect(per('Informe este Q')).toEqual(['Informe', '2026-12-31', 'quarter']);
+    expect(per('Informe este trimestre')).toEqual(['Informe', '2026-12-31', 'quarter']);
+    expect(per('Informe este año')).toEqual(['Informe', '2026-12-31', 'year']);
+  });
+  it('el siguiente periodo', () => {
+    expect(per('x la semana que viene')).toEqual(['x', '2026-11-06', 'week']);
+    expect(per('x el mes que viene')).toEqual(['x', '2026-11-30', 'month']);
+    expect(per('x el próximo trimestre')).toEqual(['x', '2027-03-31', 'quarter']);
+    expect(per('x el año que viene')).toEqual(['x', '2027-12-31', 'year']);
+  });
+  it('Q1…Q4: este año o el siguiente si ya pasó', () => {
+    expect(per('plan Q4')).toEqual(['plan', '2026-12-31', 'quarter']);
+    expect(per('plan Q1')).toEqual(['plan', '2027-03-31', 'quarter']);
+  });
+  it('un día concreto no tiene periodo; "cada año" sigue siendo recurrencia', () => {
+    expect(parseLine('x mañana', now).period).toBeNull();
+    expect(parseLine('x cada año', now)).toMatchObject({ period: null, recurrence: { unit: 'year' } });
+  });
+  it('vence: con periodo y formatLine ida y vuelta', () => {
+    expect(per('x vence:2026-Q4')).toEqual(['x', '2026-12-31', 'quarter']);
+    expect(per('x vence:2026-W45')).toEqual(['x', '2026-11-06', 'week']);
+    for (const t of ['x esta semana', 'x este mes', 'x este Q', 'x el año que viene']) {
+      const l = parseLine(t, now);
+      const again = parseLine(formatLine({ ...l, topicNames: [], peopleNames: [] }), now);
+      expect([again.due, again.period]).toEqual([l.due, l.period]);
+    }
   });
 });
 

@@ -1,6 +1,7 @@
 import * as chronoEs from 'chrono-node/es';
-import type { ISODate } from '../types';
+import type { ISODate, Period } from '../types';
 import { addDays, fromISODate, toISODate, todayISO } from '../lib/date';
+import { periodEnd } from '../lib/period';
 
 /** Carácter que sustituye a los tokens ya encontrados (misma longitud, nunca es espacio ni letra). */
 export const MASK = '\u0001';
@@ -17,6 +18,7 @@ export interface DateSpan {
   start: number;
   end: number; // exclusivo
   date: ISODate;
+  period?: Period; // fecha "blanda": fin de esa semana/mes/trimestre/año
 }
 
 const DOW: Record<string, number> = {
@@ -41,7 +43,19 @@ function nextDayOfMonth(today: ISODate, day: number): ISODate | null {
 interface Rule {
   re: RegExp; // global, sobre texto plegado
   date: (m: RegExpMatchArray, today: ISODate) => ISODate | null;
+  period?: Period;
 }
+
+const Q = 'trimestre|quarter|q';
+/** "este mes", "el mes que viene", "el próximo mes"… (texto plegado: año → ano). */
+const periodRules = (p: Period, noun: string): Rule[] => [
+  { re: word(`(?:este|esta) (?:${noun})`), date: (_, t) => periodEnd(p, t), period: p },
+  {
+    re: new RegExp(`(?<!${W})(?:(?:el|la) )?(?:(?:proximo|proxima) (?:${noun})|(?:${noun}) que viene)(?!${W})`.replace(/ /g, '\\s+'), 'gu'),
+    date: (_, t) => periodEnd(p, t, 1),
+    period: p,
+  },
+];
 
 const RULES: Rule[] = [
   {
@@ -64,9 +78,19 @@ const RULES: Rule[] = [
     date: (_, t) => addDays(t, 2),
   },
   { re: word('manana'), date: (_, t) => addDays(t, 1) },
+  ...periodRules('week', 'semana'),
+  ...periodRules('month', 'mes'),
+  ...periodRules('quarter', Q),
+  ...periodRules('year', 'ano'),
   {
-    re: word('la proxima semana|la semana que viene|proxima semana'),
-    date: (_, t) => nextAfter(t, 1),
+    // Q1…Q4: ese trimestre de este año, o del siguiente si ya ha pasado
+    re: new RegExp(`(?<!${W})q(?<q>[1-4])(?!${W})`, 'gu'),
+    date: (m, t) => {
+      const y = fromISODate(t).getFullYear();
+      const end = (yy: number) => toISODate(new Date(yy, Number(m.groups!.q) * 3, 0));
+      return end(y) >= t ? end(y) : end(y + 1);
+    },
+    period: 'quarter',
   },
   { re: word('fin de mes|final de mes'), date: (_, t) => toISODate(new Date(fromISODate(t).getFullYear(), fromISODate(t).getMonth() + 1, 0)) },
   {
@@ -122,7 +146,7 @@ export function parseSpanishDate(text: string, now: Date = new Date()): DateSpan
     for (const m of f.matchAll(r.re)) {
       const date = r.date(m, today);
       if (date) {
-        cands.push({ start: m.index!, end: m.index! + m[0].length, date });
+        cands.push({ start: m.index!, end: m.index! + m[0].length, date, ...(r.period ? { period: r.period } : {}) });
         break;
       }
     }

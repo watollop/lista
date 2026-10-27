@@ -10,7 +10,7 @@ interface Props {
   topics: Entity[];
   people: Entity[];
   names: Map<string, Entity>;
-  counts: { today: number; week: number; overdue: number; nodate: number; open: number };
+  counts: Record<DateFilter | 'open', number>;
   open: boolean; // fila de búsqueda visible
   setOpen: (v: boolean) => void;
   searchRef: { current: HTMLInputElement | null };
@@ -21,7 +21,8 @@ interface Props {
 type Menu = 'date' | 'topic' | 'person' | 'prio' | 'saved';
 
 const DATES: Array<[DateFilter, string]> = [
-  ['today', 'Hoy'], ['week', 'Semana'], ['overdue', 'Vencidas'], ['nodate', 'Sin fecha'],
+  ['today', 'Hoy'], ['week', 'Semana'], ['month', 'Mes'], ['quarter', 'Trimestre'], ['year', 'Año'],
+  ['overdue', 'Vencidas'], ['nodate', 'Sin fecha'],
 ];
 
 export const sameFilter = (a: Filter, b: Filter) => JSON.stringify(norm(a)) === JSON.stringify(norm(b));

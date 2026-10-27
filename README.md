@@ -26,6 +26,7 @@ Revisar informe @ana #marketing mañana !1 cada lunes
 | `#tema` | Asigna un tema; se crea si no existe y se queda en el texto, resaltado. Sin distinguir mayúsculas ni tildes. |
 | `@persona` | Asigna una persona, con el mismo comportamiento que los temas. |
 | `hoy`, `mañana`, `pasado` o `pasado mañana`, `el viernes`, `el lunes que viene`, `15 nov`, `en 3 días`, `dentro de 2 semanas`, `la próxima semana`, `fin de mes`, `el finde` | Fecha de vencimiento. |
+| `esta semana`, `este mes`, `este Q` / `este trimestre` / `Q4`, `este año` | Fecha de periodo: vence al final de la semana (viernes), del mes, del trimestre natural o del año. Se muestra como `esta semana`, `octubre`, `Q4`, `2026` y se agrupa en su bloque. También `la semana que viene`, `el mes que viene`, `el próximo trimestre`, `el año que viene`. |
 | `vence:2026-11-15`, `vence:15/11` | Fecha exacta; tiene prioridad sobre la natural. |
 | `!alta` `!media` `!baja` (o `!1` `!2` `!3`) | Prioridad; se muestra como ⇈ ↑ ↓. |
 | `cada día`, `cada lunes`, `cada 2 semanas`, `cada mes`, `cada año`, `a diario` | Recurrencia. |

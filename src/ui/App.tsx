@@ -8,6 +8,7 @@ import { Capture } from './Capture';
 import { FilterBar } from './FilterBar';
 import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
+import type { ChipTap } from './Chips';
 import { Settings } from './Settings';
 import { INTRO_KEY, Onboarding } from './Onboarding';
 
@@ -117,7 +118,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     await repo.replaceParsed(id, line);
   };
 
-  const chipTap = (type: 'topic' | 'person' | 'priority', key: string | Priority) => {
+  const chipTap: ChipTap = (type, key) => {
     if (type === 'topic') setFilter({ ...filter, topics: toggleIn(filter.topics, key as string) });
     if (type === 'person') setFilter({ ...filter, people: toggleIn(filter.people, key as string) });
     if (type === 'priority') setFilter({ ...filter, priorities: toggleIn(filter.priorities, key as Priority) });

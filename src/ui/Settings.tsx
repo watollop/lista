@@ -34,6 +34,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro }: Props) 
             <code>#tema</code><span>tema (se crea si no existe)</span>
             <code>@persona</code><span>persona</span>
             <code>mañana · el viernes · 15 nov · en 3 días</code><span>fecha</span>
+            <code>esta semana · este mes · este Q · este año</code><span>antes del viernes, fin de mes, trimestre o año</span>
             <code>vence:2026-11-15</code><span>fecha exacta</span>
             <code>!alta !media !baja · !1 !2 !3</code><span>prioridad ⇈ ↑ ↓</span>
             <code>cada lunes · cada día · cada mes</code><span>recurrente</span>

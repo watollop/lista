@@ -1,9 +1,10 @@
 import type {
-  ActiveToken, ISODate, ParsedLine, ParsedToken, Priority, Recurrence, TokenType,
+  ActiveToken, ISODate, ParsedLine, ParsedToken, Period, Priority, Recurrence, TokenType,
 } from '../types';
 import { diffDays, fromISODate, toISODate, todayISO } from '../lib/date';
 import { normalizeKey } from '../lib/text';
 import { firstOccurrence } from '../lib/recurrence';
+import { parsePeriodToken, periodToken } from '../lib/period';
 import { MASK, foldText, parseSpanishDate } from './dates';
 import { formatRecurrence, matchRecurrence } from './recurrence';
 
@@ -72,11 +73,16 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
     take('priority', m.index!, m.index! + m[0].length);
   }
 
+  // vence:YYYY-MM-DD | DD/MM[/YYYY] | periodo: YYYY-Www, YYYY-MM, YYYY-Qn, YYYY
   let explicit: ISODate | null = null;
-  for (const m of w.matchAll(/(?<!\S)vence:(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/\d{4})?)(?![\p{L}\p{N}_])/giu)) {
-    const due = explicitDue(m[1], today);
+  let explicitPeriod: Period | null = null;
+  const VENCE = /(?<!\S)vence:(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/\d{4})?|\d{4}-W\d{2}|\d{4}-Q[1-4]|\d{4}-\d{2}|\d{4})(?![\p{L}\p{N}_-])/giu;
+  for (const m of w.matchAll(VENCE)) {
+    const per = parsePeriodToken(m[1]);
+    const due = per ? per.date : explicitDue(m[1], today);
     if (!due) continue;
     explicit = due;
+    explicitPeriod = per ? per.period : null;
     take('date', m.index!, m.index! + m[0].length);
   }
 
@@ -93,12 +99,14 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
   if (natural) take('date', natural.start, natural.end);
 
   const due = explicit ?? natural?.date ?? (recurrence ? firstOccurrence(recurrence, today) : null);
+  const period = explicit ? explicitPeriod : natural?.period ?? null;
 
   return {
     title: titleOf(line, tokens),
     topics: unique(topicNames),
     people: unique(personNames),
     due,
+    period,
     priority,
     recurrence,
     isSubtask,
@@ -153,6 +161,7 @@ export function formatLine(t: {
   topicNames: string[];
   peopleNames: string[];
   due: ISODate | null;
+  period?: Period | null;
   priority: Priority | null;
   recurrence: Recurrence | null;
 }): string {
@@ -164,7 +173,7 @@ export function formatLine(t: {
     ...missing('@', t.peopleNames),
     t.priority ? `!${t.priority}` : '',
     t.recurrence ? formatRecurrence(t.recurrence) : '',
-    t.due ? `vence:${t.due}` : '',
+    t.due ? `vence:${t.period ? periodToken(t.period, t.due) : t.due}` : '',
   ].filter(Boolean).join(' ');
 }
 

@@ -108,6 +108,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           {parsed && parsed.tokens.length > 0 && (
             <TaskChips
               due={parsed.due}
+              period={parsed.period}
               priority={parsed.priority}
               recurrence={parsed.recurrence}
               topics={parsed.topics.map(normalizeKey)}

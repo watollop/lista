@@ -24,6 +24,7 @@ export interface Task extends SyncRec {
   topics: string[]; // claves normalizadas (normalizeKey) de Topic
   people: string[]; // claves normalizadas de Person
   due: ISODate | null;
+  period?: Period | null; // si está, `due` es el fin de esa semana/mes/trimestre/año (fecha "blanda")
   priority: Priority | null;
   recurrence: Recurrence | null;
   parentId: ID | null; // subtarea de un solo nivel
@@ -40,7 +41,10 @@ export interface Entity extends SyncRec {
   name: string; // forma de visualización (la primera escrita)
 }
 
-export type DateFilter = 'today' | 'week' | 'overdue' | 'nodate';
+/** Periodo de una fecha "blanda": esta semana (acaba el viernes), este mes, trimestre natural, año. */
+export type Period = 'week' | 'month' | 'quarter' | 'year';
+
+export type DateFilter = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'overdue' | 'nodate';
 export type StatusFilter = 'open' | 'done' | 'all';
 
 export interface Filter {
@@ -75,6 +79,7 @@ export interface ParsedLine {
   topics: string[]; // nombres tal y como se escribieron (sin '#')
   people: string[]; // sin '@'
   due: ISODate | null;
+  period: Period | null;
   priority: Priority | null;
   recurrence: Recurrence | null;
   isSubtask: boolean; // empieza por '>' o va indentada
