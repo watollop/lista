@@ -396,7 +396,7 @@ button.chip { min-height: 22px; }
   .preview { padding: 0 0 12px; }
   .suggest { bottom: auto; top: 64px; margin: 0; z-index: 2; }
   .title, .edit { font-size: 17px; line-height: 22px; }
-  .row { padding: 15px 0; }
+  .row { padding-top: 15px; padding-bottom: 15px; }
   .toast { bottom: 32px; }
   .kbd-hint { display: inline; }
   .chip { font-size: 12px; height: 24px; }
@@ -462,11 +462,13 @@ button.chip { min-height: 22px; }
   .side-x:hover { color: var(--fg); }
 }
 /* Una línea por tarea: título a la izquierda, chips a la derecha. */
-.app.wide .body { display: flex; align-items: flex-start; gap: 24px; }
+.app.wide .body { display: flex; align-items: baseline; gap: 24px; }
 .app.wide .title { flex: 1; width: auto; }
 .app.wide .meta { margin-top: 0; flex: 0 1 auto; max-width: 55%; justify-content: flex-end; }
 .app.wide .edit { flex: 1; }
-.app.wide .row { padding: 12px 0; }
+.app.wide .edit-actions { margin-top: 0; }
+/* Solo vertical: el padding-left lo usa .row.sel para compensar la barra de selección. */
+.app.wide .row { padding-top: 12px; padding-bottom: 12px; }
 .app.wide .section { padding-top: 22px; }
 .app.wide .capture-inner { max-width: none; }
 
