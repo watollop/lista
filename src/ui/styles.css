@@ -396,3 +396,71 @@ button.chip { min-height: 22px; }
   .kbd-hint { display: inline; }
   .chip { font-size: 12px; height: 24px; }
 }
+
+/* ---------- pantallas anchas: filtros en barra lateral, lista en una línea por tarea ---------- */
+.app.wide {
+  max-width: 1360px;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-areas: "top top" "side capture" "side main";
+  grid-template-rows: auto auto 1fr;
+  column-gap: 72px;
+  align-content: start;
+}
+.app.wide .top { grid-area: top; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.app.wide .capture { grid-area: capture; }
+.app.wide main { grid-area: main; min-width: 0; }
+.side {
+  grid-area: side;
+  position: sticky;
+  top: 104px;
+  align-self: start;
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 18px 2px 40px;
+}
+.side-search {
+  width: 100%;
+  font-size: 15px;
+  padding: 8px 0;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.side-search:focus { border-bottom-color: var(--fg); }
+.side-group { margin-top: 26px; }
+.side-group > .label { color: var(--faint); margin-bottom: 6px; }
+.side-list { list-style: none; }
+.side-item {
+  width: calc(100% + 20px);
+  margin: 0 -10px;
+  padding: 6px 10px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--muted);
+  text-align: left;
+  transition: background .12s, color .12s;
+}
+.side-item > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-item.on { color: var(--fg); background: var(--surface); font-weight: 500; }
+.side-count { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.side-item.warn, .side-item.warn .side-count { color: var(--warn); }
+.side-item kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
+.side-add { color: var(--faint); }
+.side-pair { display: flex; align-items: center; }
+.side-pair .side-item { flex: 1; }
+.side-x { width: 28px; height: 28px; margin-left: 4px; color: var(--faint); opacity: 0; transition: opacity .12s; }
+.side-pair:hover .side-x, .side-x:focus-visible { opacity: 1; }
+@media (hover: hover) {
+  .side-item:not(.on):hover { color: var(--fg); background: var(--surface); }
+  .side-x:hover { color: var(--fg); }
+}
+/* Una línea por tarea: título a la izquierda, chips a la derecha. */
+.app.wide .body { display: flex; align-items: flex-start; gap: 24px; }
+.app.wide .title { flex: 1; width: auto; }
+.app.wide .meta { margin-top: 0; flex: 0 1 auto; max-width: 55%; justify-content: flex-end; }
+.app.wide .edit { flex: 1; }
+.app.wide .row { padding: 12px 0; }
+.app.wide .section { padding-top: 22px; }
+.app.wide .capture-inner { max-width: none; }
