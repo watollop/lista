@@ -283,7 +283,6 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         <div class="bar">
           <span class="brand">Lista</span>
           <span class="bar-right">
-            <span class="label kbd-hint">⌘K escribir</span>
             {!wide && (
               <button class={`link ${panel ? 'on' : ''}`} aria-expanded={panel}
                 onClick={() => { const next = !panel; setPanel(next); if (next) setTimeout(() => searchRef.current?.focus(), 0); }}>

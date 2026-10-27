@@ -341,7 +341,7 @@ describe('formatLine', () => {
     expect(formatLine({
       title: 'Revisar informe', topicNames: ['aura'], peopleNames: ['ana'],
       due: '2026-11-02', priority: 1, recurrence: { unit: 'week', every: 1, weekday: 1 },
-    })).toBe('Revisar informe #aura @ana !1 cada lunes vence:2026-11-02');
+    })).toBe('Revisar informe #aura @ana !alta cada lunes vence:2026-11-02');
   });
   it('sin partes opcionales', () => {
     expect(formatLine({ title: 'Solo', topicNames: [], peopleNames: [], due: null, priority: null, recurrence: null }))
