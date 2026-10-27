@@ -881,4 +881,3 @@ input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1); opaci
 .dict-item { flex: 1; min-width: 0; display: grid; gap: 6px; font-size: 15px; }
 .dict-item .meta { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; }
 .dict-x { width: 32px; height: 32px; color: var(--faint); }
-.dict-interim { color: var(--faint); font-style: italic; font-size: 14px; }
