@@ -32,7 +32,7 @@ describe('periodos', () => {
       const due = periodEnd(p, T);
       expect(parsePeriodToken(periodToken(p, due))).toEqual({ date: due, period: p });
     }
-    expect(periodToken('quarter', '2026-12-31')).toBe('2026-Q4');
+    expect(periodToken('quarter', '2026-12-31')).toBe('2026-T4');
     expect(parsePeriodToken('2026-13')).toBeNull();
     expect(parsePeriodToken('2026-10-30')).toBeNull();
   });
@@ -43,7 +43,26 @@ describe('periodos', () => {
     expect(formatPeriod('week', '2026-11-13', T)).toBe('sem. 13 nov');
     expect(formatPeriod('month', '2026-10-31', T)).toBe('octubre');
     expect(formatPeriod('month', '2027-01-31', T)).toBe('enero 2027');
-    expect(formatPeriod('quarter', '2026-12-31', T)).toBe('Q4');
+    expect(formatPeriod('quarter', '2026-12-31', T)).toBe('este trimestre');
     expect(formatPeriod('year', '2027-12-31', T)).toBe('2027');
+  });
+
+  it('chip de trimestre: "este trimestre" y "trimestre que viene"', () => {
+    expect(formatPeriod('quarter', '2026-12-31', T)).toBe('este trimestre');
+    expect(formatPeriod('quarter', '2027-03-31', T)).toBe('trimestre que viene');
+  });
+
+  it('chip de trimestre: "T4" del mismo año y "T1 2027" de otro año', () => {
+    const hoy = '2026-06-10'; // T2 2026: T4 2026 queda a dos trimestres y T1 2027 a tres
+    expect(formatPeriod('quarter', '2026-12-31', hoy)).toBe('T4');
+    expect(formatPeriod('quarter', '2027-03-31', hoy)).toBe('T1 2027');
+  });
+
+  it('token canónico -T y alias -Q aceptados por parsePeriodToken', () => {
+    const esperado = { date: '2026-12-31', period: 'quarter' };
+    expect(parsePeriodToken('2026-T4')).toEqual(esperado);
+    expect(parsePeriodToken('2026-Q4')).toEqual(esperado);
+    expect(parsePeriodToken('2026-t1')).toEqual({ date: '2026-03-31', period: 'quarter' });
+    expect(parsePeriodToken('2026-T5')).toBeNull();
   });
 });

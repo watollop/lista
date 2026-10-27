@@ -58,7 +58,7 @@ export function isoWeekFriday(year: number, week: number): ISODate | null {
   return isoWeek(fri).year === year ? fri : null;
 }
 
-/** Forma canónica para `vence:` (vuelve a parsearse igual): 2026-W44, 2026-10, 2026-Q4, 2026. */
+/** Forma canónica para `vence:` (vuelve a parsearse igual): 2026-W44, 2026-10, 2026-T4, 2026. */
 export function periodToken(p: Period, due: ISODate): string {
   const y = due.slice(0, 4);
   if (p === 'week') {
@@ -66,18 +66,18 @@ export function periodToken(p: Period, due: ISODate): string {
     return `${w.year}-W${String(w.week).padStart(2, '0')}`;
   }
   if (p === 'month') return due.slice(0, 7);
-  if (p === 'quarter') return `${y}-Q${quarterOf(due)}`;
+  if (p === 'quarter') return `${y}-T${quarterOf(due)}`;
   return y;
 }
 
-/** `vence:2026-W44` / `2026-10` / `2026-Q4` / `2026` → fin de periodo. null si no es un periodo. */
+/** `vence:2026-W44` / `2026-10` / `2026-T4` (o `2026-Q4`, alias) / `2026` → fin de periodo. null si no es un periodo. */
 export function parsePeriodToken(s: string): { date: ISODate; period: Period } | null {
   let m = /^(\d{4})-W(\d{2})$/i.exec(s);
   if (m) {
     const date = isoWeekFriday(+m[1], +m[2]);
     return date ? { date, period: 'week' } : null;
   }
-  m = /^(\d{4})-Q([1-4])$/i.exec(s);
+  m = /^(\d{4})-[TQ]([1-4])$/i.exec(s);
   if (m) return { date: toISODate(new Date(+m[1], +m[2] * 3, 0)), period: 'quarter' };
   m = /^(\d{4})-(\d{2})$/.exec(s);
   if (m && +m[2] >= 1 && +m[2] <= 12) return { date: toISODate(new Date(+m[1], +m[2], 0)), period: 'month' };
@@ -89,7 +89,7 @@ export function parsePeriodToken(s: string): { date: ISODate; period: Period } |
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const MES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-/** Texto del chip: "esta semana", "semana que viene", "sem. 13 nov", "octubre", "Q4", "2026". */
+/** Texto del chip: "esta semana", "semana que viene", "sem. 13 nov", "octubre", "este trimestre", "T4", "T1 2027", "2026". */
 export function formatPeriod(p: Period, due: ISODate, today: ISODate): string {
   const d = fromISODate(due);
   const otherYear = d.getFullYear() !== fromISODate(today).getFullYear();
@@ -99,6 +99,10 @@ export function formatPeriod(p: Period, due: ISODate, today: ISODate): string {
     return `sem. ${d.getDate()} ${MES_CORTO[d.getMonth()]}`;
   }
   if (p === 'month') return MESES[d.getMonth()] + (otherYear ? ` ${d.getFullYear()}` : '');
-  if (p === 'quarter') return `Q${quarterOf(due)}` + (otherYear ? ` ${d.getFullYear()}` : '');
+  if (p === 'quarter') {
+    if (due === periodEnd('quarter', today)) return 'este trimestre';
+    if (due === periodEnd('quarter', today, 1)) return 'trimestre que viene';
+    return `T${quarterOf(due)}` + (otherYear ? ` ${d.getFullYear()}` : '');
+  }
   return String(d.getFullYear());
 }
