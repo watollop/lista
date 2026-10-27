@@ -2,6 +2,7 @@ import type { Table } from 'dexie';
 import type {
   Backup,
   Entity,
+  EntityKind,
   Filter,
   ID,
   ParsedLine,
@@ -15,6 +16,7 @@ import type {
 import { normalizeKey } from '../lib/text';
 import { nextOccurrence } from '../lib/recurrence';
 import { todayISO } from '../lib/date';
+import { retagTitle } from '../parser/retag';
 import { ListaDB } from './db';
 
 /** Reloj monotónico: dos escrituras en el mismo ms reciben valores estrictamente crecientes. */
@@ -60,6 +62,42 @@ function fieldsFromLine(line: ParsedLine) {
     priority: line.priority,
     recurrence: line.recurrence,
   };
+}
+
+/** Sustituye `key` por `newKey` (sin duplicados, conserva orden); con newKey null la quita. */
+function swapKeys(keys: string[], key: string, newKey: string | null): string[] {
+  if (newKey === null) return keys.filter((k) => k !== key);
+  return [...new Set(keys.map((k) => (k === key ? newKey : k)))];
+}
+
+/** Versión nueva de una tarea viva que contiene la clave; null si no la contiene o no cambia. */
+function retagTask(
+  t: Task,
+  kind: EntityKind,
+  key: string,
+  newKey: string | null,
+  to: string | null,
+  now: number,
+): Task | null {
+  if (t.deleted === 1) return null;
+  const keys = kind === 'topic' ? t.topics : t.people;
+  if (!keys.includes(key)) return null;
+  const title = retagTitle(t.title, kind === 'topic' ? '#' : '@', key, to);
+  if (newKey === key && title === t.title) return null;
+  const nextKeys = swapKeys(keys, key, newKey);
+  return kind === 'topic'
+    ? { ...t, topics: nextKeys, title, updatedAt: now, dirty: 1 }
+    : { ...t, people: nextKeys, title, updatedAt: now, dirty: 1 };
+}
+
+/** Versión nueva de un filtro vivo que contiene la clave; null si no la contiene o no cambia. */
+function retagFilter(f: SavedFilter, kind: EntityKind, key: string, newKey: string | null, now: number): SavedFilter | null {
+  if (f.deleted === 1 || newKey === key) return null;
+  const keys = kind === 'topic' ? f.filter.topics : f.filter.people;
+  if (!keys.includes(key)) return null;
+  const nextKeys = swapKeys(keys, key, newKey);
+  const filter: Filter = kind === 'topic' ? { ...f.filter, topics: nextKeys } : { ...f.filter, people: nextKeys };
+  return { ...f, filter, updatedAt: now, dirty: 1 };
 }
 
 async function markOne<R extends SyncRec>(tbl: Table<R, string>, id: string, updatedAt: number): Promise<void> {
@@ -109,6 +147,32 @@ export function createRepo(dbName = 'lista'): Repo {
   if (channel) channel.onmessage = () => emit();
 
   const allTables = [db.tasks, db.topics, db.people, db.filters] as const;
+  const tableOf = (kind: EntityKind) => (kind === 'topic' ? db.topics : db.people);
+
+  /** Sustituye la clave en tareas y filtros vivos que la contienen. Devuelve nº de tareas cambiadas y sus versiones anteriores. */
+  async function retagAll(kind: EntityKind, key: string, newKey: string | null, to: string | null, now: number) {
+    const oldTasks: Task[] = [];
+    const newTasks: Task[] = [];
+    for (const t of await db.tasks.toArray()) {
+      const next = retagTask(t, kind, key, newKey, to, now);
+      if (next) {
+        oldTasks.push(t);
+        newTasks.push(next);
+      }
+    }
+    const oldFilters: SavedFilter[] = [];
+    const newFilters: SavedFilter[] = [];
+    for (const f of await db.filters.toArray()) {
+      const next = retagFilter(f, kind, key, newKey, now);
+      if (next) {
+        oldFilters.push(f);
+        newFilters.push(next);
+      }
+    }
+    if (newTasks.length) await db.tasks.bulkPut(newTasks);
+    if (newFilters.length) await db.filters.bulkPut(newFilters);
+    return { tasks: newTasks.length, before: { tasks: oldTasks, filters: oldFilters } };
+  }
 
   const repo: Repo = {
     async listTasks() {
@@ -336,6 +400,56 @@ export function createRepo(dbName = 'lista'): Repo {
         return true;
       });
       if (changed) notify();
+    },
+
+    async renameEntity(kind, key, newName) {
+      const name = newName.trim().replace(/^[#@]/, '').trim();
+      if (!name) throw new Error('Nombre vacío');
+      const newKey = normalizeKey(name);
+      const result = await db.transaction('rw', allTables, async () => {
+        const now = stamp();
+        const tbl = tableOf(kind);
+        const old = await tbl.get(key);
+        if (!old || old.deleted === 1) throw new Error('Entidad no encontrada');
+        if (newKey === key) {
+          await tbl.put({ ...old, name, updatedAt: now, dirty: 1 });
+          const { tasks } = await retagAll(kind, key, key, name, now);
+          return { key, merged: false, tasks };
+        }
+        // fusión: si ya hay una entidad viva con la nueva clave, esa conserva su nombre
+        const target = await tbl.get(newKey);
+        const merged = target?.deleted === 0;
+        const destName = target?.deleted === 0 ? target.name : name;
+        if (!merged) await tbl.put({ key: newKey, name, updatedAt: now, deleted: 0, dirty: 1 });
+        await tbl.put({ ...old, deleted: 1, updatedAt: now, dirty: 1 });
+        const { tasks } = await retagAll(kind, key, newKey, destName, now);
+        return { key: newKey, merged, tasks };
+      });
+      notify();
+      return result;
+    },
+
+    async deleteEntity(kind, key) {
+      const tbl = tableOf(kind);
+      const result = await db.transaction('rw', allTables, async () => {
+        const now = stamp();
+        const old = await tbl.get(key);
+        if (!old || old.deleted === 1) throw new Error('Entidad no encontrada');
+        await tbl.put({ ...old, deleted: 1, updatedAt: now, dirty: 1 });
+        const { tasks, before } = await retagAll(kind, key, null, null, now);
+        const undo = async () => {
+          await db.transaction('rw', allTables, async () => {
+            const t = stamp();
+            await tbl.put({ ...old, deleted: 0, updatedAt: t, dirty: 1 });
+            await db.tasks.bulkPut(before.tasks.map((x) => ({ ...x, updatedAt: t, dirty: 1 as const })));
+            await db.filters.bulkPut(before.filters.map((x) => ({ ...x, updatedAt: t, dirty: 1 as const })));
+          });
+          notify();
+        };
+        return { tasks, undo };
+      });
+      notify();
+      return result;
     },
 
     async exportBackup(): Promise<Backup> {

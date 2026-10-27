@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Backup, Repo, Sync, SyncState } from '../types';
+import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
 import { getTheme, setTheme, type Theme } from './theme';
-import type { Entity } from '../types';
 import { normalizeKey, parseLine } from '../parser';
 import { todayISO } from '../lib/date';
 import { TaskChips } from './Chips';
 import { TitleText } from './TaskList';
+import { EntityEditor } from './EntityEditor';
 
 const SYNTAX: Array<[string, string, string[]]> = [
   ['Tema', 'se crea al escribirlo', ['#trabajo', '#casa']],
@@ -60,9 +60,16 @@ interface Props {
   onClose: () => void;
   toast: (msg: string) => void;
   onIntro: () => void;
+  topics: Entity[]; // todos, con o sin pendientes
+  people: Entity[];
+  pending: Map<string, number>; // '#clave' | '@clave' -> pendientes
+  onRename: (kind: EntityKind, key: string, name: string) => void;
+  onDelete: (kind: EntityKind, key: string) => void;
 }
 
-export function Settings({ repo, sync, state, onClose, toast, onIntro }: Props) {
+export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, people, pending, onRename, onDelete }: Props) {
+  const [editing, setEditing] = useState<{ kind: EntityKind; key: string } | null>(null);
+  const editEnt = editing && (editing.kind === 'topic' ? topics : people).find((e) => e.key === editing.key);
   return (
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Ajustes"
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
@@ -74,6 +81,13 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro }: Props) 
         <h2>Lista</h2>
         <Account sync={sync} state={state} />
         <Appearance />
+        <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
+        {editing && editEnt && (
+          <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
+            pending={pending} variant="sheet" onCancel={() => setEditing(null)}
+            onSave={(name) => { setEditing(null); onRename(editing.kind, editing.key, name); }}
+            onDelete={() => { setEditing(null); onDelete(editing.kind, editing.key); }} />
+        )}
         <BackupSection repo={repo} toast={toast} />
         <section>
           <span class="label">Ayuda</span>
@@ -176,6 +190,43 @@ function Appearance() {
             onClick={() => { setTheme(t); set(t); }}>{l}</button>
         ))}
       </div>
+    </section>
+  );
+}
+
+/** Temas y personas con sus pendientes; tocar una fila abre el editor. */
+function EntitiesSection({ topics, people, pending, onEdit }: {
+  topics: Entity[]; people: Entity[]; pending: Map<string, number>;
+  onEdit: (kind: EntityKind, key: string) => void;
+}) {
+  const group = (title: string, kind: EntityKind, list: Entity[]) => {
+    if (!list.length) return null;
+    const sym = kind === 'topic' ? '#' : '@';
+    return (
+      <div class="ent-group">
+        <h3 class="label">{title}</h3>
+        <ul class="ent-list">
+          {list.map((e) => {
+            const n = pending.get(sym + e.key) ?? 0;
+            return (
+              <li key={e.key}>
+                <button class={`ent-row ${n ? '' : 'zero'}`} onClick={() => onEdit(kind, e.key)}>
+                  <span class="ent-name">{sym}{e.name}</span>
+                  <span class="ent-count">{n ? `· ${n} ${n === 1 ? 'tarea' : 'tareas'}` : 'sin tareas'}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  };
+  return (
+    <section>
+      <span class="label">Temas y personas</span>
+      {topics.length || people.length
+        ? <>{group('Temas', 'topic', topics)}{group('Personas', 'person', people)}</>
+        : <p>Aún no hay temas ni personas. Aparecen al escribir #tema o @persona en una tarea.</p>}
     </section>
   );
 }

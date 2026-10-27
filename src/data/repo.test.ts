@@ -421,3 +421,94 @@ describe('meta, clearAll, subscribe', () => {
     expect(u2).toBeGreaterThan(u1);
   });
 });
+
+describe('renameEntity / deleteEntity', () => {
+  const filterOf = (over: { topics?: string[]; people?: string[] }) => ({
+    topics: [],
+    people: [],
+    dates: [],
+    priorities: [],
+    status: 'all' as const,
+    text: '',
+    ...over,
+  });
+
+  it('renombrar: entidad nueva, vieja tombstone, tareas y filtros actualizados', async () => {
+    const r = newRepo();
+    await r.addParsed([line('Llamar a @Elan', { people: ['Elan'] })]);
+    const f = await r.saveFilter('Elan', filterOf({ people: ['elan'] }));
+    const res = await r.renameEntity('person', 'elan', 'Elena');
+    expect(res).toEqual({ key: 'elena', merged: false, tasks: 1 });
+    expect((await r.listPeople()).map((p) => p.key)).toEqual(['elena']);
+    const pend = await r.pendingChanges();
+    expect(pend.find((p) => p.kind === 'person' && p.id === 'elan')?.deleted).toBe(true);
+    const [t] = await r.listTasks();
+    expect(t.title).toBe('Llamar a @Elena');
+    expect(t.people).toEqual(['elena']);
+    const [saved] = await r.listFilters();
+    expect(saved.id).toBe(f.id);
+    expect(saved.filter.people).toEqual(['elena']);
+  });
+
+  it('cambiar solo mayúsculas: misma clave, nombre y título nuevos', async () => {
+    const r = newRepo();
+    await r.addParsed([line('Hola @ana', { people: ['ana'] })]);
+    const res = await r.renameEntity('person', 'ana', 'Ana');
+    expect(res).toEqual({ key: 'ana', merged: false, tasks: 1 });
+    expect((await r.listPeople())[0].name).toBe('Ana');
+    expect((await r.listTasks())[0].title).toBe('Hola @Ana');
+  });
+
+  it('fusión: sin duplicados en la tarea y conserva el nombre de la entidad destino', async () => {
+    const r = newRepo();
+    await r.addParsed([line('Cena @Ana @Bea', { people: ['Ana', 'Bea'] })]);
+    const res = await r.renameEntity('person', 'ana', 'bea');
+    expect(res).toEqual({ key: 'bea', merged: true, tasks: 1 });
+    const people = await r.listPeople();
+    expect(people.map((p) => [p.key, p.name])).toEqual([['bea', 'Bea']]);
+    const [t] = await r.listTasks();
+    expect(t.people).toEqual(['bea']);
+    expect(t.title).toBe('Cena @Bea @Bea');
+  });
+
+  it('rechaza nombre vacío y notifica una vez al renombrar', async () => {
+    const r = newRepo();
+    await r.addParsed([line('x', { people: ['ana'] })]);
+    await expect(r.renameEntity('person', 'ana', ' # ')).rejects.toThrow('Nombre vacío');
+    const cb = vi.fn();
+    r.subscribe(cb);
+    await r.renameEntity('person', 'ana', 'Ana2');
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it('borrar: la tarea conserva la palabra sin @, la clave sale y la entidad queda borrada', async () => {
+    const r = newRepo();
+    await r.addParsed([line('Llamar a @Elena', { people: ['Elena'] })]);
+    await r.saveFilter('E', filterOf({ people: ['elena'] }));
+    const { tasks } = await r.deleteEntity('person', 'elena');
+    expect(tasks).toBe(1);
+    expect(await r.listPeople()).toHaveLength(0);
+    const [t] = await r.listTasks();
+    expect(t.title).toBe('Llamar a Elena');
+    expect(t.people).toEqual([]);
+    expect((await r.listFilters())[0].filter.people).toEqual([]);
+  });
+
+  it('undo de borrar restaura entidad, tareas y filtros con updatedAt nuevo y dirty=1', async () => {
+    const r = newRepo();
+    await r.addParsed([line('Llamar a @Elena', { people: ['Elena'] })]);
+    await r.saveFilter('E', filterOf({ people: ['elena'] }));
+    const [before] = await r.listTasks();
+    await r.markPushed(await r.pendingChanges());
+    const { undo } = await r.deleteEntity('person', 'elena');
+    await undo();
+    const [p] = await r.listPeople();
+    expect(p).toMatchObject({ key: 'elena', name: 'Elena', dirty: 1 });
+    const [t] = await r.listTasks();
+    expect(t).toMatchObject({ title: 'Llamar a @Elena', people: ['elena'], dirty: 1 });
+    expect(t.updatedAt).toBeGreaterThan(before.updatedAt);
+    const [f] = await r.listFilters();
+    expect(f.filter.people).toEqual(['elena']);
+    expect(f.dirty).toBe(1);
+  });
+});
