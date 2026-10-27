@@ -158,6 +158,7 @@ export function parseSpanishDate(text: string, now: Date = new Date()): DateSpan
     break;
   }
 
-  const best = cands.sort((a, b) => a.start - b.start)[0];
+  // Una fecha natural en el pasado ("ayer", "el lunes pasado") no es un vencimiento: se queda en el texto.
+  const best = cands.filter((c) => c.date >= today).sort((a, b) => a.start - b.start)[0];
   return best ? { ...best, start: extendStart(f, best.start) } : null;
 }

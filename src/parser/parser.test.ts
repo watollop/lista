@@ -158,6 +158,16 @@ describe('temas y personas', () => {
   });
 });
 
+describe('fechas pasadas', () => {
+  it('"ayer" no es un vencimiento y se queda en el texto', () => {
+    expect(parseLine('Hablar de lo de ayer', now)).toMatchObject({ title: 'Hablar de lo de ayer', due: null });
+    expect(parseLine('Revisar lo de ayer mañana', now)).toMatchObject({ title: 'Revisar lo de ayer', due: '2026-10-28' });
+  });
+  it('vence: explícito en el pasado sí se respeta', () => {
+    expect(parseLine('x vence:2026-10-20', now).due).toBe('2026-10-20');
+  });
+});
+
 describe('periodos', () => {
   // now = martes 27-oct-2026
   const per = (t: string) => { const l = parseLine(t, now); return [l.title, l.due, l.period]; };
