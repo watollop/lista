@@ -26,7 +26,7 @@ Revisar informe @ana #marketing mañana !1 cada lunes
 | `@persona` | Asigna una persona, con el mismo comportamiento que los temas. |
 | `hoy`, `mañana`, `pasado` o `pasado mañana`, `el viernes`, `el lunes que viene`, `15 nov`, `en 3 días`, `dentro de 2 semanas`, `la próxima semana`, `fin de mes`, `el finde` | Fecha de vencimiento. |
 | `vence:2026-11-15`, `vence:15/11` | Fecha exacta; tiene prioridad sobre la natural. |
-| `!1` `!2` `!3` | Prioridad; 1 es la más alta. |
+| `!alta` `!media` `!baja` (o `!1` `!2` `!3`) | Prioridad; se muestra como ⇈ ↑ ↓. |
 | `cada día`, `cada lunes`, `cada 2 semanas`, `cada mes`, `cada año`, `a diario` | Recurrencia. |
 
 Al pegar varias líneas se crea una tarea por línea.
@@ -35,7 +35,7 @@ Al pegar varias líneas se crea una tarea por línea.
 
 - **Editar**: toca una tarea para editarla con la misma sintaxis.
 - **Completar**: toca el check o desliza a la derecha. Las tareas completadas hoy siguen visibles al final de su bloque y desaparecen al día siguiente; puedes consultarlas en *Fecha → Hechas*.
-- **Filtrar**: toca un chip (`#tema`, `@persona`, `!1`) para filtrar por él, o usa los selectores *Fecha · Tema · Persona · Prioridad*. Las opciones de un mismo selector se combinan con O y los selectores entre sí con Y.
+- **Filtrar**: toca un chip (`#tema`, `@persona` o la prioridad) para filtrar por él, o usa los selectores *Fecha · Tema · Persona · Prioridad*. Las opciones de un mismo selector se combinan con O y los selectores entre sí con Y.
 - **Deshacer**: completar y borrar se pueden deshacer desde el aviso inferior.
 
 ### Atajos de teclado

@@ -179,6 +179,9 @@ input:focus-visible { outline: none; } /* los campos ya marcan el foco con su l�
 button.chip { min-height: 22px; }
 .chip.on { background: var(--accent); color: var(--on-accent); }
 .chip.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.prio-icon { flex: none; display: inline-block; vertical-align: -1px; }
+.chip.prio { padding: 0 6px; }
+.chip.prio .prio-icon { width: 13px; height: 13px; }
 .chip.ghost { background: none; padding: 0; }
 
 /* Hover solo con ratón: en táctil se queda "pegado" tras tocar y tapa el estado seleccionado. */

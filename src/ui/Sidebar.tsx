@@ -2,6 +2,7 @@ import { useMemo, useState } from 'preact/hooks';
 import type { DateFilter, Entity, Filter, ID, Priority, SavedFilter, Task } from '../types';
 import { emptyFilter, isEmptyFilter, toggleIn } from '../filters';
 import { sameFilter } from './FilterBar';
+import { PriorityName } from './Priority';
 
 interface Props {
   filter: Filter;
@@ -68,7 +69,7 @@ export function Sidebar(p: Props) {
       <Group title="Prioridad">
         {([1, 2, 3] as Priority[]).map((n) => (
           <Item key={n} on={f.priorities.includes(n)} count={tally.get('!' + n)}
-            onClick={() => set({ priorities: toggleIn(f.priorities, n) })}>!{n}</Item>
+            onClick={() => set({ priorities: toggleIn(f.priorities, n) })}><PriorityName p={n} /></Item>
         ))}
       </Group>
 

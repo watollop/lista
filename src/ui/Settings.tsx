@@ -30,7 +30,7 @@ export function Settings({ repo, sync, state, onClose, toast }: Props) {
             <code>@persona</code><span>persona</span>
             <code>mañana · el viernes · 15 nov · en 3 días</code><span>fecha</span>
             <code>vence:2026-11-15</code><span>fecha exacta</span>
-            <code>!1 !2 !3</code><span>prioridad</span>
+            <code>!alta !media !baja · !1 !2 !3</code><span>prioridad ⇈ ↑ ↓</span>
             <code>cada lunes · cada día · cada mes</code><span>recurrente</span>
           </div>
         </section>

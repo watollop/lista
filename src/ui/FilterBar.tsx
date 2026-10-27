@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { DateFilter, Entity, Filter, ID, Priority, SavedFilter } from '../types';
 import { emptyFilter, isEmptyFilter, toggleIn } from '../filters';
+import { PRIORITY_LABEL, PriorityName } from './Priority';
 
 interface Props {
   filter: Filter;
@@ -53,7 +54,7 @@ export function FilterBar(p: Props) {
     ['date', label('Fecha', 'fechas', dateValues), dateValues.length > 0],
     ['topic', label('Tema', 'temas', f.topics.map((k) => '#' + (p.names.get('#' + k)?.name ?? k))), f.topics.length > 0],
     ['person', label('Persona', 'personas', f.people.map((k) => '@' + (p.names.get('@' + k)?.name ?? k))), f.people.length > 0],
-    ['prio', label('Prioridad', 'prioridades', f.priorities.map((n) => '!' + n)), f.priorities.length > 0],
+    ['prio', label('Prioridad', 'prioridades', f.priorities.map((n) => PRIORITY_LABEL[n])), f.priorities.length > 0],
   ];
   if (p.saved.length) selectors.push(['saved', current ? current.name : 'Guardados', !!current]);
 
@@ -105,7 +106,7 @@ export function FilterBar(p: Props) {
             ))
             : <span class="label hint">Aún no hay personas · escribe @persona en una tarea</span>)}
           {menu === 'prio' && ([1, 2, 3] as Priority[]).map((n) => (
-            <Chip key={n} on={f.priorities.includes(n)} onClick={() => set({ priorities: toggleIn(f.priorities, n) })}>!{n}</Chip>
+            <Chip key={n} on={f.priorities.includes(n)} onClick={() => set({ priorities: toggleIn(f.priorities, n) })}><PriorityName p={n} /></Chip>
           ))}
           {menu === 'saved' && p.saved.map((s) => (
             <span key={s.id} class="pair">
