@@ -350,6 +350,9 @@ button.chip { min-height: 22px; }
   overflow: hidden;
   list-style: none;
   margin-bottom: 8px;
+  /* Con el teclado abierto hay poco espacio: si no caben, la lista se desplaza. */
+  max-height: 45vh;
+  overflow-y: auto;
 }
 .suggest button { width: 100%; text-align: left; padding: 0 14px; min-height: 44px; font-size: 15px; }
 .suggest .on button { background: var(--fg); color: var(--bg); }
@@ -457,6 +460,16 @@ kbd {
   .toast { bottom: 32px; }
   .kbd-hint { display: inline; }
   .chip { font-size: 12px; height: 24px; }
+}
+
+/* ---------- táctil: áreas de toque de unos 40 px sin cambiar el aspecto ---------- */
+@media (pointer: coarse) {
+  .title { padding: 10px 0; margin: -10px 0; } /* el margen negativo compensa: la fila no cambia de altura */
+  .menu .chip { height: 36px; }
+  button.chip { position: relative; }
+  button.chip::after { content: ''; position: absolute; inset: -9px -3px; } /* hueco táctil invisible alrededor del chip */
+  .actions .link, .edit-actions .link { min-height: 40px; }
+  .past-hint { min-height: 44px; }
 }
 
 /* ---------- pantallas anchas: filtros en barra lateral, lista en una línea por tarea ---------- */
