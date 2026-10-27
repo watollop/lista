@@ -8,9 +8,10 @@ interface Props {
   state: SyncState;
   onClose: () => void;
   toast: (msg: string) => void;
+  onIntro: () => void;
 }
 
-export function Settings({ repo, sync, state, onClose, toast }: Props) {
+export function Settings({ repo, sync, state, onClose, toast, onIntro }: Props) {
   return (
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Ajustes"
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
@@ -23,6 +24,10 @@ export function Settings({ repo, sync, state, onClose, toast }: Props) {
         <Account sync={sync} state={state} />
         <Appearance />
         <BackupSection repo={repo} toast={toast} />
+        <section>
+          <span class="label">Ayuda</span>
+          <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
+        </section>
         <section>
           <span class="label">Sintaxis</span>
           <div class="syntax">

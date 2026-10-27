@@ -9,6 +9,7 @@ import { FilterBar } from './FilterBar';
 import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
 import { Settings } from './Settings';
+import { INTRO_KEY, Onboarding } from './Onboarding';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 
@@ -29,6 +30,13 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const [selected, setSelected] = useState<ID | null>(null);
   const [editing, setEditing] = useState<ID | null>(null);
   const [settings, setSettings] = useState(false);
+  const [intro, setIntro] = useState(() => { try { return !localStorage.getItem(INTRO_KEY); } catch { return false; } });
+  const [googleOk, setGoogleOk] = useState(false);
+  useEffect(() => { if (intro && syncState.status === 'signedOut') sync.googleEnabled().then(setGoogleOk); }, [intro, syncState.status]);
+  const closeIntro = () => {
+    setIntro(false);
+    try { localStorage.setItem(INTRO_KEY, '1'); } catch { /* modo privado */ }
+  };
   const [toast, setToast] = useState<Toast | null>(null);
 
   const captureRef = useRef<HTMLInputElement>(null);
@@ -126,6 +134,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
       const typing = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
+      if (intro) return; // la bienvenida gestiona su propio teclado
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         captureRef.current?.focus();
@@ -229,7 +238,12 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       )}
 
       {settings && (
-        <Settings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast} />
+        <Settings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
+          onIntro={() => { setSettings(false); setIntro(true); }} />
+      )}
+      {intro && (
+        <Onboarding onClose={closeIntro}
+          signIn={googleOk && syncState.status === 'signedOut' ? () => sync.signInWithGoogle() : undefined} />
       )}
     </div>
   );
