@@ -865,3 +865,20 @@ input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1); opaci
   font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere;
 }
 .howto-link span { color: var(--faint); }
+
+/* ---------- dictado ---------- */
+.capture-row { display: flex; align-items: center; gap: 8px; }
+.capture-row input { flex: 1; min-width: 0; }
+.mic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); }
+@media (hover: hover) { .mic:hover { color: var(--fg); } }
+.dict-head { display: flex; align-items: center; gap: 8px; }
+.dict-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.dict-dot.on { background: var(--warn); animation: dict-pulse 1.2s ease-in-out infinite; }
+@keyframes dict-pulse { 50% { opacity: .3; } }
+.dict-hint { font-size: 13px; color: var(--faint); margin: 8px 0 10px; }
+.dict-list { list-style: none; max-height: 40vh; overflow-y: auto; border-top: 1px solid var(--line); margin-bottom: 12px; }
+.dict-list li { display: flex; align-items: flex-start; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.dict-item { flex: 1; min-width: 0; display: grid; gap: 6px; font-size: 15px; }
+.dict-item .meta { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; }
+.dict-x { width: 32px; height: 32px; color: var(--faint); }
+.dict-interim { color: var(--faint); font-style: italic; font-size: 14px; }

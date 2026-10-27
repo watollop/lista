@@ -33,6 +33,8 @@ Revisar informe @ana #marketing mañana !1 cada lunes
 
 Al pegar varias líneas se crea una tarea por línea.
 
+**Dictado**: el micrófono junto a la caja abre el dictado. Di una tarea, haz una pausa (o di «siguiente») y di la siguiente; «prioridad alta», «tema trabajo» y «persona Ana» se convierten en `!alta`, `#trabajo` y `@ana`. Revisas la lista y las añades de una vez. Usa el reconocimiento de voz del navegador (Apple o Google procesan el audio; las tareas no salen del dispositivo).
+
 **Sin abrir la app**: `https://<tu-dominio>/?nueva=Llamar a Ana mañana !alta` apunta la tarea al abrirse (sirve para un Atajo de iOS con Siri: «Dictar texto» + «Abrir URL»). En Android, con la app instalada, aparece en «Compartir». En iPhone el enlace se abre en el navegador, que guarda sus datos aparte de la app instalada: hay que iniciar sesión también allí para que llegue por sincronización.
 
 ## Uso
