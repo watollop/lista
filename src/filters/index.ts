@@ -31,6 +31,16 @@ const inMonth = (due: ISODate | null, today: ISODate) => until(due, today, perio
 const inQuarter = (due: ISODate | null, today: ISODate) => until(due, today, periodEnd('quarter', today));
 const inYear = (due: ISODate | null, today: ISODate) => until(due, today, periodEnd('year', today));
 
+/** El filtro de fecha más estrecho que contiene esta fecha (para el chip de fecha de una tarea). */
+export function dateFilterFor(due: ISODate, today: ISODate): DateFilter {
+  if (due < today) return 'overdue';
+  if (due === today) return 'today';
+  if (inWeek(due, today)) return 'week';
+  if (inMonth(due, today)) return 'month';
+  if (inQuarter(due, today)) return 'quarter';
+  return 'year';
+}
+
 const isOverdue = (t: Task, today: ISODate) => t.due !== null && t.due < today && t.done === 0;
 
 /** Comparador ascendente con nulos al final. */
