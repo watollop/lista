@@ -572,6 +572,9 @@ kbd {
 .demo-chips { display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px; margin-top: 12px; }
 .intro-stage .chip:not(.on):not(.warn) { background: var(--bg); }
 .demo-type .chip { animation: fade .2s ease; }
+/* Se reserva el hueco para que no salte al aparecer. */
+.demo-repeat { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--muted); opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; }
+.demo-repeat.on { opacity: 1; transform: none; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* demo 2: deslizar y filtrar (ciclo de 7 s) */

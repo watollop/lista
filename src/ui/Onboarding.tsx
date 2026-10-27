@@ -3,7 +3,7 @@ import type { Entity } from '../types';
 import { normalizeKey, parseLine } from '../parser';
 import { todayISO } from '../lib/date';
 import { TaskChips } from './Chips';
-import { PriorityIcon } from './Priority';
+import { PriorityIcon, RepeatIcon } from './Priority';
 
 export const INTRO_KEY = 'lista.intro';
 
@@ -15,7 +15,7 @@ interface Props {
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const SLIDES = [
-  { title: 'Escribe en una línea', text: 'Fecha, tema, persona y prioridad se detectan al escribir.', Demo: TypingDemo },
+  { title: 'Escribe en una línea', text: 'Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', Demo: TypingDemo },
   { title: 'Completa y filtra', text: 'Desliza a la derecha para completar. Toca un tema y verás solo sus tareas.', Demo: SwipeDemo },
   {
     title: 'Tus datos, contigo',
@@ -78,14 +78,15 @@ export function Onboarding({ onClose, signIn }: Props) {
   );
 }
 
-const DEMO_LINE = 'Llamar a Ana mañana #trabajo !alta';
+const DEMO_LINE = 'Revisar ventas cada lunes #trabajo !alta';
 
 /** La frase se escribe sola y los chips aparecen con el parser real. */
 function TypingDemo() {
   const [n, setN] = useState(() => (reduced() ? DEMO_LINE.length : 0));
   useEffect(() => {
     if (reduced()) return;
-    const id = setInterval(() => setN((k) => (k >= DEMO_LINE.length + 25 ? 0 : k + 1)), 70);
+    // +45 pasos de 70 ms: ~3 s de pausa con la frase completa antes de repetir
+    const id = setInterval(() => setN((k) => (k >= DEMO_LINE.length + 45 ? 0 : k + 1)), 70);
     return () => clearInterval(id);
   }, []);
   const text = DEMO_LINE.slice(0, n);
@@ -97,9 +98,12 @@ function TypingDemo() {
     <div class="demo-type">
       <div class="demo-input">{text}<span class="demo-caret" /></div>
       <div class="demo-chips">
-        <TaskChips due={p.due} priority={p.priority} recurrence={null} topics={p.topics.map(normalizeKey)}
+        <TaskChips due={p.due} priority={p.priority} recurrence={p.recurrence} topics={p.topics.map(normalizeKey)}
           people={[]} names={names} today={todayISO()} />
       </div>
+      <p class={`demo-repeat ${p.recurrence ? 'on' : ''}`}>
+        <RepeatIcon /> Al completarla, vuelve sola el lunes siguiente
+      </p>
     </div>
   );
 }
