@@ -35,7 +35,7 @@ function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>, pastMode: boolea
   if (t.done && !doneToday.has(t.id)) return pastMode ? 'past' : 'done';
   if (!t.due) return 'nodate';
   if (t.due < today) return 'overdue';
-  // "Esta semana" llega hasta el viernes e incluye las de periodo "esta semana"; mes/Q/año van a Próximas.
+  // "Esta semana" llega hasta el viernes e incluye las de periodo "esta semana"; mes/trimestre/año van a Próximas.
   if (t.period) return t.period === 'week' && isCurrentPeriod('week', t.due, today) ? 'week' : 'next';
   if (t.due === today) return 'today';
   if (t.due === addDays(today, 1)) return 'tomorrow';

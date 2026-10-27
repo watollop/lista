@@ -46,6 +46,7 @@ interface Rule {
   period?: Period;
 }
 
+/** Alias de trimestre aceptados al escribir: "trimestre" es la forma principal; "quarter" y "q" se siguen entendiendo. */
 const Q = 'trimestre|quarter|q';
 /** "este mes", "el mes que viene", "el próximo mes"… (texto plegado: año → ano). */
 const periodRules = (p: Period, noun: string): Rule[] => [
@@ -83,8 +84,8 @@ const RULES: Rule[] = [
   ...periodRules('quarter', Q),
   ...periodRules('year', 'ano'),
   {
-    // Q1…Q4: ese trimestre de este año, o del siguiente si ya ha pasado
-    re: new RegExp(`(?<!${W})q(?<q>[1-4])(?!${W})`, 'gu'),
+    // T1…T4 (y Q1…Q4, alias): ese trimestre de este año, o del siguiente si ya ha pasado
+    re: new RegExp(`(?<!${W})[tq](?<q>[1-4])(?!${W})`, 'gu'),
     date: (m, t) => {
       const y = fromISODate(t).getFullYear();
       const end = (yy: number) => toISODate(new Date(yy, Number(m.groups!.q) * 3, 0));

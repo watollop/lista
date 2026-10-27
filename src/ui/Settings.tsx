@@ -11,7 +11,7 @@ const SYNTAX: Array<[string, string, string[]]> = [
   ['Tema', 'se crea al escribirlo', ['#trabajo', '#casa']],
   ['Persona', '', ['@ana', '@marta']],
   ['Fecha', '', ['hoy', 'mañana', 'pasado', 'el viernes', '15 nov', 'en 3 días']],
-  ['Periodo', 'vence el viernes o al final del periodo', ['esta semana', 'este mes', 'este Q', 'este año']],
+  ['Periodo', 'vence el viernes o al final del periodo', ['esta semana', 'este mes', 'este trimestre', 'este año']],
   ['Fecha exacta', '', ['vence:15/11', 'vence:2026-11-15']],
   ['Prioridad', '⇈ ↑ ↓ · también !1 !2 !3', ['!alta', '!media', '!baja']],
   ['Repetir', 'al completarla se crea la siguiente', ['cada día', 'cada lunes', 'cada mes']],

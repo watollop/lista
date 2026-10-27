@@ -184,13 +184,35 @@ describe('periodos', () => {
     expect(per('x el próximo trimestre')).toEqual(['x', '2027-03-31', 'quarter']);
     expect(per('x el año que viene')).toEqual(['x', '2027-12-31', 'year']);
   });
-  it('Q1…Q4: este año o el siguiente si ya pasó', () => {
+  it('Q1…Q4 (alias): este año o el siguiente si ya pasó', () => {
     expect(per('plan Q4')).toEqual(['plan', '2026-12-31', 'quarter']);
     expect(per('plan Q1')).toEqual(['plan', '2027-03-31', 'quarter']);
+  });
+  it('T1…T4: este año o el siguiente si ya pasó, en mayúscula o minúscula', () => {
+    expect(per('plan T4')).toEqual(['plan', '2026-12-31', 'quarter']);
+    expect(per('plan T1')).toEqual(['plan', '2027-03-31', 'quarter']);
+    expect(per('plan t1')).toEqual(['plan', '2027-03-31', 'quarter']);
+    expect(per('plan t4')).toEqual(['plan', '2026-12-31', 'quarter']);
+  });
+  it('alias "este quarter" y "el trimestre que viene"', () => {
+    expect(per('x este quarter')).toEqual(['x', '2026-12-31', 'quarter']);
+    expect(per('x el trimestre que viene')).toEqual(['x', '2027-03-31', 'quarter']);
+  });
+  it('T dentro de una palabra o de un número no es trimestre', () => {
+    for (const t of ['x AT4', 'x T45', 'x 2T4', 'x T5', 'x T0']) {
+      const l = parseLine(t, now);
+      expect([t, l.due, l.period]).toEqual([t, null, null]);
+    }
   });
   it('un día concreto no tiene periodo; "cada año" sigue siendo recurrencia', () => {
     expect(parseLine('x mañana', now).period).toBeNull();
     expect(parseLine('x cada año', now)).toMatchObject({ period: null, recurrence: { unit: 'year' } });
+  });
+  it('vence:2026-T4 (y el antiguo -Q4) al editar una tarea de trimestre', () => {
+    expect(per('x vence:2026-T4')).toEqual(['x', '2026-12-31', 'quarter']);
+    expect(per('x vence:2026-Q4')).toEqual(['x', '2026-12-31', 'quarter']);
+    const l = parseLine('Plan este trimestre', now);
+    expect(formatLine({ ...l, topicNames: [], peopleNames: [] })).toBe('Plan vence:2026-T4');
   });
   it('vence: con periodo y formatLine ida y vuelta', () => {
     expect(per('x vence:2026-Q4')).toEqual(['x', '2026-12-31', 'quarter']);

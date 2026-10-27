@@ -76,7 +76,7 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
   // vence:YYYY-MM-DD | DD/MM[/YYYY] | periodo: YYYY-Www, YYYY-MM, YYYY-Qn, YYYY
   let explicit: ISODate | null = null;
   let explicitPeriod: Period | null = null;
-  const VENCE = /(?<!\S)vence:(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/\d{4})?|\d{4}-W\d{2}|\d{4}-Q[1-4]|\d{4}-\d{2}|\d{4})(?![\p{L}\p{N}_-])/giu;
+  const VENCE = /(?<!\S)vence:(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/\d{4})?|\d{4}-W\d{2}|\d{4}-[QT][1-4]|\d{4}-\d{2}|\d{4})(?![\p{L}\p{N}_-])/giu;
   for (const m of w.matchAll(VENCE)) {
     const per = parsePeriodToken(m[1]);
     const due = per ? per.date : explicitDue(m[1], today);
