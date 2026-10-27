@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Lista</title>
+    <meta name="description" content="Lista de tareas minimalista: rápida, sin distracciones y disponible sin conexión." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0c0c" />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Lista" />
+
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/splash-1179x2556-light.png"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/splash-1179x2556-dark.png"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    />
+
+    <style>
+      html { background: #ffffff; }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) { background: #0c0c0c; }
+      }
+      html[data-theme="dark"] { background: #0c0c0c; }
+    </style>
+    <script>
+      try { var t = localStorage.getItem('lista.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
