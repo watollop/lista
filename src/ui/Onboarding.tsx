@@ -16,8 +16,12 @@ const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-
 
 const SLIDES = [
   { title: 'Escribe en una línea', text: 'Fecha, tema, persona y prioridad se detectan al escribir.', Demo: TypingDemo },
-  { title: 'Completa y filtra', text: 'Desliza a la derecha para completar. Toca un tema o una persona para ver solo eso.', Demo: SwipeDemo },
-  { title: 'En todos tus dispositivos', text: 'Funciona sin conexión. Entra con Google para tener la misma lista en el móvil y el ordenador.', Demo: DevicesDemo },
+  { title: 'Completa y filtra', text: 'Desliza a la derecha para completar. Toca un tema y verás solo sus tareas.', Demo: SwipeDemo },
+  {
+    title: 'Tus datos, contigo',
+    text: 'Todo se guarda en tu dispositivo y funciona sin conexión, sin cuenta. Si quieres, entra con Google para sincronizar móvil y ordenador: solo tú puedes ver tu lista.',
+    Demo: DevicesDemo,
+  },
 ];
 
 /** Bienvenida en tres pasos. Se muestra la primera vez y desde Ajustes → Cómo funciona. */
@@ -100,26 +104,30 @@ function TypingDemo() {
   );
 }
 
-/** Una tarea se desliza y queda hecha; luego se "toca" un chip. */
+/** Una tarea se desliza y queda hecha; al tocar #trabajo se pliegan las demás. */
 function SwipeDemo() {
+  const rows: Array<[string, string, string]> = [
+    ['a', 'Llamar a Ana', 'hoy'],
+    ['b', 'Enviar propuesta', '#trabajo'],
+    ['c', 'Comprar pan', '#casa'],
+    ['d', 'Preparar reunión', '#trabajo'],
+    ['e', 'Pedir cita médico', '#personal'],
+  ];
   return (
     <div class={`demo-list ${reduced() ? 'still' : ''}`}>
-      <div class="demo-row a">
-        <span class="demo-check"><i /></span>
-        <span class="demo-title">Llamar a Ana</span>
-        <span class="chip">hoy</span>
-      </div>
-      <div class="demo-row b">
-        <span class="demo-check"><i /></span>
-        <span class="demo-title">Enviar propuesta</span>
-        <span class="chip demo-tap">#trabajo</span>
-      </div>
+      {rows.map(([k, title, chip]) => (
+        <div key={k} class={`demo-row ${k} ${chip === '#trabajo' ? 'keep' : 'hide'}`}>
+          <span class="demo-check"><i /></span>
+          <span class="demo-title">{title}</span>
+          <span class={`chip ${k === 'b' ? 'demo-tap' : ''}`}>{chip}</span>
+        </div>
+      ))}
       <span class="demo-finger" />
     </div>
   );
 }
 
-/** Ordenador y móvil con la misma lista. */
+/** Primero solo el móvil (local, con candado); después el ordenador sincronizado. */
 function DevicesDemo() {
   const lines = (
     <>
@@ -130,12 +138,24 @@ function DevicesDemo() {
   );
   return (
     <div class={`demo-devices ${reduced() ? 'still' : ''}`}>
-      <div class="demo-laptop">{lines}</div>
-      <svg class="demo-sync" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none"
-        stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 9h14l-3-3M20 15H6l3 3" />
-      </svg>
-      <div class="demo-phone">{lines}</div>
+      <div class="demo-pair">
+        <div class="demo-phone">
+          <svg class="demo-lock" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" fill="none"
+            stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+            <rect x="2.5" y="5.5" width="7" height="5" rx="1" /><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" />
+          </svg>
+          {lines}
+        </div>
+        <svg class="demo-sync" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none"
+          stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 9h14l-3-3M20 15H6l3 3" />
+        </svg>
+        <div class="demo-laptop">{lines}</div>
+      </div>
+      <div class="demo-captions label">
+        <span class="local">Solo en este dispositivo</span>
+        <span class="synced">Sincronizado · solo tú lo ves</span>
+      </div>
     </div>
   );
 }

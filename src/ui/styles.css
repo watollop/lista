@@ -523,65 +523,79 @@ button.chip { min-height: 22px; }
 .demo-type .chip { animation: fade .2s ease; }
 @keyframes blink { 50% { opacity: 0; } }
 
-/* demo 2: deslizar y filtrar */
-.demo-list { width: 100%; position: relative; }
+/* demo 2: deslizar y filtrar (ciclo de 7 s) */
+.demo-list { width: 100%; height: 182px; position: relative; align-self: center; }
 .demo-row {
   display: flex; align-items: center; gap: 12px;
-  height: 48px; padding: 0 2px;
+  height: 36px; padding: 0 2px;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
+  font-size: 14px;
+  overflow: hidden;
 }
 .demo-row .chip { margin-left: auto; }
-.demo-check i { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--fg); border-radius: var(--radius); background: var(--bg); }
+.demo-check i { display: grid; place-items: center; width: 15px; height: 15px; border: 1px solid var(--fg); border-radius: var(--radius); background: var(--bg); }
 .demo-check i::after { content: ''; width: 4px; height: 8px; border: solid var(--bg); border-width: 0 1px 1px 0; transform: translateY(-1px) rotate(45deg); }
-.demo-row.a { animation: demo-slide 4.5s ease infinite; }
-.demo-row.a .demo-check i { animation: demo-fill 4.5s steps(1) infinite; }
-.demo-row.a .demo-title { animation: demo-strike 4.5s steps(1) infinite; }
-.demo-tap { animation: demo-on 4.5s steps(1) infinite; }
+.demo-row.a { animation: demo-slide 7s ease infinite, demo-hide 7s ease infinite; }
+.demo-row.hide:not(.a) { animation: demo-hide 7s ease infinite; }
+.demo-row.a .demo-check i { animation: demo-fill 7s steps(1) infinite; }
+.demo-row.a .demo-title { animation: demo-strike 7s steps(1) infinite; }
+.demo-tap { animation: demo-on 7s steps(1) infinite; }
 .demo-finger {
   position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;
   border-radius: 50%; background: color-mix(in srgb, var(--fg) 22%, transparent);
   border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
-  animation: demo-finger 4.5s ease infinite;
+  animation: demo-finger 7s ease infinite;
   pointer-events: none;
 }
-@keyframes demo-slide { 0%, 8% { transform: none; } 28% { transform: translateX(34%); } 36%, 100% { transform: none; } }
-@keyframes demo-fill { 0% { background: var(--bg); } 34% { background: var(--fg); } }
-@keyframes demo-strike { 0% { color: var(--fg); text-decoration: none; } 34% { color: var(--faint); text-decoration: line-through; } }
-@keyframes demo-on { 0% { background: var(--bg); color: var(--muted); } 58% { background: var(--fg); color: var(--bg); } }
+@keyframes demo-slide { 0%, 6% { transform: none; } 20% { transform: translateX(34%); } 25%, 100% { transform: none; } }
+@keyframes demo-fill { 0% { background: var(--bg); } 23% { background: var(--fg); } 96% { background: var(--bg); } }
+@keyframes demo-strike { 0% { color: var(--fg); text-decoration: none; } 23% { color: var(--faint); text-decoration: line-through; } 96% { color: var(--fg); text-decoration: none; } }
+@keyframes demo-on { 0% { background: var(--bg); color: var(--muted); } 42% { background: var(--fg); color: var(--bg); } 96% { background: var(--bg); color: var(--muted); } }
+@keyframes demo-hide {
+  0%, 44% { height: 36px; opacity: 1; border-bottom-width: 1px; }
+  54%, 90% { height: 0; opacity: 0; border-bottom-width: 0; }
+  98%, 100% { height: 36px; opacity: 1; border-bottom-width: 1px; }
+}
 @keyframes demo-finger {
-  0% { left: 22%; top: 24px; opacity: 0; }
-  8% { left: 22%; top: 24px; opacity: 1; }
-  28% { left: 56%; top: 24px; opacity: 1; }
-  34% { left: 56%; top: 24px; opacity: 0; }
-  48% { left: calc(100% - 38px); top: 72px; opacity: 0; transform: none; }
-  55% { left: calc(100% - 38px); top: 72px; opacity: 1; transform: scale(.75); }
-  62% { transform: none; }
-  88% { left: calc(100% - 38px); top: 72px; opacity: 1; }
-  100% { left: calc(100% - 38px); top: 72px; opacity: 0; }
+  0% { left: 22%; top: 18px; opacity: 0; }
+  6% { left: 22%; top: 18px; opacity: 1; }
+  20% { left: 56%; top: 18px; opacity: 1; }
+  24% { left: 56%; top: 18px; opacity: 0; }
+  34% { left: calc(100% - 38px); top: 54px; opacity: 0; transform: none; }
+  39% { left: calc(100% - 38px); top: 54px; opacity: 1; transform: scale(.75); }
+  44% { left: calc(100% - 38px); top: 54px; opacity: 1; transform: none; }
+  52%, 100% { left: calc(100% - 38px); top: 18px; opacity: 0; }
 }
 .demo-list.still * { animation: none !important; }
-.demo-list.still .demo-row.a .demo-check i { background: var(--fg); }
-.demo-list.still .demo-row.a .demo-title { color: var(--faint); text-decoration: line-through; }
+.demo-list.still .demo-row.hide { display: none; }
 .demo-list.still .demo-tap { background: var(--fg); color: var(--bg); }
 .demo-list.still .demo-finger { display: none; }
 
-/* demo 3: dispositivos */
-.demo-devices { display: flex; align-items: center; justify-content: center; gap: 22px; color: var(--fg); }
+/* demo 3: local primero, luego sincronizado (ciclo de 6 s) */
+.demo-devices { display: flex; flex-direction: column; align-items: center; gap: 18px; color: var(--fg); }
+.demo-pair { display: flex; align-items: center; gap: 22px; animation: demo-center 6s ease infinite; }
+/* En local solo se ve el móvil: se centra desplazando el par (sync 22 + portátil 160 + 2 huecos 22) / 2. */
+@keyframes demo-center { 0%, 40% { transform: translateX(113px); } 52%, 92% { transform: none; } 100% { transform: translateX(113px); } }
 .demo-laptop, .demo-phone {
+  position: relative;
   display: flex; flex-direction: column; gap: 9px; justify-content: center;
   border: 1.5px solid var(--fg); background: var(--bg);
 }
-.demo-laptop { width: 170px; height: 108px; padding: 0 16px; border-radius: 4px; box-shadow: 0 6px 0 -3px var(--fg); }
+.demo-laptop { width: 160px; height: 102px; padding: 0 16px; border-radius: 4px; box-shadow: 0 6px 0 -3px var(--fg); }
 .demo-phone { width: 62px; height: 112px; padding: 0 9px; border-radius: 11px; }
-.demo-line { display: flex; align-items: center; gap: 6px; animation: demo-appear 3s ease infinite; }
-.demo-line:nth-child(2) { animation-delay: .25s; }
-.demo-line:nth-child(3) { animation-delay: .5s; }
+.demo-lock { position: absolute; top: 8px; left: 50%; margin-left: -5.5px; }
+.demo-line { display: flex; align-items: center; gap: 6px; }
 .demo-line i { flex: none; width: 7px; height: 7px; border: 1px solid var(--fg); border-radius: 1px; }
 .demo-line b { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
 .demo-line em { display: flex; color: var(--warn); }
 .demo-phone .demo-line em { display: none; }
-.demo-sync { animation: demo-pulse 1.5s ease infinite; }
-@keyframes demo-appear { 0% { opacity: .3; } 20%, 100% { opacity: 1; } }
-@keyframes demo-pulse { 50% { opacity: .35; } }
+.demo-laptop, .demo-sync { animation: demo-sync-in 6s ease infinite; }
+.demo-lock { animation: demo-sync-out 6s ease infinite; }
+.demo-captions { position: relative; height: 1.4em; width: 100%; text-align: center; color: var(--muted); }
+.demo-captions span { position: absolute; inset: 0; }
+.demo-captions .local { animation: demo-sync-out 6s ease infinite; }
+.demo-captions .synced { animation: demo-sync-in 6s ease infinite; }
+@keyframes demo-sync-in { 0%, 40% { opacity: 0; } 52%, 92% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes demo-sync-out { 0%, 40% { opacity: 1; } 52%, 92% { opacity: 0; } 100% { opacity: 1; } }
 .demo-devices.still * { animation: none !important; }
+.demo-devices.still .demo-captions .local, .demo-devices.still .demo-lock { opacity: 0; }
