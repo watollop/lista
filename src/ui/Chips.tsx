@@ -1,5 +1,5 @@
 import type { Entity, ISODate, Priority, Recurrence } from '../types';
-import { formatDue, formatRecurrence } from '../parser';
+import { formatDue, formatRecurrence, inlineTags, normalizeKey } from '../parser';
 import { PRIORITY_LABEL, PriorityIcon } from './Priority';
 
 export type ChipTap = (type: 'topic' | 'person' | 'priority', key: string | Priority) => void;
@@ -14,10 +14,12 @@ interface Props {
   names: Map<string, Entity>; // clave -> entidad (temas y personas)
   today: ISODate;
   onTap?: ChipTap;
+  title?: string; // los #temas/@personas ya escritos en el título no se repiten como chip
 }
 
 /** Chips discretos de una tarea. Con onTap, tocar #tema/@persona/!prio filtra por él. */
-export function TaskChips({ due, done, priority, recurrence, topics, people, names, today, onTap }: Props) {
+export function TaskChips({ due, done, priority, recurrence, topics, people, names, today, onTap, title }: Props) {
+  const inline = new Set(title ? inlineTags(title).map((t) => t.sym + normalizeKey(t.name)) : []);
   const overdue = !done && due !== null && due < today;
   const tag = (cls: string, content: preact.ComponentChildren, tap?: () => void, label?: string) =>
     tap
@@ -29,8 +31,8 @@ export function TaskChips({ due, done, priority, recurrence, topics, people, nam
       {recurrence && tag('', formatRecurrence(recurrence))}
       {priority && tag(`prio ${priority === 1 ? 'warn' : ''}`, <PriorityIcon p={priority} />,
         onTap && (() => onTap('priority', priority)), `Prioridad ${PRIORITY_LABEL[priority].toLowerCase()}`)}
-      {topics.map((k) => tag('', `#${names.get('#' + k)?.name ?? k}`, onTap && (() => onTap('topic', k))))}
-      {people.map((k) => tag('', `@${names.get('@' + k)?.name ?? k}`, onTap && (() => onTap('person', k))))}
+      {topics.filter((k) => !inline.has('#' + k)).map((k) => tag('', `#${names.get('#' + k)?.name ?? k}`, onTap && (() => onTap('topic', k))))}
+      {people.filter((k) => !inline.has('@' + k)).map((k) => tag('', `@${names.get('@' + k)?.name ?? k}`, onTap && (() => onTap('person', k))))}
     </>
   );
 }

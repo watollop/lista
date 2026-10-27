@@ -265,6 +265,8 @@ button.chip { min-height: 22px; }
   overflow-wrap: anywhere;
   cursor: text;
 }
+.title .tag { color: var(--muted); cursor: pointer; }
+@media (hover: hover) { .title .tag:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; } }
 .title.p1 { font-weight: 500; }
 .meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .meta:empty { display: none; }
