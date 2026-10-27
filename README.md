@@ -72,7 +72,7 @@ Sin configuración adicional la app funciona en modo local, sin sincronización.
 ## Sincronización con Supabase (opcional)
 
 1. Crea un proyecto en [Supabase](https://supabase.com).
-2. En el **SQL Editor**, ejecuta [`supabase/schema.sql`](supabase/schema.sql). Crea la tabla `items`, las políticas RLS por usuario y un trigger *last-write-wins*.
+2. En el **SQL Editor**, ejecuta [`supabase/schema.sql`](supabase/schema.sql). Crea la tabla `items`, las políticas RLS por usuario, un trigger *last-write-wins* y la función `delete_account` (para que cada usuario pueda eliminar su cuenta desde Ajustes). Se puede volver a ejecutar sin problema.
 3. Copia `.env.example` a `.env` y rellena la *Project URL* y la clave pública (*anon* o *publishable*):
    ```
    VITE_SUPABASE_URL=https://<proyecto>.supabase.co
@@ -140,6 +140,10 @@ Los archivos `.env*`, salvo `.env.example`, están excluidos del control de vers
 - Los recursos con hash se sirven desde caché.
 - Una versión nueva se activa sola y borra las cachés anteriores. La recarga se aplica cuando la app pasa a segundo plano, nunca mientras escribes.
 - La app solicita almacenamiento persistente para que el sistema no borre los datos locales.
+
+### Eliminar datos
+
+**Ajustes → Eliminar datos** borra todo lo de este dispositivo. Con sesión iniciada, además borra los datos de la nube y la cuenta de Supabase. Pide confirmación y no se puede deshacer.
 
 ### Copias de seguridad
 

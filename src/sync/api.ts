@@ -117,3 +117,27 @@ export async function pullItems(
 
   return { items, cursor };
 }
+
+/**
+ * Elimina la cuenta: llama a la función delete_account (ver supabase/schema.sql), que borra las filas y el
+ * usuario. Si la función no existe en el proyecto (404), borra al menos las filas y devuelve account=false.
+ */
+export async function deleteRemoteAccount(
+  cfg: SyncConfig,
+  session: Session,
+  fetchImpl: typeof fetch,
+): Promise<{ account: boolean }> {
+  const rpc = await fetchImpl(`${cfg.url}/rest/v1/rpc/delete_account`, {
+    method: 'POST',
+    headers: authHeaders(cfg, session),
+    body: '{}',
+  });
+  if (rpc.ok) return { account: true };
+  if (rpc.status !== 404) throw await httpErrorFrom(rpc);
+  const del = await fetchImpl(`${cfg.url}/rest/v1/items?user_id=eq.${encodeURIComponent(session.userId)}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+  });
+  if (!del.ok) throw await httpErrorFrom(del);
+  return { account: false };
+}

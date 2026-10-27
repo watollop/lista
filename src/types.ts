@@ -159,6 +159,8 @@ export interface Repo {
   deleteEntity(kind: EntityKind, key: string): Promise<{ tasks: number; undo: () => Promise<void> }>;
 
   exportBackup(): Promise<Backup>;
+  /** Borra todos los datos locales (tareas, temas, personas, filtros y metadatos de sync). */
+  wipe(): Promise<void>;
   /** merge: LWW por updatedAt. replace: borra todo y carga. */
   importBackup(b: Backup, mode: 'merge' | 'replace'): Promise<void>;
 
@@ -193,6 +195,9 @@ export interface Sync {
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
+  /** Borra los datos de la nube y la cuenta (si la función existe en Supabase) y cierra la sesión.
+   *  remote: 'none' sin sesión; 'data' solo se borraron las tareas; 'account' tareas y cuenta. */
+  deleteAccount(): Promise<{ remote: 'none' | 'data' | 'account' }>;
   syncNow(): Promise<void>;
   start(): void; // engancha eventos (focus, online, visibilidad, intervalo, cambios del repo)
   stop(): void;

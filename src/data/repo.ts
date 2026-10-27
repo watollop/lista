@@ -452,6 +452,13 @@ export function createRepo(dbName = 'lista'): Repo {
       return result;
     },
 
+    async wipe() {
+      await db.transaction('rw', [...allTables, db.meta], async () => {
+        await Promise.all([...allTables, db.meta].map((t) => t.clear()));
+      });
+      notify();
+    },
+
     async exportBackup(): Promise<Backup> {
       const [tasks, topics, people, filters] = await db.transaction('r', allTables, async () =>
         Promise.all([db.tasks.toArray(), db.topics.toArray(), db.people.toArray(), db.filters.toArray()]),

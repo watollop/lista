@@ -55,3 +55,18 @@ drop trigger if exists items_lww on public.items;
 create trigger items_lww
   before insert or update on public.items
   for each row execute function public.items_lww();
+
+-- Eliminar la cuenta desde la app (Ajustes -> Eliminar datos): borra las filas del usuario que llama y
+-- su usuario de auth. security definer para poder tocar auth.users; solo actúa sobre auth.uid().
+create or replace function public.delete_account()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.items where user_id = auth.uid();
+  delete from auth.users where id = auth.uid();
+$$;
+
+revoke all on function public.delete_account() from public, anon;
+grant execute on function public.delete_account() to authenticated;

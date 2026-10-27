@@ -116,6 +116,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
             ))}
           </dl>
         </section>
+        <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
         <footer class="credit">
           <span>Código Do Norte <span class="heart" aria-label="con cariño">♥</span> Coruña</span>
           <a href="https://github.com/watollop/lista" target="_blank" rel="noopener noreferrer" aria-label="Código en GitHub" title="Código en GitHub">
@@ -227,6 +228,51 @@ function EntitiesSection({ topics, people, pending, onEdit }: {
       {topics.length || people.length
         ? <>{group('Temas', 'topic', topics)}{group('Personas', 'person', people)}</>
         : <p>Aún no hay temas ni personas. Aparecen al escribir #tema o @persona en una tarea.</p>}
+    </section>
+  );
+}
+
+/** Eliminar datos: en local borra este dispositivo; con sesión, también los datos de la nube y la cuenta. */
+function DangerSection({ repo, sync, state, toast }: { repo: Repo; sync: Sync; state: SyncState; toast: (m: string) => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const signedIn = state.status !== 'disabled' && state.status !== 'signedOut';
+  const run = async () => {
+    setBusy(true);
+    try {
+      const { remote } = await sync.deleteAccount();
+      await repo.wipe();
+      try {
+        for (const k of Object.keys(localStorage)) if (k.startsWith('lista.')) localStorage.removeItem(k);
+      } catch { /* modo privado */ }
+      if (remote === 'data') alert('Se han borrado tus datos de la nube, pero no la cuenta: falta la función delete_account en Supabase (ver supabase/schema.sql).');
+      location.reload();
+    } catch (e) {
+      setBusy(false);
+      toast(`No se pudo eliminar: ${(e as Error).message}`);
+    }
+  };
+  return (
+    <section>
+      <span class="label">Eliminar datos</span>
+      <p>
+        {signedIn
+          ? 'Borra todas tus tareas, temas y personas de este dispositivo y de la nube, y elimina tu cuenta. Los otros dispositivos dejarán de sincronizar.'
+          : 'Borra todas tus tareas, temas y personas de este dispositivo.'}
+      </p>
+      {!confirming ? (
+        <div class="row-btns"><button class="btn danger-btn" onClick={() => setConfirming(true)}>Eliminar datos</button></div>
+      ) : (
+        <>
+          <p class="err">No se puede deshacer. Si quieres conservarlos, exporta antes una copia.</p>
+          <div class="row-btns">
+            <button class="btn danger-btn solid" disabled={busy} onClick={run}>
+              {busy ? 'Eliminando…' : signedIn ? 'Sí, eliminar datos y cuenta' : 'Sí, eliminar todo'}
+            </button>
+            <button class="btn" disabled={busy} onClick={() => setConfirming(false)}>Cancelar</button>
+          </div>
+        </>
+      )}
     </section>
   );
 }

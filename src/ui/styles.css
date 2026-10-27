@@ -825,3 +825,8 @@ kbd {
 .ent-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ent-count { flex: none; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .ent-row.zero, .ent-row.zero .ent-count { color: var(--faint); }
+
+/* ---------- eliminar datos ---------- */
+.btn.danger-btn { color: var(--warn); border-color: var(--warn); }
+.btn.danger-btn.solid { background: var(--warn); color: var(--bg); }
+@media (hover: hover) { .btn.danger-btn:not(.solid):hover { background: var(--warn); color: var(--bg); } }
