@@ -35,6 +35,8 @@ export interface Task extends SyncRec {
   createdAt: number;
 }
 
+export type EntityKind = 'topic' | 'person';
+
 /** Tema (#) o persona (@). key = normalizeKey(name). */
 export interface Entity extends SyncRec {
   key: string;
@@ -147,6 +149,14 @@ export interface Repo {
 
   saveFilter(name: string, filter: Filter): Promise<SavedFilter>;
   deleteFilter(id: ID): Promise<void>;
+
+  /** Renombra un tema/persona. Si el nuevo nombre normaliza a otra clave que ya existe, FUSIONA: sus tareas y
+   *  filtros guardados pasan a esa clave y la antigua se borra (tombstone). Reescribe las etiquetas en el texto
+   *  de las tareas (#viejo -> #nuevo). Mismo key (solo cambia mayúsculas/tildes): actualiza el nombre visible. */
+  renameEntity(kind: EntityKind, key: string, newName: string): Promise<{ key: string; merged: boolean; tasks: number }>;
+  /** Borra un tema/persona: lo quita de sus tareas (en el texto queda la palabra sin #/@) y de los filtros
+   *  guardados. Las tareas NO se borran. Devuelve cuántas tareas cambió y una función para deshacerlo. */
+  deleteEntity(kind: EntityKind, key: string): Promise<{ tasks: number; undo: () => Promise<void> }>;
 
   exportBackup(): Promise<Backup>;
   /** merge: LWW por updatedAt. replace: borra todo y carga. */
