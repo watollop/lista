@@ -9,6 +9,9 @@
   --accent: #111111; /* selección, completadas: el propio negro */
   --on-accent: #ffffff;
   --warn: #b5432e; /* único color: vencidas y prioridad 1 */
+  --swipe-done: #dcefe0; /* fondo al deslizar: completar (verde pálido) */
+  --swipe-del: #f6dcd7; /* fondo al deslizar: borrar (rojo pálido) */
+  --swipe-done-fg: #2f6b3f;
   --font: 'Helvetica Neue', Helvetica, -apple-system, Inter, Arial, sans-serif;
   --radius: 2px;
   --gutter: 20px;
@@ -32,6 +35,9 @@
     --accent: #f2f2f2;
     --on-accent: #0c0c0c;
     --warn: #e0715c;
+    --swipe-done: #183022;
+    --swipe-del: #3a1c17;
+    --swipe-done-fg: #8fd0a2;
   }
 }
 :root[data-theme="dark"] {
@@ -44,6 +50,9 @@
   --accent: #f2f2f2;
   --on-accent: #0c0c0c;
   --warn: #e0715c;
+  --swipe-done: #183022;
+  --swipe-del: #3a1c17;
+  --swipe-done-fg: #8fd0a2;
   color-scheme: dark;
 }
 :root[data-theme="light"] { color-scheme: light; }
@@ -217,24 +226,28 @@ button.chip { min-height: 22px; }
 }
 .row.sub { padding-left: 34px; }
 /* Deslizar a la derecha para completar: el contenido se desplaza y descubre la etiqueta. */
-.row { position: relative; touch-action: pan-y; }
+.row { position: relative; touch-action: pan-y; isolation: isolate; }
 .row > .check, .row > .body { transform: translateX(var(--dx, 0px)); transition: transform .2s ease; }
 .row.swiping > .check, .row.swiping > .body { transition: none; }
+.row::before, .row::after {
+  /* Fondo de la fila al deslizar: más intenso cuanto más se estira (máximo en el umbral). Detrás del contenido. */
+  position: absolute; inset: 0; z-index: -1;
+  display: flex; align-items: center;
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 0 var(--gutter);
+}
 .row::before {
   content: attr(data-swipe);
-  position: absolute;
-  left: 0; top: 50%;
-  transform: translateY(-50%);
+  background: var(--swipe-done);
+  color: var(--swipe-done-fg);
   font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--fg);
   opacity: var(--swipe, 0);
   pointer-events: none;
 }
 .row::after {
   content: attr(data-swipe-left);
-  position: absolute;
-  right: 0; top: 50%;
-  transform: translateY(-50%);
+  justify-content: flex-end;
+  background: var(--swipe-del);
   font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--warn);
   opacity: var(--swipe-l, 0);
