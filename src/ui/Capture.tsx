@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'preact/hooks';
 import type { Entity, ISODate, ParsedLine } from '../types';
 import { activeToken, normalizeKey, parseBlock, parseLine } from '../parser';
 import { TaskChips } from './Chips';
+import { Dictation, canDictate } from './Dictation';
 
 interface Props {
   topics: Entity[];
@@ -18,6 +19,10 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const [caret, setCaret] = useState(0);
   const [sel, setSel] = useState(0);
   const composing = useRef(false);
+  const [dictating, setDictating] = useState(false);
+  const [mic] = useState(canDictate);
+  // Con el micrófono al lado, en móvil el ejemplo completo no cabe.
+  const compact = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 480px)').matches;
 
   const parsed = useMemo(() => (value.trim() ? parseLine(value) : null), [value, today]);
   const active = useMemo(() => activeToken(value, caret), [value, caret]);
@@ -92,10 +97,11 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
             ))}
           </ul>
         )}
+        <div class="capture-row">
         <input
           ref={inputRef}
           value={value}
-          placeholder={narrow ? 'Nueva tarea… #tema @persona' : 'Nueva tarea… #tema @persona mañana !alta'}
+          placeholder={narrow ? 'Nueva tarea… #tema @persona' : mic && compact ? 'Nueva tarea… #tema @persona mañana' : 'Nueva tarea… #tema @persona mañana !alta'}
           aria-label="Nueva tarea"
           autocomplete="off"
           enterkeyhint="enter" // la tecla azul dice "intro": no se confunde con el ✓ de iOS, que solo cierra el teclado
@@ -107,6 +113,15 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           onCompositionStart={() => (composing.current = true)}
           onCompositionEnd={() => (composing.current = false)}
         />
+        {mic && (
+          <button class="mic" aria-label="Dictar tareas" title="Dictar tareas" onClick={() => setDictating(true)}>
+            <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
+              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5" /><path d="M3 7.5a5 5 0 0 0 10 0M8 12.5v2" />
+            </svg>
+          </button>
+        )}
+        </div>
         <div class="preview">
           {parsed && parsed.tokens.length > 0 && (
             <TaskChips
@@ -122,6 +137,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           )}
         </div>
       </div>
+      {dictating && <Dictation names={names} today={today} onAdd={onAdd} onClose={() => setDictating(false)} />}
     </div>
   );
 }
