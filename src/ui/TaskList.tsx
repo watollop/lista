@@ -102,7 +102,7 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
   Props & { task: Task; sub?: boolean }) {
   const isEditing = editing === task.id;
   const ref = useRef<HTMLLIElement>(null);
-  const swipe = useSwipeRight(() => onToggle(task.id), !isEditing);
+  const swipe = useSwipe(() => onToggle(task.id), () => onDelete(task.id), !isEditing);
   useEffect(() => {
     if (selected === task.id) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
@@ -113,6 +113,7 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
       class={`row ${sub ? 'sub' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''}`}
       data-id={task.id}
       data-swipe={task.done ? 'Pendiente' : 'Hecha'}
+      data-swipe-left="Borrar"
       style={swipe.style}
       {...swipe.handlers}
     >
@@ -135,14 +136,22 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
           </>
         )}
       </div>
+      {!isEditing && (
+        <button class="trash" aria-label="Borrar tarea" title="Borrar" onClick={() => onDelete(task.id)}>
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
+            stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 4.5h11M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4 4.5l.7 8.6a1 1 0 0 0 1 .9h4.6a1 1 0 0 0 1-.9l.7-8.6M6.7 7v4.5M9.3 7v4.5" />
+          </svg>
+        </button>
+      )}
     </li>
   );
 }
 
 const SWIPE_MIN = 72; // px; o un tercio del ancho de la fila si es mayor
 
-/** Deslizar a la derecha (táctil) completa la tarea. El scroll vertical sigue siendo del navegador (touch-action: pan-y). */
-function useSwipeRight(onSwipe: () => void, enabled: boolean) {
+/** Táctil: deslizar a la derecha completa y a la izquierda borra. El scroll vertical sigue siendo del navegador (touch-action: pan-y). */
+function useSwipe(onRight: () => void, onLeft: () => void, enabled: boolean) {
   const start = useRef<{ x: number; y: number } | null>(null);
   const moved = useRef(false);
   const [dx, setDx] = useState(0);
@@ -161,15 +170,17 @@ function useSwipeRight(onSwipe: () => void, enabled: boolean) {
       const y = e.clientY - s.y;
       if (!moved.current) {
         if (Math.abs(y) > 10 && Math.abs(y) > Math.abs(x)) { reset(); return; }
-        if (x < 10) return;
+        if (Math.abs(x) < 10) return;
         moved.current = true;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       }
-      setDx(Math.max(0, x));
+      setDx(x);
     },
     onPointerUp: (e: PointerEvent) => {
       const width = (e.currentTarget as HTMLElement).offsetWidth;
-      if (moved.current && dx > Math.max(SWIPE_MIN, width / 3)) onSwipe();
+      const min = Math.max(SWIPE_MIN, width / 3);
+      if (moved.current && dx > min) onRight();
+      else if (moved.current && dx < -min) onLeft();
       reset();
     },
     onPointerCancel: reset,
@@ -178,8 +189,10 @@ function useSwipeRight(onSwipe: () => void, enabled: boolean) {
       if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false; }
     },
   };
-  const style = dx ? { '--dx': `${dx}px`, '--swipe': Math.min(1, dx / SWIPE_MIN) } : undefined;
-  return { handlers, style, active: dx > 0 };
+  const style = dx
+    ? { '--dx': `${dx}px`, '--swipe': Math.min(1, Math.max(0, dx) / SWIPE_MIN), '--swipe-l': Math.min(1, Math.max(0, -dx) / SWIPE_MIN) }
+    : undefined;
+  return { handlers, style, active: dx !== 0 };
 }
 
 /** Título con los #temas y @personas resaltados; tocarlos filtra (sin abrir el editor). */
