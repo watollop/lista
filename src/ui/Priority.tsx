@@ -18,3 +18,15 @@ export function PriorityIcon({ p }: { p: Priority }) {
 export function PriorityName({ p }: { p: Priority }) {
   return <><PriorityIcon p={p} /> {PRIORITY_LABEL[p]}</>;
 }
+
+/** Reloj con flecha de vuelta: tarea recurrente. */
+export function RepeatIcon() {
+  return (
+    <svg class="prio-icon" viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
+      fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.1 6.4A3.9 3.9 0 1 0 3.3 3.2" />
+      <path d="M3.4 1.2v2.1H1.3" />
+      <path d="M6 3.8V6.2l1.6 1" />
+    </svg>
+  );
+}
