@@ -2,7 +2,7 @@
 import type { RemoteItem, Repo, Sync, SyncState } from '../types';
 import * as auth from './auth';
 import type { Session, SessionStorage, SyncConfig } from './auth';
-import { HttpError, pullItems, pushItems } from './api';
+import { HttpError, deleteRemoteAccount, pullItems, pushItems } from './api';
 
 export type { SyncConfig } from './auth';
 
@@ -291,6 +291,24 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     await repo.setMeta(CURSOR_KEY, null);
   }
 
+  async function deleteAccount(): Promise<{ remote: 'none' | 'data' | 'account' }> {
+    const c = cfg;
+    const s = session;
+    if (!c || !s) return { remote: 'none' };
+    let res: { account: boolean };
+    try {
+      res = await deleteRemoteAccount(c, s, fetchImpl);
+    } catch (e) {
+      throw friendly(e);
+    }
+    // La cuenta ya no existe: se cierra la sesión solo en local.
+    epoch++;
+    session = null;
+    auth.clearSession(storage);
+    setState({ status: 'signedOut' });
+    return { remote: res.account ? 'account' : 'data' };
+  }
+
   // ---------- disparadores ----------
 
   let started = false;
@@ -375,6 +393,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     signIn,
     signUp,
     signOut,
+    deleteAccount,
     syncNow,
     start,
     stop,

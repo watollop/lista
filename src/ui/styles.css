@@ -826,6 +826,11 @@ kbd {
 .ent-count { flex: none; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .ent-row.zero, .ent-row.zero .ent-count { color: var(--faint); }
 
+/* ---------- eliminar datos ---------- */
+.btn.danger-btn { color: var(--warn); border-color: var(--warn); }
+.btn.danger-btn.solid { background: var(--warn); color: var(--bg); }
+@media (hover: hover) { .btn.danger-btn:not(.solid):hover { background: var(--warn); color: var(--bg); } }
+
 /* ---------- listas largas de temas y personas ---------- */
 .side-more { color: var(--faint); font-size: 13px; }
 .side-filter { font-size: 13px; padding: 4px 0; margin: 2px 0 6px; }
