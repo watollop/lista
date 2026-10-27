@@ -4,6 +4,8 @@ import { emptyFilter, isEmptyFilter, toggleIn } from '../filters';
 import { sameFilter } from './FilterBar';
 import { PriorityName } from './Priority';
 import { EntityEditor } from './EntityEditor';
+import { SEARCH_FROM, byUse } from './byUse';
+import { fold } from '../lib/text';
 
 interface Props {
   filter: Filter;
@@ -67,23 +69,15 @@ export function Sidebar(p: Props) {
       </Group>
 
       {p.topics.length > 0 && (
-        <Group title="Temas">
-          {p.topics.map((t) => (
-            <EntityItem key={t.key} kind="topic" ent={t} all={p.allTopics} pending={p.pending}
-              on={f.topics.includes(t.key)} onToggle={() => set({ topics: toggleIn(f.topics, t.key) })}
-              onRename={p.onRename} onDelete={p.onDelete} />
-          ))}
-        </Group>
+        <EntityGroup title="Temas" kind="topic" items={p.topics} all={p.allTopics} pending={p.pending}
+          selected={f.topics} onToggle={(k) => set({ topics: toggleIn(f.topics, k) })}
+          onRename={p.onRename} onDelete={p.onDelete} />
       )}
 
       {p.people.length > 0 && (
-        <Group title="Personas">
-          {p.people.map((t) => (
-            <EntityItem key={t.key} kind="person" ent={t} all={p.allPeople} pending={p.pending}
-              on={f.people.includes(t.key)} onToggle={() => set({ people: toggleIn(f.people, t.key) })}
-              onRename={p.onRename} onDelete={p.onDelete} />
-          ))}
-        </Group>
+        <EntityGroup title="Personas" kind="person" items={p.people} all={p.allPeople} pending={p.pending}
+          selected={f.people} onToggle={(k) => set({ people: toggleIn(f.people, k) })}
+          onRename={p.onRename} onDelete={p.onDelete} />
       )}
 
       {(p.saved.length > 0 || (!isEmptyFilter(f) && !current)) && (
@@ -120,6 +114,54 @@ function Group({ title, children }: { title: string; children: preact.ComponentC
       <h3 class="label">{title}</h3>
       <ul class="side-list">{children}</ul>
     </section>
+  );
+}
+
+const TOP = 5; // plegado: los seleccionados y los TOP más usados
+
+/** Temas o personas: plegado muestra los seleccionados y los más usados; «Ver todos» despliega la lista con búsqueda. */
+function EntityGroup({ title, kind, items, all, pending, selected, onToggle, onRename, onDelete }: {
+  title: string; kind: EntityKind; items: Entity[]; all: Entity[]; pending: Map<string, number>; selected: string[];
+  onToggle: (key: string) => void; onRename: (kind: EntityKind, key: string, name: string) => void;
+  onDelete: (kind: EntityKind, key: string) => void;
+}) {
+  const store = `lista.side.${kind}`;
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem(store) === '1'; } catch { return false; } });
+  const [q, setQ] = useState('');
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    setQ('');
+    try { localStorage.setItem(store, next ? '1' : '0'); } catch { /* modo privado */ }
+  };
+  const sorted = byUse(items, kind === 'topic' ? '#' : '@', pending);
+  const shown = open
+    ? sorted.filter((e) => !q || fold(e.name).includes(fold(q)))
+    : [...sorted.filter((e) => selected.includes(e.key)), ...sorted.filter((e) => !selected.includes(e.key)).slice(0, TOP)];
+  const foldable = items.length > TOP;
+
+  return (
+    <Group title={title}>
+      {open && items.length > SEARCH_FROM && (
+        <li>
+          <input class="side-search side-filter" type="search" placeholder={`Buscar ${title.toLowerCase()}`} value={q}
+            aria-label={`Buscar ${title.toLowerCase()}`} onInput={(e) => setQ(e.currentTarget.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setQ(''); e.currentTarget.blur(); } }} />
+        </li>
+      )}
+      {shown.map((t) => (
+        <EntityItem key={t.key} kind={kind} ent={t} all={all} pending={pending} on={selected.includes(t.key)}
+          onToggle={() => onToggle(t.key)} onRename={onRename} onDelete={onDelete} />
+      ))}
+      {open && q && !shown.length && <li class="side-empty">Sin resultados</li>}
+      {foldable && (
+        <li>
+          <button class="side-item side-more" aria-expanded={open} onClick={toggle}>
+            {open ? 'Ver menos' : `Ver todos (${items.length})`}
+          </button>
+        </li>
+      )}
+    </Group>
   );
 }
 
