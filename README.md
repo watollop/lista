@@ -97,7 +97,7 @@ En la app, ve a **Ajustes → Continuar con Google**. La sesión se renueva auto
 
 ## Despliegue
 
-El proyecto se despliega en **Cloudflare Pages**, que permite definir las cabeceras de caché ([`public/_headers`](public/_headers)) necesarias para el service worker.
+El proyecto se despliega en **Cloudflare Pages**, que permite definir cabeceras propias ([`public/_headers`](public/_headers)): caché del service worker y cabeceras de seguridad. La *Content-Security-Policy* se completa en cada build con los hashes del script y el estilo en línea de `index.html` ([`scripts/csp-plugin.ts`](scripts/csp-plugin.ts)).
 
 ### GitHub Actions
 
