@@ -90,34 +90,35 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
             onSave={(name) => { setEditing(null); onRename(editing.kind, editing.key, name); }}
             onDelete={() => { setEditing(null); onDelete(editing.kind, editing.key); }} />
         )}
-        <BackupSection repo={repo} toast={toast} />
         <section>
           <span class="label">Ayuda</span>
-          <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
+          <p>Repasa cómo funciona o consulta todo lo que puedes escribir.</p>
+          <div class="row-btns"><button class="btn" onClick={onIntro}>Ver el tutorial</button></div>
+          <div class="help-folds">
+            <Fold title="Sintaxis completa">
+              <SyntaxExample />
+              <dl class="syn">
+                {SYNTAX.map(([name, hint, examples]) => (
+                  <div key={name}>
+                    <dt>{name}{hint && <small>{hint}</small>}</dt>
+                    <dd>{examples.map((e) => <code key={e} class="chip">{e}</code>)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Fold>
+            <Fold title="Atajos de teclado" class="kbd-only">
+              <dl class="keys">
+                {KEYS.map(([keys, what]) => (
+                  <div key={what}>
+                    <dt>{keys.map((k) => <kbd key={k}>{k}</kbd>)}</dt>
+                    <dd>{what}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Fold>
+          </div>
         </section>
-        <section>
-          <span class="label">Sintaxis</span>
-          <SyntaxExample />
-          <dl class="syn">
-            {SYNTAX.map(([name, hint, examples]) => (
-              <div key={name}>
-                <dt>{name}{hint && <small>{hint}</small>}</dt>
-                <dd>{examples.map((e) => <code key={e} class="chip">{e}</code>)}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-        <section class="kbd-only">
-          <span class="label">Teclado</span>
-          <dl class="keys">
-            {KEYS.map(([keys, what]) => (
-              <div key={what}>
-                <dt>{keys.map((k) => <kbd key={k}>{k}</kbd>)}</dt>
-                <dd>{what}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
+        <BackupSection repo={repo} toast={toast} />
         <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
         <footer class="credit">
           <span>Código Do Norte <span class="heart" aria-label="con cariño">♥</span> Coruña</span>
@@ -249,6 +250,20 @@ function EntitiesSection({ topics, people, pending, onEdit }: {
         ? <>{group('Temas', 'topic', topics)}{group('Personas', 'person', people)}</>
         : <p>Aún no hay temas ni personas. Aparecen al escribir #tema o @persona en una tarea.</p>}
     </section>
+  );
+}
+
+/** Bloque plegable de Ajustes (cerrado al abrir). */
+function Fold({ title, class: cls, children }: { title: string; class?: string; children: preact.ComponentChildren }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div class={`fold ${cls ?? ''}`}>
+      <button class={`ent-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>{title}</span>
+        <span class="ent-head-count"><span class="caret" aria-hidden="true" /></span>
+      </button>
+      {open && <div class="fold-body">{children}</div>}
+    </div>
   );
 }
 
