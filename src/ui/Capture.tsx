@@ -92,7 +92,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
         <input
           ref={inputRef}
           value={value}
-          placeholder="Nueva tarea…  #tema @persona mañana !1"
+          placeholder="Nueva tarea… #tema @persona mañana !alta"
           aria-label="Nueva tarea"
           autocomplete="off"
           enterkeyhint="enter" // la tecla azul dice "intro": no se confunde con el ✓ de iOS, que solo cierra el teclado
