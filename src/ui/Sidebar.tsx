@@ -1,20 +1,25 @@
-import { useMemo, useState } from 'preact/hooks';
-import type { DateFilter, Entity, Filter, ID, Priority, SavedFilter, Task } from '../types';
+import { useState } from 'preact/hooks';
+import type { DateFilter, Entity, EntityKind, Filter, ID, Priority, SavedFilter } from '../types';
 import { emptyFilter, isEmptyFilter, toggleIn } from '../filters';
 import { sameFilter } from './FilterBar';
 import { PriorityName } from './Priority';
+import { EntityEditor } from './EntityEditor';
 
 interface Props {
   filter: Filter;
   setFilter: (f: Filter) => void;
-  tasks: Task[];
   saved: SavedFilter[];
-  topics: Entity[];
+  topics: Entity[]; // solo los que tienen pendientes o están en el filtro
   people: Entity[];
+  allTopics: Entity[]; // todos: para detectar fusiones al editar
+  allPeople: Entity[];
+  pending: Map<string, number>; // '#clave' | '@clave' | '!prioridad' -> pendientes
   counts: Record<DateFilter | 'open', number>;
   searchRef: { current: HTMLInputElement | null };
   onSave: (name: string) => void;
   onDeleteSaved: (id: ID) => void;
+  onRename: (kind: EntityKind, key: string, name: string) => void;
+  onDelete: (kind: EntityKind, key: string) => void;
 }
 
 const DATES: Array<[DateFilter, string]> = [
@@ -29,19 +34,6 @@ export function Sidebar(p: Props) {
   const current = p.saved.find((s) => sameFilter(f, s.filter));
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('');
-
-  // Pendientes por tema, persona y prioridad.
-  const tally = useMemo(() => {
-    const m = new Map<string, number>();
-    const inc = (k: string) => m.set(k, (m.get(k) ?? 0) + 1);
-    for (const t of p.tasks) {
-      if (t.deleted || t.done) continue;
-      t.topics.forEach((k) => inc('#' + k));
-      t.people.forEach((k) => inc('@' + k));
-      if (t.priority) inc('!' + t.priority);
-    }
-    return m;
-  }, [p.tasks]);
 
   const save = () => {
     if (name.trim()) p.onSave(name.trim());
@@ -69,7 +61,7 @@ export function Sidebar(p: Props) {
 
       <Group title="Prioridad">
         {([1, 2, 3] as Priority[]).map((n) => (
-          <Item key={n} on={f.priorities.includes(n)} count={tally.get('!' + n)}
+          <Item key={n} on={f.priorities.includes(n)} count={p.pending.get('!' + n)}
             onClick={() => set({ priorities: toggleIn(f.priorities, n) })}><PriorityName p={n} /></Item>
         ))}
       </Group>
@@ -77,8 +69,9 @@ export function Sidebar(p: Props) {
       {p.topics.length > 0 && (
         <Group title="Temas">
           {p.topics.map((t) => (
-            <Item key={t.key} on={f.topics.includes(t.key)} count={tally.get('#' + t.key)}
-              onClick={() => set({ topics: toggleIn(f.topics, t.key) })}>#{t.name}</Item>
+            <EntityItem key={t.key} kind="topic" ent={t} all={p.allTopics} pending={p.pending}
+              on={f.topics.includes(t.key)} onToggle={() => set({ topics: toggleIn(f.topics, t.key) })}
+              onRename={p.onRename} onDelete={p.onDelete} />
           ))}
         </Group>
       )}
@@ -86,8 +79,9 @@ export function Sidebar(p: Props) {
       {p.people.length > 0 && (
         <Group title="Personas">
           {p.people.map((t) => (
-            <Item key={t.key} on={f.people.includes(t.key)} count={tally.get('@' + t.key)}
-              onClick={() => set({ people: toggleIn(f.people, t.key) })}>@{t.name}</Item>
+            <EntityItem key={t.key} kind="person" ent={t} all={p.allPeople} pending={p.pending}
+              on={f.people.includes(t.key)} onToggle={() => set({ people: toggleIn(f.people, t.key) })}
+              onRename={p.onRename} onDelete={p.onDelete} />
           ))}
         </Group>
       )}
@@ -126,6 +120,51 @@ function Group({ title, children }: { title: string; children: preact.ComponentC
       <h3 class="label">{title}</h3>
       <ul class="side-list">{children}</ul>
     </section>
+  );
+}
+
+/** Tema o persona en la barra: al pasar el ratón, lápiz (editar) y papelera (borrar). Doble clic en el nombre también edita. */
+function EntityItem({ kind, ent, all, pending, on, onToggle, onRename, onDelete }: {
+  kind: EntityKind; ent: Entity; all: Entity[]; pending: Map<string, number>; on: boolean;
+  onToggle: () => void;
+  onRename: (kind: EntityKind, key: string, name: string) => void;
+  onDelete: (kind: EntityKind, key: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const sym = kind === 'topic' ? '#' : '@';
+  const count = pending.get(sym + ent.key);
+
+  if (editing) {
+    return (
+      <li class="side-ent">
+        <EntityEditor kind={kind} entity={ent} entities={all} pending={pending} variant="inline"
+          onSave={(n) => { setEditing(false); onRename(kind, ent.key, n); }}
+          onCancel={() => setEditing(false)} />
+      </li>
+    );
+  }
+
+  return (
+    <li class="side-ent">
+      {/* detail > 1: el segundo clic del doble clic no vuelve a filtrar; el doble clic abre la edición. */}
+      <button class={`side-item ${on ? 'on' : ''}`} aria-pressed={on}
+        onClick={(e) => { if (e.detail < 2) onToggle(); }} onDblClick={() => setEditing(true)}>
+        <span>{sym}{ent.name}</span>
+        {count ? <span class="side-count">{count}</span> : null}
+      </button>
+      <span class="side-acts">
+        <button class="side-act" aria-label={`Editar ${sym}${ent.name}`} title="Editar" onClick={() => setEditing(true)}>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+            <path d="M3 13l.6-2.6 7.4-7.4 2 2-7.4 7.4z" /><path d="M9.5 4.5l2 2" />
+          </svg>
+        </button>
+        <button class="side-act del" aria-label={`Borrar ${sym}${ent.name}`} title="Borrar" onClick={() => onDelete(kind, ent.key)}>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+            <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" />
+          </svg>
+        </button>
+      </span>
+    </li>
   );
 }
 

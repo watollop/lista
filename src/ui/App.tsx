@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { DateFilter, Entity, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../types';
+import type { DateFilter, Entity, EntityKind, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../types';
 import { applyFilter, counts, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
 import { formatDue } from '../parser';
 import { toISODate } from '../lib/date';
@@ -9,6 +9,7 @@ import { FilterBar } from './FilterBar';
 import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
 import type { ChipTap } from './Chips';
+import { EntityEditor } from './EntityEditor';
 import { Settings } from './Settings';
 import { INTRO_KEY, Onboarding } from './Onboarding';
 
@@ -31,6 +32,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const [panel, setPanel] = useState(false);
   const [selected, setSelected] = useState<ID | null>(null);
   const [editing, setEditing] = useState<ID | null>(null);
+  const [sheetEnt, setSheetEnt] = useState<{ kind: EntityKind; key: string } | null>(null); // editor de tema/persona en móvil
   const [settings, setSettings] = useState(false);
   const [intro, setIntro] = useState(() => { try { return !localStorage.getItem(INTRO_KEY); } catch { return false; } });
   const [googleOk, setGoogleOk] = useState(false);
@@ -62,6 +64,25 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     data.people.forEach((e) => m.set('@' + e.key, e));
     return m;
   }, [data.topics, data.people]);
+
+  // Tareas pendientes por etiqueta ('#clave', '@clave', '!prioridad').
+  const pending = useMemo(() => {
+    const m = new Map<string, number>();
+    const inc = (k: string) => m.set(k, (m.get(k) ?? 0) + 1);
+    for (const t of data.tasks) {
+      if (t.deleted || t.done) continue;
+      t.topics.forEach((k) => inc('#' + k));
+      t.people.forEach((k) => inc('@' + k));
+      if (t.priority) inc('!' + t.priority);
+    }
+    return m;
+  }, [data.tasks]);
+
+  // Lo que se muestra en filtros y captura: solo con pendientes, o los que el filtro activo usa (para no perderlos).
+  const shownTopics = useMemo(() => data.topics.filter((e) => pending.has('#' + e.key) || filter.topics.includes(e.key)),
+    [data.topics, pending, filter.topics]);
+  const shownPeople = useMemo(() => data.people.filter((e) => pending.has('@' + e.key) || filter.people.includes(e.key)),
+    [data.people, pending, filter.people]);
 
   // Completadas hoy: siguen visibles (tachadas, en su sitio) hasta que cambia el día.
   const doneToday = useMemo(() => new Set(data.tasks
@@ -135,6 +156,48 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     if (type === 'date') setFilter({ ...filter, dates: toggleIn(filter.dates, key as DateFilter) });
   };
 
+  // ---------- temas y personas ----------
+  const sigil = (kind: EntityKind) => (kind === 'topic' ? '#' : '@');
+  const listOf = (kind: EntityKind) => (kind === 'topic' ? data.topics : data.people);
+  // Aplica fn a las claves del filtro de ese tipo (solo si la entidad está en él).
+  const patchEntityKeys = (kind: EntityKind, key: string, fn: (keys: string[]) => string[]) => {
+    const inFilter = kind === 'topic' ? filter.topics : filter.people;
+    if (!inFilter.includes(key)) return;
+    setFilter(kind === 'topic' ? { ...filter, topics: fn(filter.topics) } : { ...filter, people: fn(filter.people) });
+  };
+
+  const renameEntity = async (kind: EntityKind, key: string, newName: string) => {
+    try {
+      const r = await repo.renameEntity(kind, key, newName);
+      if (r.key !== key) patchEntityKeys(kind, key, (keys) => [...new Set(keys.map((k) => (k === key ? r.key : k)))]);
+      if (r.merged) {
+        const target = listOf(kind).find((e) => e.key === r.key);
+        showToast(`Unido con ${sigil(kind)}${target?.name ?? newName}`);
+      } else {
+        showToast(`Renombrado a ${sigil(kind)}${newName}`);
+      }
+    } catch (e) {
+      showToast((e as Error).message || 'No se pudo renombrar');
+    }
+  };
+
+  const deleteEntity = async (kind: EntityKind, key: string) => {
+    const name = listOf(kind).find((e) => e.key === key)?.name ?? key;
+    try {
+      const { undo } = await repo.deleteEntity(kind, key);
+      patchEntityKeys(kind, key, (keys) => keys.filter((k) => k !== key));
+      showToast({
+        msg: `${sigil(kind)}${name} borrado`,
+        action: {
+          label: 'Deshacer',
+          run: () => { undo().catch((e: Error) => showToast(e.message || 'No se pudo deshacer')); },
+        },
+      });
+    } catch (e) {
+      showToast((e as Error).message || 'No se pudo borrar');
+    }
+  };
+
   const saveFilter = async (name: string) => {
     await repo.saveFilter(name, filter);
     setPanel(false);
@@ -202,23 +265,25 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         </div>
         {!wide && (
           <FilterBar
-            filter={filter} setFilter={setFilter} saved={data.filters} topics={data.topics} people={data.people}
-            names={names} counts={tally} open={panel} setOpen={setPanel} searchRef={searchRef}
+            filter={filter} setFilter={setFilter} saved={data.filters} topics={shownTopics} people={shownPeople}
+            names={names} pending={pending} counts={tally} open={panel} setOpen={setPanel} searchRef={searchRef}
             onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
+            onEditEntity={(kind, key) => setSheetEnt({ kind, key })} onDeleteEntity={deleteEntity}
           />
         )}
       </header>
 
       {wide && (
         <Sidebar
-          filter={filter} setFilter={setFilter} tasks={data.tasks} saved={data.filters} topics={data.topics}
-          people={data.people} counts={tally} searchRef={searchRef}
-          onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
+          filter={filter} setFilter={setFilter} saved={data.filters} topics={shownTopics}
+          people={shownPeople} allTopics={data.topics} allPeople={data.people} pending={pending}
+          counts={tally} searchRef={searchRef} onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
+          onRename={renameEntity} onDelete={deleteEntity}
         />
       )}
 
       <Capture
-        topics={data.topics} people={data.people} names={names} today={today} kbOpen={kbOpen}
+        topics={shownTopics} people={shownPeople} names={names} today={today} kbOpen={kbOpen}
         inputRef={captureRef} onAdd={add}
       />
 
@@ -249,8 +314,21 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         </div>
       )}
 
+      {sheetEnt && !settings && (() => {
+        const ent = listOf(sheetEnt.kind).find((e) => e.key === sheetEnt.key);
+        if (!ent) return null;
+        return (
+          <EntityEditor kind={sheetEnt.kind} entity={ent} entities={listOf(sheetEnt.kind)} pending={pending}
+            variant="sheet" onCancel={() => setSheetEnt(null)}
+            onSave={(name) => { setSheetEnt(null); renameEntity(sheetEnt.kind, sheetEnt.key, name); }}
+            onDelete={() => { setSheetEnt(null); deleteEntity(sheetEnt.kind, sheetEnt.key); }} />
+        );
+      })()}
+
       {settings && (
         <Settings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
+          topics={data.topics} people={data.people} pending={pending}
+          onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro(true); }} />
       )}
       {intro && (
