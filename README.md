@@ -16,6 +16,7 @@ Revisar informe @ana #marketing mañana !1 cada lunes
 - **Gestos y teclado**: desliza a la derecha para completar en móvil; atajos tipo Vim en escritorio.
 - **Offline y sincronización**: IndexedDB en local y sincronización en segundo plano con Supabase, con acceso mediante Google.
 - **Instalable** en iOS, Android y escritorio, con tema claro, oscuro o el del sistema.
+- **Bienvenida** de tres pasos la primera vez (también en *Ajustes → Cómo funciona*).
 - **Ligera**: unos 70 KB comprimidos en total y sin dependencias de UI pesadas.
 
 ## Sintaxis
