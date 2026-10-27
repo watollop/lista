@@ -3,9 +3,10 @@ import type { Entity, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../ty
 import { applyFilter, counts, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
 import { formatDue } from '../parser';
 import { toISODate } from '../lib/date';
-import { useData, useKeyboardInset, useSyncState, useToday } from './hooks';
+import { useData, useKeyboardInset, useSyncState, useToday, useWide } from './hooks';
 import { Capture } from './Capture';
 import { FilterBar } from './FilterBar';
+import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
 import { Settings } from './Settings';
 
@@ -21,6 +22,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const today = useToday();
   const syncState = useSyncState(sync);
   const kbOpen = useKeyboardInset();
+  const wide = useWide();
 
   const [filter, setFilterRaw] = useState<Filter>(loadFilter);
   const [panel, setPanel] = useState(false);
@@ -147,7 +149,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       else if (key === 'h') run(() => setFilter({ ...emptyFilter(), dates: ['today'] }));
       else if (key === 's') run(() => setFilter({ ...emptyFilter(), dates: ['week'] }));
       else if (key === 'v') run(() => setFilter({ ...emptyFilter(), dates: ['overdue'] }));
-      else if (key === 'f') run(() => { setPanel(true); setTimeout(() => searchRef.current?.focus(), 0); });
+      else if (key === 'f') run(() => { if (!wide) setPanel(true); setTimeout(() => searchRef.current?.focus(), 0); });
       else if (/^[1-9]$/.test(key) && data.filters[+key - 1]) run(() => setFilter(data.filters[+key - 1].filter));
       else if (key === 'Escape') run(() => {
         if (selected) setSelected(null);
@@ -162,25 +164,37 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const syncDot = syncState.status === 'error' || syncState.status === 'offline' ? ' ·' : '';
 
   return (
-    <div class="app" onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
+    <div class={`app ${wide ? 'wide' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
       <header class="top">
         <div class="bar">
           <span class="brand">Lista</span>
           <span class="bar-right">
             <span class="label kbd-hint">⌘K escribir</span>
-            <button class={`link ${panel ? 'on' : ''}`} aria-expanded={panel}
-              onClick={() => { const next = !panel; setPanel(next); if (next) setTimeout(() => searchRef.current?.focus(), 0); }}>
-              Buscar
-            </button>
+            {!wide && (
+              <button class={`link ${panel ? 'on' : ''}`} aria-expanded={panel}
+                onClick={() => { const next = !panel; setPanel(next); if (next) setTimeout(() => searchRef.current?.focus(), 0); }}>
+                Buscar
+              </button>
+            )}
             <button class="link" onClick={() => setSettings(true)} aria-label="Ajustes">Ajustes{syncDot}</button>
           </span>
         </div>
-        <FilterBar
-          filter={filter} setFilter={setFilter} saved={data.filters} topics={data.topics} people={data.people}
-          names={names} counts={tally} open={panel} setOpen={setPanel} searchRef={searchRef}
+        {!wide && (
+          <FilterBar
+            filter={filter} setFilter={setFilter} saved={data.filters} topics={data.topics} people={data.people}
+            names={names} counts={tally} open={panel} setOpen={setPanel} searchRef={searchRef}
+            onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
+          />
+        )}
+      </header>
+
+      {wide && (
+        <Sidebar
+          filter={filter} setFilter={setFilter} tasks={data.tasks} saved={data.filters} topics={data.topics}
+          people={data.people} counts={tally} searchRef={searchRef}
           onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
         />
-      </header>
+      )}
 
       <Capture
         topics={data.topics} people={data.people} names={names} today={today} kbOpen={kbOpen}

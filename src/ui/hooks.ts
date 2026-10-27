@@ -55,6 +55,18 @@ export function useSyncState(sync: Sync): SyncState {
   return s;
 }
 
+/** Pantalla ancha (escritorio grande): filtros en barra lateral. */
+export function useWide(query = '(min-width: 1200px)'): boolean {
+  const [wide, setWide] = useState(() => typeof matchMedia !== 'undefined' && matchMedia(query).matches);
+  useEffect(() => {
+    const mq = matchMedia(query);
+    const on = () => setWide(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [query]);
+  return wide;
+}
+
 /** iOS: mantiene la caja de captura por encima del teclado usando visualViewport. */
 export function useKeyboardInset(): boolean {
   const [open, setOpen] = useState(false);
