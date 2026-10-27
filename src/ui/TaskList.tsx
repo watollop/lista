@@ -3,6 +3,7 @@ import type { Entity, ID, ISODate, ParsedLine, Task } from '../types';
 import { formatLine, inlineTags, normalizeKey, parseLine } from '../parser';
 import { TaskChips, type ChipTap } from './Chips';
 import { isCurrentPeriod, periodEnd } from '../lib/period';
+import { addToAppleCalendar, addToCalendar, addToGoogleCalendar, prefersApple } from './calendar';
 import { addDays } from '../lib/date';
 
 export interface Group { task: Task; children: Task[] }
@@ -136,6 +137,11 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
           </>
         )}
       </div>
+      {!isEditing && task.due && !task.done && (
+        <button class="trash cal" aria-label="Añadir al calendario" title="Añadir al calendario" onClick={() => addToCalendar(task)}>
+          <CalendarIcon />
+        </button>
+      )}
       {!isEditing && (
         <button class="trash" aria-label="Borrar tarea" title="Borrar" onClick={() => onDelete(task.id)}>
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
@@ -256,10 +262,28 @@ function Editor({ task, names, onSave, onCancel, onDelete }: {
       />
       <div class="edit-actions">
         <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
+        {task.due && (prefersApple() ? (
+          <>
+            <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToAppleCalendar(task)}><CalendarIcon />Calendario</button>
+            <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToGoogleCalendar(task)}>Google</button>
+          </>
+        ) : (
+          <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToGoogleCalendar(task)}><CalendarIcon />Google Calendar</button>
+        ))}
         <button class="link danger" onMouseDown={(e) => { e.preventDefault(); done.current = true; }} onClick={onDelete}>
           Borrar
         </button>
       </div>
     </>
+  );
+}
+
+/** Calendario de trazo fino (mismo estilo que la papelera). */
+function CalendarIcon() {
+  return (
+    <svg class="cal-icon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor"
+      stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" /><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3" />
+    </svg>
   );
 }
