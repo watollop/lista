@@ -444,9 +444,12 @@ kbd {
   top: 104px;
   align-self: start;
   max-height: calc(100dvh - 120px);
+  overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
-  padding: 18px 2px 40px;
+  /* 10 px de margen a cada lado para el fondo de las opciones, sin desbordar (y sin scroll lateral). */
+  margin: 0 -10px;
+  padding: 18px 10px 40px;
 }
 .side-search {
   width: 100%;
