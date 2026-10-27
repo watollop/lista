@@ -41,6 +41,8 @@ export function TaskList(props: Props) {
     if (last?.key === key) last.items.push(g);
     else sections.push({ key, items: [g] });
   }
+  // Dentro de cada bloque, las pendientes arriba y las ya hechas (hoy) abajo, conservando el orden.
+  for (const s of sections) s.items = [...s.items.filter((g) => !g.task.done), ...s.items.filter((g) => g.task.done)];
   return (
     <>
       {sections.map((s) => (
