@@ -74,13 +74,26 @@ export function useKeyboardInset(): boolean {
     const vv = window.visualViewport;
     if (!vv) return;
     const update = () => {
-      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // Solo hay teclado si hay un campo de texto enfocado. Durante el rebote de iOS al pasarse del
+      // principio o del final, offsetTop sale negativo y sin estas guardas parecía un teclado abierto.
+      const el = document.activeElement;
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+      const raw = window.innerHeight - vv.height - Math.max(0, vv.offsetTop);
+      const kb = typing && raw > 80 ? raw : 0;
       document.documentElement.style.setProperty('--kb', `${Math.round(kb)}px`);
-      setOpen(kb > 80);
+      setOpen(kb > 0);
     };
+    const afterFocus = () => setTimeout(update, 0); // activeElement aún no está actualizado en focusout
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
-    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+    document.addEventListener('focusin', afterFocus);
+    document.addEventListener('focusout', afterFocus);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      document.removeEventListener('focusin', afterFocus);
+      document.removeEventListener('focusout', afterFocus);
+    };
   }, []);
   return open;
 }
