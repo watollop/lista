@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { DateFilter, Entity, EntityKind, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../types';
 import { applyFilter, counts, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
-import { formatDue } from '../parser';
+import { formatDue, parseBlock } from '../parser';
 import { toISODate } from '../lib/date';
+import { externalCapture } from '../lib/capture';
 import { useData, useKeyboardInset, useSyncState, useToday, useWide } from './hooks';
 import { Capture } from './Capture';
 import { FilterBar } from './FilterBar';
@@ -126,6 +127,22 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       showToast({ msg: 'Añadida (oculta por el filtro)', action: { label: 'Ver todo', run: () => setFilter(emptyFilter()) } });
     }
   };
+
+  // Tarea que llega desde fuera (?nueva=… de un Atajo/Siri, o «Compartir con Lista»): se apunta una vez
+  // y se limpia la URL para que recargar no la duplique.
+  useEffect(() => {
+    const text = externalCapture(location.search);
+    if (!text) return;
+    history.replaceState(null, '', location.pathname + location.hash);
+    (async () => {
+      const created = await repo.addParsed(parseBlock(text).map((l) => ({ ...l, isSubtask: false })), null);
+      if (!created.length) return;
+      showToast({
+        msg: created.length > 1 ? `${created.length} tareas apuntadas` : `Apuntada: ${created[0].title}`,
+        action: { label: 'Deshacer', run: () => { for (const t of created) void repo.deleteTask(t.id); } },
+      });
+    })();
+  }, []);
 
   const toggle = async (id: ID) => {
     const { task, spawned } = await repo.toggleDone(id);
