@@ -208,6 +208,12 @@ describe('periodos', () => {
     expect(parseLine('x mañana', now).period).toBeNull();
     expect(parseLine('x cada año', now)).toMatchObject({ period: null, recurrence: { unit: 'year' } });
   });
+  it('vence:2026-T4 (y el antiguo -Q4) al editar una tarea de trimestre', () => {
+    expect(per('x vence:2026-T4')).toEqual(['x', '2026-12-31', 'quarter']);
+    expect(per('x vence:2026-Q4')).toEqual(['x', '2026-12-31', 'quarter']);
+    const l = parseLine('Plan este trimestre', now);
+    expect(formatLine({ ...l, topicNames: [], peopleNames: [] })).toBe('Plan vence:2026-T4');
+  });
   it('vence: con periodo y formatLine ida y vuelta', () => {
     expect(per('x vence:2026-Q4')).toEqual(['x', '2026-12-31', 'quarter']);
     expect(per('x vence:2026-W45')).toEqual(['x', '2026-11-06', 'week']);
