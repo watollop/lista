@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { Entity } from '../types';
 import { normalizeKey, parseLine } from '../parser';
 import { todayISO } from '../lib/date';
@@ -13,31 +14,65 @@ interface Props {
 }
 
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** En táctil (móvil) se dice "este móvil"; con ratón (ordenador) "este ordenador". */
+const device = () => (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 'móvil' : 'ordenador');
 
 const SLIDES = [
-  { title: 'Escribe en una línea', text: 'Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', Demo: TypingDemo },
-  { title: 'Completa y filtra', text: 'Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas.', Demo: SwipeDemo },
+  { title: 'Escribe en una línea', text: () => 'Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', Demo: TypingDemo },
+  { title: 'Completa y filtra', text: () => 'Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas.', Demo: SwipeDemo },
   {
     title: 'Tus datos, contigo',
-    text: 'Todo se guarda en tu dispositivo y funciona sin conexión, sin cuenta. Si quieres, entra con Google para sincronizar móvil y ordenador: solo tú puedes ver tu lista.',
+    text: () => `Todo se guarda solo en este ${device()} y funciona sin conexión, sin cuenta. Si quieres tenerlo también en otros dispositivos, entra con Google para sincronizar.`,
     Demo: DevicesDemo,
   },
 ];
+
+/** Icono de Google monocromo (solo la G, trazo fino, currentColor). */
+function GoogleG({ class: cls }: { class?: string }) {
+  return (
+    <svg class={cls} viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none"
+      stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18.93 8A8 8 0 1 0 20 12H12.4" />
+    </svg>
+  );
+}
+
+const FOCUSABLE = 'button:not([disabled])';
 
 /** Bienvenida en tres pasos. Se muestra la primera vez y desde Ajustes → Cómo funciona. */
 export function Onboarding({ onClose, signIn }: Props) {
   const [i, setI] = useState(0);
   const last = i === SLIDES.length - 1;
+  const { Demo } = SLIDES[i];
   const next = () => (last ? onClose() : setI(i + 1));
   const prev = () => setI(Math.max(0, i - 1));
+  const card = useRef<HTMLDivElement>(null);
+  const primary = useRef<HTMLButtonElement>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
-  const { title, text, Demo } = SLIDES[i];
+
+  // El foco va al botón principal al abrir y vuelve a quien abrió la bienvenida al cerrar.
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    primary.current?.focus();
+    return () => before?.focus?.();
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        // Foco atrapado dentro de la tarjeta (es un diálogo modal).
+        const items = [...(card.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
+        if (!items.length) return;
+        const first = items[0];
+        const lastItem = items[items.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || !card.current?.contains(active))) { e.preventDefault(); lastItem.focus(); }
+        else if (!e.shiftKey && (active === lastItem || !card.current?.contains(active))) { e.preventDefault(); first.focus(); }
+        return;
+      }
       if (e.key === 'Escape') onClose();
-      else if (e.key === 'ArrowRight') next();
-      else if (e.key === 'ArrowLeft') prev();
+      else if (e.key === 'ArrowRight') { if (!last) next(); }
+      else if (e.key === 'ArrowLeft') { if (i > 0) prev(); }
       else return;
       e.preventDefault();
       e.stopPropagation();
@@ -48,34 +83,74 @@ export function Onboarding({ onClose, signIn }: Props) {
 
   return (
     <div class="intro" role="dialog" aria-modal="true" aria-label="Cómo funciona">
-      <div class="intro-card"
+      <div class="intro-card" ref={card}
         onTouchStart={(e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
         onTouchEnd={(e) => {
           const t = touch.current;
           touch.current = null;
           if (!t) return;
           const dx = e.changedTouches[0].clientX - t.x;
-          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.changedTouches[0].clientY - t.y)) (dx < 0 ? next : prev)();
+          if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(e.changedTouches[0].clientY - t.y)) return;
+          if (dx < 0 && !last) next();
+          else if (dx > 0 && i > 0) prev();
         }}>
         <div class="bar">
-          <span class="label">{i + 1} / {SLIDES.length}</span>
+          <span class="label" aria-live="polite">{i + 1} / {SLIDES.length}</span>
           <button class="link" onClick={onClose}>Saltar</button>
         </div>
-        <div class="intro-stage" key={i}><Demo /></div>
-        <h2>{title}</h2>
-        <p>{text}</p>
+        <div class="intro-stage" key={i}>
+          <Fit><Demo /></Fit>
+        </div>
+        {/* Los textos se apilan en la misma celda: la tarjeta mide siempre lo mismo entre slides. */}
+        <div class="intro-copy">
+          {SLIDES.map((s, k) => (
+            <div key={k} class={`intro-text ${k === i ? 'on' : ''}`} aria-hidden={k !== i}>
+              <h2>{s.title}</h2>
+              <p>{s.text()}</p>
+            </div>
+          ))}
+        </div>
         <div class="intro-foot">
-          <span class="intro-dots" aria-hidden="true">
-            {SLIDES.map((_, k) => <i key={k} class={k === i ? 'on' : ''} />)}
+          <span class="intro-dots">
+            {SLIDES.map((_, k) => (
+              <button key={k} class={k === i ? 'on' : ''} aria-label={`Ir a la diapositiva ${k + 1}`}
+                aria-current={k === i ? 'step' : undefined} onClick={() => setI(k)}>
+                <i />
+              </button>
+            ))}
           </span>
           <span class="row-btns">
-            {last && signIn && <button class="btn" onClick={() => { onClose(); signIn(); }}>Entrar con Google</button>}
-            <button class="btn solid" onClick={next} autoFocus>{last ? 'Empezar' : 'Siguiente'}</button>
+            {last && signIn && <button class="btn btn-google" onClick={() => { onClose(); signIn(); }}><GoogleG />Entrar con Google</button>}
+            <button class="btn solid" onClick={next} ref={primary}>{last ? 'Empezar' : 'Siguiente'}</button>
           </span>
         </div>
       </div>
     </div>
   );
+}
+
+/** Reduce la ilustración si no cabe en el hueco (pantallas bajas o estrechas), sin cambiar su diseño. */
+function Fit({ children }: { children: ComponentChildren }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const box = ref.current;
+    const stage = box?.parentElement;
+    const inner = box?.firstElementChild as HTMLElement | null | undefined;
+    if (!box || !stage || !inner) return;
+    const fit = () => {
+      const cs = getComputedStyle(stage);
+      const w = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const h = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const k = Math.min(1, w / inner.offsetWidth, h / inner.offsetHeight);
+      box.style.setProperty('--fit', String(k > 0 ? k : 1));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(stage);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, []);
+  return <div class="demo-fit" ref={ref}>{children}</div>;
 }
 
 const DEMO_LINE = 'Revisar ventas cada lunes #trabajo !alta';
@@ -96,7 +171,7 @@ function TypingDemo() {
   const names = new Map<string, Entity>(p.topics.map((t) => ['#' + normalizeKey(t), { key: normalizeKey(t), name: t } as Entity]));
   return (
     <div class="demo-type">
-      <div class="demo-input">{text}<span class="demo-caret" /></div>
+      <div class="demo-input"><span>{text}<span class="demo-caret" /></span></div>
       <div class="demo-chips">
         <TaskChips due={p.due} priority={p.priority} recurrence={p.recurrence} topics={p.topics.map(normalizeKey)}
           people={[]} names={names} today={todayISO()} />
@@ -119,12 +194,30 @@ function SwipeDemo() {
     ['e', 'Esta semana', 'Preparar reunión #trabajo', false],
     ['f', null, 'Revisar notas con @ana', true],
   ];
+  const list = useRef<HTMLDivElement>(null);
+  // Posiciones del dedo medidas en el DOM (no en píxeles fijos): valen con cualquier fuente o ancho.
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (!el) return;
+    const place = () => {
+      const tap = el.querySelector<HTMLElement>('.demo-tap');
+      const b = el.querySelector<HTMLElement>('.demo-row.b');
+      if (!tap || !b) return;
+      el.style.setProperty('--tap-x', `${tap.offsetLeft + tap.offsetWidth / 2}px`);
+      el.style.setProperty('--tap-y', `${tap.offsetTop + tap.offsetHeight / 2}px`);
+      el.style.setProperty('--row-y', `${b.offsetTop + b.offsetHeight / 2}px`);
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const text = (t: string, tap: boolean) =>
     t.split(/(\s+)/).map((w, i) => (/^[#@]/.test(w)
       ? <span key={i} class={`tag ${tap && w === '@ana' ? 'demo-tap' : ''}`}>{w}</span>
       : w));
   return (
-    <div class={`demo-list ${reduced() ? 'still' : ''}`}>
+    <div class={`demo-list ${reduced() ? 'still' : ''}`} ref={list}>
       {rows.map(([k, day, title, ana]) => [
         day && <div key={day} class="demo-day">{day}</div>,
         <div key={k} class={`demo-row ${k} ${ana ? 'keep' : 'hide'}`}>
@@ -139,6 +232,8 @@ function SwipeDemo() {
 
 /** Primero solo el móvil (local, con candado); después el ordenador sincronizado. */
 function DevicesDemo() {
+  const where = device();
+  const desk = where === 'ordenador';
   const lines = (
     <>
       <span class="demo-line"><i /><b /><em><PriorityIcon p={1} /></em></span>
@@ -146,24 +241,34 @@ function DevicesDemo() {
       <span class="demo-line"><i /><b /></span>
     </>
   );
+  // Candado: en el dispositivo local (móvil o portátil según dónde se abra).
+  const lock = (cls: string) => (
+    <svg class={`demo-lock ${cls}`} viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" fill="none"
+      stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+      <rect x="2.5" y="5.5" width="7" height="5" rx="1" /><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" />
+    </svg>
+  );
   return (
-    <div class={`demo-devices ${reduced() ? 'still' : ''}`}>
+    <div class={`demo-devices ${desk ? 'desk' : ''} ${reduced() ? 'still' : ''}`}>
       <div class="demo-pair">
         <div class="demo-phone">
-          <svg class="demo-lock" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" fill="none"
-            stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
-            <rect x="2.5" y="5.5" width="7" height="5" rx="1" /><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" />
-          </svg>
+          {lock('demo-lock-phone')}
           {lines}
         </div>
-        <svg class="demo-sync" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none"
-          stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 9h14l-3-3M20 15H6l3 3" />
-        </svg>
-        <div class="demo-laptop">{lines}</div>
+        <span class="demo-syncwrap">
+          <svg class="demo-sync" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none"
+            stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 9h14l-3-3M20 15H6l3 3" />
+          </svg>
+          <GoogleG class="demo-g" />
+        </span>
+        <div class="demo-laptop">
+          {lock('demo-lock-desk')}
+          {lines}
+        </div>
       </div>
       <div class="demo-captions label">
-        <span class="local">Solo en este dispositivo</span>
+        <span class="local">Solo en este {where}</span>
         <span class="synced">Sincronizado · solo tú lo ves</span>
       </div>
     </div>
