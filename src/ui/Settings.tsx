@@ -1,59 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
 import { getTheme, setTheme, type Theme } from './theme';
-import { normalizeKey, parseLine } from '../parser';
-import { todayISO } from '../lib/date';
-import { TaskChips } from './Chips';
-import { TitleText } from './TaskList';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { EntityEditor } from './EntityEditor';
-
-const SYNTAX: Array<[string, string, string[]]> = [
-  ['Tema', 'se crea al escribirlo', ['#trabajo', '#casa']],
-  ['Persona', '', ['@ana', '@marta']],
-  ['Fecha', '', ['hoy', 'mañana', 'pasado', 'el viernes', '15 nov', 'en 3 días']],
-  ['Periodo', 'vence el viernes o al final del periodo', ['esta semana', 'este mes', 'este trimestre', 'este año']],
-  ['Fecha exacta', '', ['vence:15/11', 'vence:2026-11-15']],
-  ['Prioridad', '⇈ ↑ ↓ · también !1 !2 !3', ['!alta', '!media', '!baja']],
-  ['Repetir', 'al completarla se crea la siguiente', ['cada día', 'cada lunes', 'cada mes']],
-];
-
-const KEYS: Array<[string[], string]> = [
-  [['⌘K', '/', 'n'], 'escribir tarea'],
-  [['j', 'k'], 'moverse por la lista'],
-  [['x'], 'completar'],
-  [['e'], 'editar'],
-  [['⌫'], 'borrar'],
-  [['h', 's', 'v'], 'hoy · semana · vencidas'],
-  [['1–9'], 'filtro guardado'],
-  [['f'], 'buscar'],
-  [['esc'], 'limpiar filtro'],
-];
-
-const EXAMPLE = 'Llamar a @ana mañana #trabajo !alta';
-
-/** Una línea de ejemplo y cómo queda la tarea, con los mismos componentes que la lista. */
-function SyntaxExample() {
-  const p = parseLine(EXAMPLE);
-  const names = new Map<string, Entity>([
-    ...p.topics.map((n): [string, Entity] => ['#' + normalizeKey(n), { key: normalizeKey(n), name: n } as Entity]),
-    ...p.people.map((n): [string, Entity] => ['@' + normalizeKey(n), { key: normalizeKey(n), name: n } as Entity]),
-  ]);
-  return (
-    <div class="syn-example">
-      <div class="syn-input">{EXAMPLE}</div>
-      <div class="syn-result">
-        <span class="syn-title"><TitleText text={p.title} onChip={() => {}} /></span>
-        <span class="syn-chips">
-          <TaskChips due={p.due} period={p.period} priority={p.priority} recurrence={p.recurrence}
-            topics={p.topics.map(normalizeKey)} people={p.people.map(normalizeKey)} names={names}
-            today={todayISO()} title={p.title} />
-        </span>
-      </div>
-    </div>
-  );
-}
 
 interface Props {
   repo: Repo;
@@ -92,31 +42,8 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
         )}
         <section>
           <span class="label">Ayuda</span>
-          <p>Repasa cómo funciona o consulta todo lo que puedes escribir.</p>
-          <div class="row-btns"><button class="btn" onClick={onIntro}>Ver el tutorial</button></div>
-          <div class="help-folds">
-            <Fold title="Sintaxis completa">
-              <SyntaxExample />
-              <dl class="syn">
-                {SYNTAX.map(([name, hint, examples]) => (
-                  <div key={name}>
-                    <dt>{name}{hint && <small>{hint}</small>}</dt>
-                    <dd>{examples.map((e) => <code key={e} class="chip">{e}</code>)}</dd>
-                  </div>
-                ))}
-              </dl>
-            </Fold>
-            <Fold title="Atajos de teclado" class="kbd-only">
-              <dl class="keys">
-                {KEYS.map(([keys, what]) => (
-                  <div key={what}>
-                    <dt>{keys.map((k) => <kbd key={k}>{k}</kbd>)}</dt>
-                    <dd>{what}</dd>
-                  </div>
-                ))}
-              </dl>
-            </Fold>
-          </div>
+          <p>Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.</p>
+          <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
         </section>
         <BackupSection repo={repo} toast={toast} />
         <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
@@ -250,20 +177,6 @@ function EntitiesSection({ topics, people, pending, onEdit }: {
         ? <>{group('Temas', 'topic', topics)}{group('Personas', 'person', people)}</>
         : <p>Aún no hay temas ni personas. Aparecen al escribir #tema o @persona en una tarea.</p>}
     </section>
-  );
-}
-
-/** Bloque plegable de Ajustes (cerrado al abrir). */
-function Fold({ title, class: cls, children }: { title: string; class?: string; children: preact.ComponentChildren }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div class={`fold ${cls ?? ''}`}>
-      <button class={`ent-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>{title}</span>
-        <span class="ent-head-count"><span class="caret" aria-hidden="true" /></span>
-      </button>
-      {open && <div class="fold-body">{children}</div>}
-    </div>
   );
 }
 
