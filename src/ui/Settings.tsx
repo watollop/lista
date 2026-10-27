@@ -1,6 +1,57 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Backup, Repo, Sync, SyncState } from '../types';
 import { getTheme, setTheme, type Theme } from './theme';
+import type { Entity } from '../types';
+import { normalizeKey, parseLine } from '../parser';
+import { todayISO } from '../lib/date';
+import { TaskChips } from './Chips';
+import { TitleText } from './TaskList';
+
+const SYNTAX: Array<[string, string, string[]]> = [
+  ['Tema', 'se crea al escribirlo', ['#trabajo', '#casa']],
+  ['Persona', '', ['@ana', '@marta']],
+  ['Fecha', '', ['hoy', 'mañana', 'pasado', 'el viernes', '15 nov', 'en 3 días']],
+  ['Periodo', 'vence el viernes o al final del periodo', ['esta semana', 'este mes', 'este Q', 'este año']],
+  ['Fecha exacta', '', ['vence:15/11', 'vence:2026-11-15']],
+  ['Prioridad', '⇈ ↑ ↓ · también !1 !2 !3', ['!alta', '!media', '!baja']],
+  ['Repetir', 'al completarla se crea la siguiente', ['cada día', 'cada lunes', 'cada mes']],
+];
+
+const KEYS: Array<[string[], string]> = [
+  [['⌘K', '/', 'n'], 'escribir tarea'],
+  [['j', 'k'], 'moverse por la lista'],
+  [['x'], 'completar'],
+  [['e'], 'editar'],
+  [['⌫'], 'borrar'],
+  [['h', 's', 'v'], 'hoy · semana · vencidas'],
+  [['1–9'], 'filtro guardado'],
+  [['f'], 'buscar'],
+  [['esc'], 'limpiar filtro'],
+];
+
+const EXAMPLE = 'Llamar a @ana mañana #trabajo !alta';
+
+/** Una línea de ejemplo y cómo queda la tarea, con los mismos componentes que la lista. */
+function SyntaxExample() {
+  const p = parseLine(EXAMPLE);
+  const names = new Map<string, Entity>([
+    ...p.topics.map((n): [string, Entity] => ['#' + normalizeKey(n), { key: normalizeKey(n), name: n } as Entity]),
+    ...p.people.map((n): [string, Entity] => ['@' + normalizeKey(n), { key: normalizeKey(n), name: n } as Entity]),
+  ]);
+  return (
+    <div class="syn-example">
+      <div class="syn-input">{EXAMPLE}</div>
+      <div class="syn-result">
+        <span class="syn-title"><TitleText text={p.title} onChip={() => {}} /></span>
+        <span class="syn-chips">
+          <TaskChips due={p.due} period={p.period} priority={p.priority} recurrence={p.recurrence}
+            topics={p.topics.map(normalizeKey)} people={p.people.map(normalizeKey)} names={names}
+            today={todayISO()} title={p.title} />
+        </span>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   repo: Repo;
@@ -30,29 +81,26 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro }: Props) 
         </section>
         <section>
           <span class="label">Sintaxis</span>
-          <div class="syntax">
-            <code>#tema</code><span>tema (se crea si no existe)</span>
-            <code>@persona</code><span>persona</span>
-            <code>mañana · el viernes · 15 nov · en 3 días</code><span>fecha</span>
-            <code>esta semana · este mes · este Q · este año</code><span>antes del viernes, fin de mes, trimestre o año</span>
-            <code>vence:2026-11-15</code><span>fecha exacta</span>
-            <code>!alta !media !baja · !1 !2 !3</code><span>prioridad ⇈ ↑ ↓</span>
-            <code>cada lunes · cada día · cada mes</code><span>recurrente</span>
-          </div>
+          <SyntaxExample />
+          <dl class="syn">
+            {SYNTAX.map(([name, hint, examples]) => (
+              <div key={name}>
+                <dt>{name}{hint && <small>{hint}</small>}</dt>
+                <dd>{examples.map((e) => <code key={e} class="chip">{e}</code>)}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
-        <section>
+        <section class="kbd-only">
           <span class="label">Teclado</span>
-          <div class="syntax">
-            <code>/ · n · ⌘K</code><span>escribir tarea</span>
-            <code>j k · ↑ ↓</code><span>moverse por la lista</span>
-            <code>x · espacio</code><span>completar</span>
-            <code>e · intro</code><span>editar</span>
-            <code>⌫</code><span>borrar</span>
-            <code>h s v</code><span>hoy · semana · vencidas</span>
-            <code>1–9</code><span>filtro guardado</span>
-            <code>f</code><span>buscar</span>
-            <code>esc</code><span>limpiar filtro</span>
-          </div>
+          <dl class="keys">
+            {KEYS.map(([keys, what]) => (
+              <div key={what}>
+                <dt>{keys.map((k) => <kbd key={k}>{k}</kbd>)}</dt>
+                <dd>{what}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
         <footer class="credit">
           <span>Código Do Norte <span class="heart" aria-label="con cariño">♥</span> Coruña</span>
