@@ -152,7 +152,7 @@ const SWIPE_MIN = 72; // px; o un tercio del ancho de la fila si es mayor
 
 /** Táctil: deslizar a la derecha completa y a la izquierda borra. El scroll vertical sigue siendo del navegador (touch-action: pan-y). */
 function useSwipe(onRight: () => void, onLeft: () => void, enabled: boolean) {
-  const start = useRef<{ x: number; y: number } | null>(null);
+  const start = useRef<{ x: number; y: number; min: number } | null>(null);
   const moved = useRef(false);
   const [dx, setDx] = useState(0);
   const reset = () => { start.current = null; setDx(0); };
@@ -160,7 +160,8 @@ function useSwipe(onRight: () => void, onLeft: () => void, enabled: boolean) {
   const handlers = {
     onPointerDown: (e: PointerEvent) => {
       if (!enabled || e.pointerType === 'mouse') return;
-      start.current = { x: e.clientX, y: e.clientY };
+      // Umbral para completar/borrar: 72 px o un tercio de la fila. El color de fondo llega al máximo ahí.
+      start.current = { x: e.clientX, y: e.clientY, min: Math.max(SWIPE_MIN, (e.currentTarget as HTMLElement).offsetWidth / 3) };
       moved.current = false;
     },
     onPointerMove: (e: PointerEvent) => {
@@ -177,8 +178,7 @@ function useSwipe(onRight: () => void, onLeft: () => void, enabled: boolean) {
       setDx(x);
     },
     onPointerUp: (e: PointerEvent) => {
-      const width = (e.currentTarget as HTMLElement).offsetWidth;
-      const min = Math.max(SWIPE_MIN, width / 3);
+      const min = start.current?.min ?? SWIPE_MIN;
       if (moved.current && dx > min) onRight();
       else if (moved.current && dx < -min) onLeft();
       reset();
@@ -189,8 +189,9 @@ function useSwipe(onRight: () => void, onLeft: () => void, enabled: boolean) {
       if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false; }
     },
   };
+  const min = start.current?.min ?? SWIPE_MIN;
   const style = dx
-    ? { '--dx': `${dx}px`, '--swipe': Math.min(1, Math.max(0, dx) / SWIPE_MIN), '--swipe-l': Math.min(1, Math.max(0, -dx) / SWIPE_MIN) }
+    ? { '--dx': `${dx}px`, '--swipe': Math.min(1, Math.max(0, dx) / min), '--swipe-l': Math.min(1, Math.max(0, -dx) / min) }
     : undefined;
   return { handlers, style, active: dx !== 0 };
 }
