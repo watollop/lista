@@ -855,3 +855,13 @@ input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1); opaci
 .edit-actions .link { display: inline-flex; align-items: center; gap: 5px; }
 .cal-icon { flex: none; }
 @media (hover: hover) and (pointer: fine) { .trash.cal:hover { color: var(--fg); } }
+
+/* ---------- Ajustes: apuntar sin abrir la app ---------- */
+.howto { list-style: none; display: grid; gap: 10px; margin-bottom: 14px; font-size: 14px; color: var(--muted); }
+.howto b { color: var(--fg); font-weight: 500; }
+.howto-link {
+  display: block; margin-bottom: 12px; padding: 10px 12px;
+  background: var(--surface); border-radius: var(--radius);
+  font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere;
+}
+.howto-link span { color: var(--faint); }
