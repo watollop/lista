@@ -1,0 +1,31 @@
+public/manifest.webmanifest
+  s_c0c1af889a85ab::t_b67a6481173b98 14-41
+src/lib/capture.test.ts
+  s_c0c1af889a85ab::t_77f2ce77d32f93 1-18
+src/lib/capture.ts
+  s_c0c1af889a85ab::t_17dbc7a58c601e 1-18
+src/ui/App.tsx
+  s_c0c1af889a85ab::t_5061294a8889cf 4,6,131-146
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_80145f17e62dcf 48,229-248
+src/ui/styles.css
+  s_c0c1af889a85ab::t_17f771339ab9f7 853-862
+README.md
+  s_c0c1af889a85ab::t_597986d6393fdd 36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f2796f7755e64b8bb168c57d804d354e2e3de321",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
