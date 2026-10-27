@@ -62,14 +62,14 @@ describe('1. acentos y mayúsculas', () => {
     const r = newRepo();
     await r.addParsed([parse('Llamar @José'), parse('Comprar pan')]);
     const tasks = await r.listTasks();
-    expect(applyFilter(tasks, f({ text: 'jose' }), TODAY).map((t) => t.title)).toEqual(['Llamar']);
-    expect(applyFilter(tasks, f({ text: 'JOSÉ' }), TODAY).map((t) => t.title)).toEqual(['Llamar']);
+    expect(applyFilter(tasks, f({ text: 'jose' }), TODAY).map((t) => t.title)).toEqual(['Llamar @José']);
+    expect(applyFilter(tasks, f({ text: 'JOSÉ' }), TODAY).map((t) => t.title)).toEqual(['Llamar @José']);
   });
 
   it('título con emoji y «comillas» sobrevive parse -> repo -> formatLine -> parse', async () => {
     const r = newRepo();
     const p1 = parse('Llamar a «Ana» 📞 #Casa @José !2');
-    expect(p1.title).toBe('Llamar a «Ana» 📞');
+    expect(p1.title).toBe('Llamar a «Ana» 📞 #Casa @José');
     const [t] = await r.addParsed([p1]);
     const line = formatLine({
       title: t.title,
@@ -259,7 +259,7 @@ describe('5. subtareas', () => {
     const r = newRepo();
     await r.addParsed(parseBlock('Mudanza #Casa\n  Cajas\nOtra cosa', at(2026, 10, 27)));
     const shown = applyFilter(await r.listTasks(), f({ topics: ['casa'] }), TODAY).map((t) => t.title);
-    expect(shown.sort()).toEqual(['Cajas', 'Mudanza']);
+    expect(shown.sort()).toEqual(['Cajas', 'Mudanza #Casa']);
   });
 
   it('borrar el padre tombstonea los hijos y restoreTask los devuelve', async () => {

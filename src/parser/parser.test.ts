@@ -10,7 +10,7 @@ const due = (s: string) => parseLine(s, now).due;
 describe('parseLine: ejemplo completo', () => {
   const l = parseLine('Revisar informe @ana #aura mañana !1 cada lunes', now);
   it('título, personas, temas, prioridad y recurrencia', () => {
-    expect(l.title).toBe('Revisar informe');
+    expect(l.title).toBe('Revisar informe @ana #aura'); // #tema y @persona se quedan en el texto
     expect(l.people).toEqual(['ana']);
     expect(l.topics).toEqual(['aura']);
     expect(l.priority).toBe(1);
@@ -128,10 +128,18 @@ describe('vence: explícito', () => {
 });
 
 describe('temas y personas', () => {
+  it('se quedan en el título donde se escribieron; fecha y prioridad no', () => {
+    const l = parseLine('@elena hablar sobre #sto mañana !alta', now);
+    expect(l).toMatchObject({ title: '@elena hablar sobre #sto', topics: ['sto'], people: ['elena'], priority: 1 });
+  });
+  it('formatLine no repite etiquetas que ya están en el título', () => {
+    expect(formatLine({ title: 'hablar con @Elena', topicNames: ['sto'], peopleNames: ['elena'], due: null, priority: null, recurrence: null }))
+      .toBe('hablar con @Elena #sto');
+  });
   it('deduplica por clave, conserva la primera escritura', () => {
     const l = parseLine('#Aura #aura #Áura', now);
     expect(l.topics).toEqual(['Aura']);
-    expect(l.title).toBe('');
+    expect(l.title).toBe('#Aura #aura #Áura');
   });
   it('email no produce persona', () => {
     const l = parseLine('Escribir a ana@x.com', now);
@@ -142,7 +150,7 @@ describe('temas y personas', () => {
     const l = parseLine('@juan-carlos #proyecto_2 tarea', now);
     expect(l.people).toEqual(['juan-carlos']);
     expect(l.topics).toEqual(['proyecto_2']);
-    expect(l.title).toBe('tarea');
+    expect(l.title).toBe('@juan-carlos #proyecto_2 tarea');
   });
   it('# dentro de palabra no cuenta', () => {
     const l = parseLine('casa(#aura)', now);
@@ -176,7 +184,7 @@ describe('subtareas', () => {
   it('índices de tokens respecto a la línea original', () => {
     const line = '>  #aura mañana';
     const l = parseLine(line, now);
-    expect(l.title).toBe('');
+    expect(l.title).toBe('#aura');
     for (const t of l.tokens) expect(line.slice(t.start, t.end)).toBe(t.text);
   });
   it('parseBlock marca indentadas', () => {
@@ -195,10 +203,10 @@ describe('subtareas', () => {
 
 describe('título', () => {
   it('colapsa espacios', () => {
-    expect(parseLine('  a   #x   b  ', now).title).toBe('a b');
+    expect(parseLine('  a   #x   b  ', now).title).toBe('a #x b');
   });
   it('solo tokens => título vacío', () => {
-    expect(parseLine('#a @b !2', now).title).toBe('');
+    expect(parseLine('!2 mañana', now).title).toBe('');
   });
 });
 

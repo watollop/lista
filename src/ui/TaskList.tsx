@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Entity, ID, ISODate, ParsedLine, Task } from '../types';
-import { formatLine, parseLine } from '../parser';
+import { formatLine, inlineTags, normalizeKey, parseLine } from '../parser';
 import { TaskChips, type ChipTap } from './Chips';
 
 export interface Group { task: Task; children: Task[] }
@@ -91,11 +91,11 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
         ) : (
           <>
             <button class={`title ${task.priority === 1 ? 'p1' : ''}`} onClick={() => { onSelect(task.id); onEdit(task.id); }}>
-              {task.title}
+              <TitleText text={task.title} onChip={onChip} />
             </button>
             <div class="meta">
               <TaskChips due={task.due} done={!!task.done} priority={task.priority} recurrence={task.recurrence}
-                topics={task.topics} people={task.people} names={names} today={today} onTap={onChip} />
+                topics={task.topics} people={task.people} names={names} today={today} onTap={onChip} title={task.title} />
             </div>
           </>
         )}
@@ -145,6 +145,24 @@ function useSwipeRight(onSwipe: () => void, enabled: boolean) {
   };
   const style = dx ? { '--dx': `${dx}px`, '--swipe': Math.min(1, dx / SWIPE_MIN) } : undefined;
   return { handlers, style, active: dx > 0 };
+}
+
+/** Título con los #temas y @personas resaltados; tocarlos filtra (sin abrir el editor). */
+function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
+  const parts: preact.ComponentChildren[] = [];
+  let i = 0;
+  for (const t of inlineTags(text)) {
+    parts.push(text.slice(i, t.start));
+    parts.push(
+      <span key={t.start} class="tag" onClick={(e) => {
+        e.stopPropagation();
+        onChip(t.sym === '#' ? 'topic' : 'person', normalizeKey(t.name));
+      }}>{text.slice(t.start, t.end)}</span>,
+    );
+    i = t.end;
+  }
+  parts.push(text.slice(i));
+  return <>{parts}</>;
 }
 
 /** Edición en línea con la misma sintaxis que la captura. Las fechas se muestran como vence:AAAA-MM-DD

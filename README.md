@@ -23,7 +23,7 @@ Revisar informe @ana #marketing mañana !1 cada lunes
 
 | Escribe | Resultado |
 |---|---|
-| `#tema` | Asigna un tema; se crea si no existe. Sin distinguir mayúsculas ni tildes. |
+| `#tema` | Asigna un tema; se crea si no existe y se queda en el texto, resaltado. Sin distinguir mayúsculas ni tildes. |
 | `@persona` | Asigna una persona, con el mismo comportamiento que los temas. |
 | `hoy`, `mañana`, `pasado` o `pasado mañana`, `el viernes`, `el lunes que viene`, `15 nov`, `en 3 días`, `dentro de 2 semanas`, `la próxima semana`, `fin de mes`, `el finde` | Fecha de vencimiento. |
 | `vence:2026-11-15`, `vence:15/11` | Fecha exacta; tiene prioridad sobre la natural. |

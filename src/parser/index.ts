@@ -95,7 +95,7 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
   const due = explicit ?? natural?.date ?? (recurrence ? firstOccurrence(recurrence, today) : null);
 
   return {
-    title: w.replace(/\u0001+/g, ' ').replace(/\s+/g, ' ').trim(),
+    title: titleOf(line, tokens),
     topics: unique(topicNames),
     people: unique(personNames),
     due,
@@ -104,6 +104,17 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
     isSubtask,
     tokens: tokens.sort((a, b) => a.start - b.start),
   };
+}
+
+/** El título es la línea sin los tokens de metadatos (fecha, prioridad, recurrencia, vence:).
+ *  #tema y @persona se quedan en el texto: forman parte de la frase ("hablar con @elena sobre #sto"). */
+function titleOf(line: string, tokens: ParsedToken[]): string {
+  let t = line.replace(/^\s*>/, ' ');
+  for (const k of tokens) {
+    if (k.type === 'topic' || k.type === 'person') continue;
+    t = t.slice(0, k.start) + ' '.repeat(k.end - k.start) + t.slice(k.end);
+  }
+  return t.replace(/\s+/g, ' ').trim();
 }
 
 /** Un bloque de texto: una tarea por línea no vacía. Las líneas indentadas (salvo la primera) son subtareas. */
@@ -129,6 +140,13 @@ export function activeToken(text: string, caret: number): ActiveToken | null {
   return { type: sym === '#' ? 'topic' : 'person', prefix: text.slice(i, end), start: i - 1, end };
 }
 
+/** #tema / @persona escritos dentro de un texto, con su posición (mismas reglas que parseLine). */
+export function inlineTags(text: string): Array<{ sym: '#' | '@'; name: string; start: number; end: number }> {
+  return [...text.matchAll(/(?<!\S)([#@])([\p{L}\p{N}_-]+)/gu)].map((m) => ({
+    sym: m[1] as '#' | '@', name: m[2], start: m.index!, end: m.index! + m[0].length,
+  }));
+}
+
 /** Línea canónica que vuelve a parsearse al mismo resultado. */
 export function formatLine(t: {
   title: string;
@@ -138,10 +156,12 @@ export function formatLine(t: {
   priority: Priority | null;
   recurrence: Recurrence | null;
 }): string {
+  const inTitle = new Set(inlineTags(t.title).map((x) => x.sym + normalizeKey(x.name)));
+  const missing = (sym: string, names: string[]) => names.filter((n) => !inTitle.has(sym + normalizeKey(n))).map((n) => sym + n);
   return [
     t.title,
-    ...t.topicNames.map((n) => `#${n}`),
-    ...t.peopleNames.map((n) => `@${n}`),
+    ...missing('#', t.topicNames),
+    ...missing('@', t.peopleNames),
     t.priority ? `!${t.priority}` : '',
     t.recurrence ? formatRecurrence(t.recurrence) : '',
     t.due ? `vence:${t.due}` : '',
