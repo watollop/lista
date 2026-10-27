@@ -183,7 +183,7 @@ function useSwipeRight(onSwipe: () => void, enabled: boolean) {
 }
 
 /** Título con los #temas y @personas resaltados; tocarlos filtra (sin abrir el editor). */
-function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
+export function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
   const parts: preact.ComponentChildren[] = [];
   let i = 0;
   for (const t of inlineTags(text)) {
