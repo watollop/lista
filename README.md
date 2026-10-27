@@ -39,6 +39,7 @@ Al pegar varias líneas se crea una tarea por línea.
 - **Completar**: toca el check o desliza a la derecha. Las tareas completadas hoy siguen visibles al final de su bloque y desaparecen al día siguiente; puedes consultarlas en *Fecha → Hechas*.
 - **Filtrar**: toca un chip (`#tema`, `@persona`, la fecha o la prioridad) para filtrar por él, o usa los selectores *Fecha · Tema · Persona · Prioridad*. Las opciones de un mismo selector se combinan con O y los selectores entre sí con Y.
 - **Borrar**: desliza a la izquierda (móvil) o usa la papelera que aparece al pasar el ratón (escritorio). Borrar una tarea recurrente no crea la siguiente.
+- **Calendario**: en una tarea con fecha, «Calendario» crea el evento de día completo en Calendario de Apple (.ics) y «Google» lo abre rellenado en Google Calendar; las recurrentes se repiten igual. Es una copia: si luego cambias la tarea, el evento no cambia.
 - **Deshacer**: completar y borrar se pueden deshacer desde el aviso inferior.
 
 ### Atajos de teclado
