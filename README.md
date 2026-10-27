@@ -89,7 +89,8 @@ En la app, ve a **Ajustes → Continuar con Google**. La sesión se renueva auto
 
 ### Cómo funciona
 
-- Cada cambio se guarda en local al instante y se sube en segundo plano: tras escribir, al volver a la app, al recuperar la conexión y periódicamente.
+- Cada cambio se guarda en local al instante y se sube en segundo plano: tras escribir, al volver a la app y al recuperar la conexión.
+- Con la app visible, se consultan los cambios remotos cada 30 s si ha habido actividad en los últimos 5 minutos, y cada 2 minutos si no. Cada consulta es incremental y en segundo plano no se hace ninguna.
 - Los conflictos se resuelven por tarea con *last-write-wins*, según la marca de tiempo. Los borrados se propagan como *tombstones*.
 - La clave pública de Supabase forma parte del cliente por diseño; los datos están protegidos por RLS.
 
