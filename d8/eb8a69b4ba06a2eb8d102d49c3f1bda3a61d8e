@@ -1,0 +1,35 @@
+src/data/repo.ts
+  s_c0c1af889a85ab::t_e82795875b90b8 455-461
+src/sync/account.test.ts
+  s_c0c1af889a85ab::t_c266f07e77821c 1-46
+src/sync/api.ts
+  s_c0c1af889a85ab::t_196e24e79955b6 120-143
+src/sync/index.ts
+  s_c0c1af889a85ab::t_6241439a6f0241 5,294-311,396
+src/types.ts
+  s_c0c1af889a85ab::t_21c38f83fead7d 162-163,198-200
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_1227f62846ca95 119,235-279
+src/ui/styles.css
+  s_c0c1af889a85ab::t_58d77436d7f605 828-832
+supabase/schema.sql
+  s_c0c1af889a85ab::t_92dbd2e860e984 58-72
+README.md
+  s_c0c1af889a85ab::t_7464f6e75e1571 75,144-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d8eb8a69b4ba06a2eb8d102d49c3f1bda3a61d8e",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
