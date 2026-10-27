@@ -9,6 +9,7 @@ function line(title: string, extra: Partial<ParsedLine> = {}): ParsedLine {
     topics: [],
     people: [],
     due: null,
+    period: null,
     priority: null,
     recurrence: null,
     isSubtask: false,

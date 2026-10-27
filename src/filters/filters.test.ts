@@ -251,6 +251,16 @@ describe('groupTasks', () => {
   });
 });
 
+describe('periodos en filtros', () => {
+  it('mes, trimestre y año van de hoy al fin del periodo', () => {
+    const tasks = [mk({ id: 'oct', due: '2026-10-31' }), mk({ id: 'nov', due: '2026-11-30' }), mk({ id: 'mar', due: '2027-03-31' })];
+    const ids = (d: 'month' | 'quarter' | 'year') => applyFilter(tasks, { ...emptyFilter(), dates: [d] }, TODAY).map((t) => t.id);
+    expect(ids('month')).toEqual(['oct']);
+    expect(ids('quarter')).toEqual(['oct', 'nov']);
+    expect(ids('year')).toEqual(['oct', 'nov']);
+  });
+});
+
 describe('counts', () => {
   it('counts open, non-deleted tasks by bucket', () => {
     const tasks = [
@@ -262,7 +272,7 @@ describe('counts', () => {
       mk({ due: TODAY, done: 1, doneAt: 1 }),
       mk({ due: null, deleted: 1 }),
     ];
-    expect(counts(tasks, TODAY)).toEqual({ today: 1, week: 2, overdue: 1, nodate: 1, open: 5 });
+    expect(counts(tasks, TODAY)).toEqual({ today: 1, week: 2, month: 1, quarter: 3, year: 3, overdue: 1, nodate: 1, open: 5 });
   });
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Entity, ID, ISODate, ParsedLine, Task } from '../types';
 import { formatLine, inlineTags, normalizeKey, parseLine } from '../parser';
 import { TaskChips, type ChipTap } from './Chips';
+import { isCurrentPeriod } from '../lib/period';
 
 export interface Group { task: Task; children: Task[] }
 
@@ -20,27 +21,31 @@ interface Props {
   doneToday: Set<ID>; // completadas hoy: se quedan en su sitio hasta que cambia el día
 }
 
-type SectionKey = 'overdue' | 'today' | 'next' | 'nodate' | 'done';
+type SectionKey = 'overdue' | 'today' | 'next' | 'week' | 'month' | 'quarter' | 'year' | 'nodate' | 'done';
 const SECTION_LABEL: Record<SectionKey, string> = {
-  overdue: 'Vencidas', today: 'Hoy', next: 'Próximas', nodate: 'Sin fecha', done: 'Completadas',
+  overdue: 'Vencidas', today: 'Hoy', next: 'Próximas',
+  week: 'Esta semana', month: 'Este mes', quarter: 'Este trimestre', year: 'Este año',
+  nodate: 'Sin fecha', done: 'Completadas',
 };
+const SECTION_ORDER = Object.keys(SECTION_LABEL) as SectionKey[];
 
 function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>): SectionKey {
   if (t.done && !doneToday.has(t.id)) return 'done';
   if (!t.due) return 'nodate';
   if (t.due < today) return 'overdue';
+  // Fechas de periodo en curso ("esta semana", "este Q"…) en su bloque; las de periodos futuros, en Próximas.
+  if (t.period && isCurrentPeriod(t.period, t.due, today)) return t.period;
   return t.due === today ? 'today' : 'next';
 }
 
 export function TaskList(props: Props) {
   const { groups, today } = props;
-  const sections: Array<{ key: SectionKey; items: Group[] }> = [];
+  const byKey = new Map<SectionKey, Group[]>();
   for (const g of groups) {
     const key = sectionOf(g.task, today, props.doneToday);
-    const last = sections[sections.length - 1];
-    if (last?.key === key) last.items.push(g);
-    else sections.push({ key, items: [g] });
+    byKey.set(key, [...(byKey.get(key) ?? []), g]);
   }
+  const sections = SECTION_ORDER.filter((k) => byKey.has(k)).map((key) => ({ key, items: byKey.get(key)! }));
   // Dentro de cada bloque, las pendientes arriba y las ya hechas (hoy) abajo, conservando el orden.
   for (const s of sections) s.items = [...s.items.filter((g) => !g.task.done), ...s.items.filter((g) => g.task.done)];
   return (
@@ -94,7 +99,7 @@ function Row({ task, sub, names, today, selected, editing, onSelect, onEdit, onT
               <TitleText text={task.title} onChip={onChip} />
             </button>
             <div class="meta">
-              <TaskChips due={task.due} done={!!task.done} priority={task.priority} recurrence={task.recurrence}
+              <TaskChips due={task.due} period={task.period} done={!!task.done} priority={task.priority} recurrence={task.recurrence}
                 topics={task.topics} people={task.people} names={names} today={today} onTap={onChip} title={task.title} />
             </div>
           </>
@@ -175,7 +180,7 @@ function Editor({ task, names, onSave, onCancel, onDelete }: {
     title: task.title,
     topicNames: task.topics.map((k) => names.get('#' + k)?.name ?? k),
     peopleNames: task.people.map((k) => names.get('@' + k)?.name ?? k),
-    due: task.due, priority: task.priority, recurrence: task.recurrence,
+    due: task.due, period: task.period, priority: task.priority, recurrence: task.recurrence,
   });
   const [v, setV] = useState(initial);
   const ref = useRef<HTMLInputElement>(null);

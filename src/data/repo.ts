@@ -56,6 +56,7 @@ function fieldsFromLine(line: ParsedLine) {
   return {
     title: line.title.trim(),
     due: line.due,
+    period: line.due ? line.period ?? null : null,
     priority: line.priority,
     recurrence: line.recurrence,
   };

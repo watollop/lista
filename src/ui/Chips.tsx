@@ -1,11 +1,13 @@
-import type { Entity, ISODate, Priority, Recurrence } from '../types';
+import type { Entity, ISODate, Period, Priority, Recurrence } from '../types';
 import { formatDue, formatRecurrence, inlineTags, normalizeKey } from '../parser';
 import { PRIORITY_LABEL, PriorityIcon } from './Priority';
+import { formatPeriod } from '../lib/period';
 
 export type ChipTap = (type: 'topic' | 'person' | 'priority', key: string | Priority) => void;
 
 interface Props {
   due: ISODate | null;
+  period?: Period | null;
   done?: boolean;
   priority: Priority | null;
   recurrence: Recurrence | null;
@@ -18,7 +20,7 @@ interface Props {
 }
 
 /** Chips discretos de una tarea. Con onTap, tocar #tema/@persona/!prio filtra por él. */
-export function TaskChips({ due, done, priority, recurrence, topics, people, names, today, onTap, title }: Props) {
+export function TaskChips({ due, period, done, priority, recurrence, topics, people, names, today, onTap, title }: Props) {
   const inline = new Set(title ? inlineTags(title).map((t) => t.sym + normalizeKey(t.name)) : []);
   const overdue = !done && due !== null && due < today;
   const tag = (cls: string, content: preact.ComponentChildren, tap?: () => void, label?: string) =>
@@ -27,7 +29,7 @@ export function TaskChips({ due, done, priority, recurrence, topics, people, nam
       : <span class={`chip ${cls}`} aria-label={label} title={label}>{content}</span>;
   return (
     <>
-      {due && tag(overdue ? 'warn' : '', formatDue(due, today))}
+      {due && tag(overdue ? 'warn' : '', period ? formatPeriod(period, due, today) : formatDue(due, today))}
       {recurrence && tag('', formatRecurrence(recurrence))}
       {priority && tag(`prio ${priority === 1 ? 'warn' : ''}`, <PriorityIcon p={priority} />,
         onTap && (() => onTap('priority', priority)), `Prioridad ${PRIORITY_LABEL[priority].toLowerCase()}`)}

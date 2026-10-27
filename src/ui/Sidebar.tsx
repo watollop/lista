@@ -11,14 +11,15 @@ interface Props {
   saved: SavedFilter[];
   topics: Entity[];
   people: Entity[];
-  counts: { today: number; week: number; overdue: number; nodate: number; open: number };
+  counts: Record<DateFilter | 'open', number>;
   searchRef: { current: HTMLInputElement | null };
   onSave: (name: string) => void;
   onDeleteSaved: (id: ID) => void;
 }
 
 const DATES: Array<[DateFilter, string]> = [
-  ['today', 'Hoy'], ['week', 'Semana'], ['overdue', 'Vencidas'], ['nodate', 'Sin fecha'],
+  ['today', 'Hoy'], ['week', 'Semana'], ['month', 'Mes'], ['quarter', 'Trimestre'], ['year', 'Año'],
+  ['overdue', 'Vencidas'], ['nodate', 'Sin fecha'],
 ];
 
 /** Pantallas anchas: todos los filtros a la vista, con recuento de pendientes. Misma lógica que FilterBar. */

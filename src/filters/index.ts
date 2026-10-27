@@ -1,5 +1,6 @@
-import type { Filter, ISODate, Task } from '../types';
+import type { DateFilter, Filter, ISODate, Task } from '../types';
 import { addDays } from '../lib/date';
+import { periodEnd } from '../lib/period';
 import { fold } from '../lib/text';
 
 export function emptyFilter(): Filter {
@@ -24,6 +25,12 @@ export function toggleIn<T>(arr: T[], v: T): T[] {
 const inWeek = (due: ISODate | null, today: ISODate) =>
   due !== null && due >= today && due <= addDays(today, 6);
 
+/** Desde hoy hasta el fin del mes/trimestre/año en curso. */
+const until = (due: ISODate | null, today: ISODate, end: ISODate) => due !== null && due >= today && due <= end;
+const inMonth = (due: ISODate | null, today: ISODate) => until(due, today, periodEnd('month', today));
+const inQuarter = (due: ISODate | null, today: ISODate) => until(due, today, periodEnd('quarter', today));
+const inYear = (due: ISODate | null, today: ISODate) => until(due, today, periodEnd('year', today));
+
 const isOverdue = (t: Task, today: ISODate) => t.due !== null && t.due < today && t.done === 0;
 
 /** Comparador ascendente con nulos al final. */
@@ -41,6 +48,9 @@ export function matches(task: Task, f: Filter, today: ISODate, parent?: Task): b
       switch (d) {
         case 'today': return task.due === today;
         case 'week': return inWeek(task.due, today);
+        case 'month': return inMonth(task.due, today);
+        case 'quarter': return inQuarter(task.due, today);
+        case 'year': return inYear(task.due, today);
         case 'overdue': return isOverdue(task, today);
         case 'nodate': return task.due === null;
       }
@@ -107,11 +117,14 @@ export function groupTasks(sorted: Task[]): Array<{ task: Task; children: Task[]
 export function counts(
   tasks: Task[],
   today: ISODate,
-): { today: number; week: number; overdue: number; nodate: number; open: number } {
+): Record<DateFilter | 'open', number> {
   const open = tasks.filter((t) => !t.deleted && t.done === 0);
   return {
     today: open.filter((t) => t.due === today).length,
     week: open.filter((t) => inWeek(t.due, today)).length,
+    month: open.filter((t) => inMonth(t.due, today)).length,
+    quarter: open.filter((t) => inQuarter(t.due, today)).length,
+    year: open.filter((t) => inYear(t.due, today)).length,
     overdue: open.filter((t) => isOverdue(t, today)).length,
     nodate: open.filter((t) => t.due === null).length,
     open: open.length,
