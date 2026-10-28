@@ -754,7 +754,7 @@ kbd {
   border-bottom: 1px solid var(--fg);
   padding: 4px 0;
 }
-.ent-inline input { flex: 1; min-width: 0; font-size: 15px; padding: 2px 0; }
+.ent-inline input { flex: 1; min-width: 0; font-size: 16px; padding: 2px 0; }
 .ent-sym { color: var(--muted); flex: none; }
 .ent-hint { flex-basis: 100%; display: block; font-size: 12px; color: var(--muted); }
 .side-ent { position: relative; }
@@ -834,7 +834,7 @@ kbd {
   transform: translateY(-2px) rotate(45deg); transition: transform .15s;
 }
 .ent-head.open .caret { transform: translateY(1px) rotate(-135deg); }
-.ent-search { width: 100%; font-size: 15px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ent-search { width: 100%; font-size: 16px; /* menos de 16 px: iOS amplía al enfocar */ padding: 10px 0; border-bottom: 1px solid var(--line); }
 .ent-search:focus { border-bottom-color: var(--fg); }
 .ent-empty { padding: 12px 0; font-size: 14px; color: var(--faint); }
 /* La ✕ nativa de los campos de búsqueda, en gris en vez del azul del sistema. */
