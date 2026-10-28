@@ -136,3 +136,16 @@
 
 /* Bienvenida */
 :where([data-look="industrial"]) .intro-dots button.on i { background: var(--accent); }
+
+/* Sugerencias de #tema y @persona: la misma pantalla oscura que la captura */
+:where([data-look="industrial"]) .suggest {
+  background: var(--screen); color: var(--screen-fg);
+  border: 1px solid rgb(255 255 255 / .12);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .25);
+  padding: 6px;
+}
+:where([data-look="industrial"]) .suggest button { font-family: var(--mono); font-size: 15px; border-radius: 8px; }
+:where([data-look="industrial"]) .suggest .on button, :where([data-look="industrial"]) .suggest button:hover { background: var(--accent); color: #fff; }
+:where([data-look="industrial"]) .suggest small { color: rgb(241 240 234 / .45); text-transform: uppercase; font-size: 10px; letter-spacing: .06em; }
+:where([data-look="industrial"]) .suggest .on small, :where([data-look="industrial"]) .suggest button:hover small { color: rgb(255 255 255 / .75); }
+@media (min-width: 900px) { :where([data-look="industrial"]) .suggest { top: calc(100% + 8px); } }
