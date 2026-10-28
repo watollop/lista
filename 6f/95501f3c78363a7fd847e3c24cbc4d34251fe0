@@ -1,0 +1,21 @@
+src/lib/mic.test.ts
+  s_c0c1af889a85ab::t_2024238e0499b8 7-8,10-11,13,31-57
+src/lib/mic.ts
+  s_c0c1af889a85ab::t_5fd1853b35cab6 4-6,10-14,16-19,22-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6f95501f3c78363a7fd847e3c24cbc4d34251fe0",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
