@@ -19,7 +19,7 @@
   --warn: #ff4f00;
   --mono: 'Space Mono', ui-monospace, Menlo, monospace;
   --dots: 'Doto', 'Space Mono', monospace;
-  --radius: 999px;
+  --radius: 14px; /* tarjetas y paneles; chips y casillas pequeñas quedan redondos solos */
   --r: 14px;
 }
 @media (prefers-color-scheme: dark) {
@@ -133,3 +133,6 @@
 :where([data-look="industrial"]) .side-item.on .side-count { color: var(--bg); }
 :where([data-look="industrial"]) .side-search { font-family: var(--mono); font-size: 13px; }
 @media (pointer: coarse) { :where([data-look="industrial"]) .side-search { font-size: 16px; } } /* iPad: sin zoom al enfocar */
+
+/* Bienvenida */
+:where([data-look="industrial"]) .intro-dots button.on i { background: var(--accent); }
