@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import './ui/styles.css';
+import './ui/look.css';
 import { createRepo } from './data/repo';
 import { createSync, syncConfigFromEnv } from './sync';
 import { registerSW, requestPersistence } from './pwa/register';

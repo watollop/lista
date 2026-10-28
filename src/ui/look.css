@@ -1,0 +1,132 @@
+/* Estilo «Industrial» (Ajustes → Apariencia): aspecto "aparato": monocromo y de puntos (Nothing) con gris cálido, naranja y rótulos en mono (Teenage Engineering). */
+@import '@fontsource/doto/700.css';
+@import '@fontsource/space-mono/400.css';
+@import '@fontsource/space-mono/700.css';
+
+:root[data-look="industrial"] {
+  --bg: #eeede9;
+  --fg: #111111;
+  --muted: #5f5e5a;
+  --faint: #9a9892;
+  --line: #cfcdc6;
+  --dot: #b9b7b0; /* separadores de puntos */
+  --surface: #e2e1dc;
+  --panel: #f7f6f2; /* módulos (tarjetas) */
+  --screen: #141414; /* "pantalla" de la captura */
+  --screen-fg: #f1f0ea;
+  --accent: #ff4f00; /* único color: naranja */
+  --on-accent: #ffffff;
+  --warn: #ff4f00;
+  --mono: 'Space Mono', ui-monospace, Menlo, monospace;
+  --dots: 'Doto', 'Space Mono', monospace;
+  --radius: 999px;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-look="industrial"]:not([data-theme="light"]) {
+    --bg: #000000; --fg: #f1f0ea; --muted: #9a9892; --faint: #5c5b57; --line: #262624; --dot: #3a3936;
+    --surface: #161615; --panel: #0e0e0d; --screen: #1c1c1b; --screen-fg: #f1f0ea;
+    --accent: #ff5a14; --on-accent: #000000; --warn: #ff5a14;
+  }
+}
+:root[data-look="industrial"][data-theme="dark"] {
+  --bg: #000000; --fg: #f1f0ea; --muted: #9a9892; --faint: #5c5b57; --line: #262624; --dot: #3a3936;
+  --surface: #161615; --panel: #0e0e0d; --screen: #1c1c1b; --screen-fg: #f1f0ea;
+  --accent: #ff5a14; --on-accent: #000000; --warn: #ff5a14;
+}
+
+/* Rótulos: mono en mayúsculas */
+:where([data-look="industrial"]) .label, :where([data-look="industrial"]) .section, :where([data-look="industrial"]) .tab, :where([data-look="industrial"]) .link, :where([data-look="industrial"]) .btn, :where([data-look="industrial"]) .chip, :where([data-look="industrial"]) .side-count, :where([data-look="industrial"]) .toast .link {
+  font-family: var(--mono);
+  letter-spacing: .06em;
+}
+:where([data-look="industrial"]) .label, :where([data-look="industrial"]) .section, :where([data-look="industrial"]) .tab, :where([data-look="industrial"]) .link, :where([data-look="industrial"]) .btn { font-size: 11px; }
+
+/* Marca en tipografía de puntos con el punto naranja */
+:where([data-look="industrial"]) .brand { font-family: var(--dots); font-weight: 700; font-size: 26px; letter-spacing: .04em; text-transform: uppercase; }
+:where([data-look="industrial"]) .brand::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: 2px; }
+
+:where([data-look="industrial"]) .tab.on { border-bottom-color: var(--accent); }
+:where([data-look="industrial"]) .tab sup { font-family: var(--mono); }
+
+/* Secciones numeradas: 01 HOY ······ 03 */
+:where([data-look="industrial"]) main { counter-reset: sec; }
+:where([data-look="industrial"]) main section { counter-increment: sec; }
+:where([data-look="industrial"]) .section {
+  align-items: center; gap: 10px;
+  color: var(--fg);
+  border-bottom: 0;
+  padding: 30px 0 10px;
+}
+:where([data-look="industrial"]) .section > span:first-child::before { content: counter(sec, decimal-leading-zero); color: var(--faint); margin-right: 10px; }
+:where([data-look="industrial"]) .section::after {
+  content: ''; order: 1; flex: 1; height: 2px;
+  background: radial-gradient(circle, var(--dot) 1px, transparent 1.2px) 0 50% / 6px 2px repeat-x;
+}
+:where([data-look="industrial"]) .section > span:last-child { order: 2; min-width: 28px; height: 20px; padding: 0 6px; display: grid; place-items: center; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 10px; }
+:where([data-look="industrial"]) .section.warn > span:last-child { background: var(--accent); color: var(--on-accent); }
+:where([data-look="industrial"]) .section.warn { color: var(--accent); }
+
+/* Lista dentro de un módulo */
+:where([data-look="industrial"]) .list { background: var(--panel); border-radius: var(--r); margin: 0; padding: 0 16px; }
+:where([data-look="industrial"]) .row { border-bottom: 0; background: radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 100% / 5px 2px repeat-x; }
+:where([data-look="industrial"]) .row:last-child { background: none; }
+:where([data-look="industrial"]) .row::before, :where([data-look="industrial"]) .row::after { margin: 0 -16px; padding: 0 16px; border-radius: var(--r); font-family: var(--mono); }
+:where([data-look="industrial"]) .row.sel { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* Casilla: punto */
+:where([data-look="industrial"]) .check i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--fg); }
+:where([data-look="industrial"]) .row.done .check i { background: var(--accent); border-color: var(--accent); }
+:where([data-look="industrial"]) .row.done .check i::after { width: 6px; height: 6px; border: 0; border-radius: 50%; background: var(--on-accent); transform: none; }
+:where([data-look="industrial"]) .row.done .title { text-decoration-color: var(--faint); }
+
+/* Chips: píldoras en mono */
+:where([data-look="industrial"]) .chip {
+  font-size: 10.5px; text-transform: uppercase;
+  background: transparent; border: 1px solid var(--line); color: var(--muted);
+  height: 22px; padding: 0 9px;
+}
+:where([data-look="industrial"]) .chip.on { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+:where([data-look="industrial"]) .chip.warn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+:where([data-look="industrial"]) .chip.ghost { border: 0; }
+:where([data-look="industrial"]) .title .tag { color: var(--muted); }
+
+/* Captura: pantalla oscura con trama de puntos */
+:where([data-look="industrial"]) .capture { background: transparent; border-top: 0; padding-top: 8px; }
+:where([data-look="industrial"]) .capture-inner {
+  background: var(--screen) radial-gradient(circle, rgb(255 255 255 / .07) .8px, transparent 1px) 0 0 / 6px 6px;
+  color: var(--screen-fg);
+  border-radius: var(--r);
+  padding: 0 18px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(255 255 255 / .08);
+}
+:where([data-look="industrial"]) .capture input { font-family: var(--mono); font-size: 15px; height: 58px; color: var(--screen-fg); caret-color: var(--accent); }
+:where([data-look="industrial"]) .capture input::placeholder { color: rgb(241 240 234 / .45); }
+:where([data-look="industrial"]) .capture .chip { border-color: rgb(255 255 255 / .2); color: rgb(241 240 234 / .7); }
+:where([data-look="industrial"]) .capture .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Vacío: tipografía de puntos */
+:where([data-look="industrial"]) .empty p:first-child { font-family: var(--dots); font-weight: 700; font-size: 34px; color: var(--fg); text-transform: uppercase; }
+:where([data-look="industrial"]) .empty p:last-child { font-family: var(--mono); font-size: 12px; }
+
+:where([data-look="industrial"]) .toast { border-radius: 999px; font-family: var(--mono); font-size: 12px; }
+:where([data-look="industrial"]) .btn { border-radius: 999px; }
+:where([data-look="industrial"]) .btn.solid { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+
+/* Ajustes */
+:where([data-look="industrial"]) .sheet h2 { font-family: var(--dots); font-weight: 700; font-size: 40px; text-transform: uppercase; }
+:where([data-look="industrial"]) .sheet section { border-top: 0; background: radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 0 / 5px 2px repeat-x; }
+
+/* Escritorio */
+@media (min-width: 900px) {
+  :where([data-look="industrial"]) .brand { font-size: 32px; }
+  :where([data-look="industrial"]) .capture { border-bottom: 0; margin-top: 18px; }
+  :where([data-look="industrial"]) .capture input { font-size: 18px; height: 66px; }
+}
+:where([data-look="industrial"]) .app.wide .top { border-bottom: 0; background: var(--bg) radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 100% / 6px 2px repeat-x; }
+:where([data-look="industrial"]) .side-group > .label { color: var(--fg); }
+:where([data-look="industrial"]) .side-group > .label::before { content: '■'; color: var(--accent); margin-right: 8px; font-size: 9px; vertical-align: 1px; }
+:where([data-look="industrial"]) .side-item { border-radius: 999px; font-size: 14px; }
+:where([data-look="industrial"]) .side-item.on { background: var(--fg); color: var(--bg); }
+:where([data-look="industrial"]) .side-item.on .side-count { color: var(--bg); }
+:where([data-look="industrial"]) .side-search { font-family: var(--mono); font-size: 13px; }
