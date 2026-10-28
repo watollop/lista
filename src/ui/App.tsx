@@ -36,7 +36,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const [editing, setEditing] = useState<ID | null>(null);
   const [sheetEnt, setSheetEnt] = useState<{ kind: EntityKind; key: string } | null>(null); // editor de tema/persona en móvil
   const [settings, setSettings] = useState(false);
-  // 'first': primera vez (3 slides); 'full': desde Ajustes, con las slides de referencia.
+  // 'first': primera vez; 'full': abierta desde Ajustes (mismas slides, el último botón dice «Listo»).
   const [intro, setIntro] = useState<false | 'first' | 'full'>(() => { try { return localStorage.getItem(INTRO_KEY) ? false : 'first'; } catch { return false; } });
   const [googleOk, setGoogleOk] = useState(false);
   useEffect(() => { if (intro && syncState.status === 'signedOut') sync.googleEnabled().then(setGoogleOk); }, [intro, syncState.status]);

@@ -11,7 +11,7 @@ export const INTRO_KEY = 'lista.intro';
 interface Props {
   onClose: () => void;
   signIn?: () => void; // solo si se puede entrar con Google
-  extended?: boolean; // desde Ajustes: añade las slides de referencia (fechas, prioridad y repetición, teclado)
+  extended?: boolean; // abierta desde Ajustes: el último botón dice «Listo» en vez de «Empezar»
 }
 
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -37,7 +37,7 @@ const SLIDES = [
 /** Con ratón (ordenador) se enseñan también los atajos de teclado. */
 const hasKeyboard = () => typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-/** Versión extendida (Ajustes → Cómo funciona): la referencia de todo lo que se puede escribir. */
+/** Referencia de todo lo que se puede escribir (al final de la bienvenida). */
 const EXTRA = [
   { title: 'Fechas como las dirías', text: () => 'Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', Demo: DatesDemo },
   { title: 'Prioridad y repetición', text: () => 'Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla.', Demo: PrioRepeatDemo },
@@ -58,9 +58,10 @@ function GoogleG({ class: cls }: { class?: string }) {
 
 const FOCUSABLE = 'button:not([disabled])';
 
-/** Bienvenida (portada y tres pasos) la primera vez; desde Ajustes → Cómo funciona, versión extendida con la referencia. */
+/** Bienvenida completa: portada, tres pasos y referencia. Se muestra la primera vez y desde Ajustes → Cómo funciona. */
 export function Onboarding({ onClose, signIn, extended }: Props) {
-  const [slides] = useState<Slide[]>(() => (extended ? [...SLIDES, ...EXTRA.filter((s) => !s.keyboard || hasKeyboard())] : SLIDES));
+  // Siempre todas: portada, los tres pasos y la referencia (fechas, prioridad y repetición; teclado solo con ratón).
+  const [slides] = useState<Slide[]>(() => [...SLIDES, ...EXTRA.filter((s) => !s.keyboard || hasKeyboard())]);
   const [i, setI] = useState(0);
   const last = i === slides.length - 1;
   const { Demo } = slides[i];
