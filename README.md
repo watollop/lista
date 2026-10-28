@@ -13,11 +13,12 @@ Revisar informe @ana #marketing mañana !1 cada lunes
 - **Captura en una línea** con lenguaje natural en español, vista previa de lo detectado y autocompletado de temas y personas.
 - **Filtros combinables** por fecha, tema, persona, prioridad y texto, que se pueden guardar y reutilizar.
 - **Tareas recurrentes**: al completar una tarea se crea la siguiente ocurrencia.
-- **Gestos y teclado**: desliza a la derecha para completar en móvil; atajos tipo Vim en escritorio.
+- **Gestos y teclado**: en móvil, desliza a la derecha para completar y a la izquierda para borrar; atajos tipo Vim en escritorio.
 - **Offline y sincronización**: IndexedDB en local y sincronización en segundo plano con Supabase, con acceso mediante Google.
 - **Instalable** en iOS, Android y escritorio, con tema claro, oscuro o el del sistema.
-- **Bienvenida** de tres pasos la primera vez (también en *Ajustes → Cómo funciona*).
-- **Ligera**: unos 70 KB comprimidos en total y sin dependencias de UI pesadas.
+- **Dos estilos**: *Clásico* (editorial en blanco y negro) e *Industrial* (gris cálido, tipografía de puntos y naranja como único acento), en *Ajustes → Apariencia*.
+- **Bienvenida** la primera vez, con demos animadas de cada función (también en *Ajustes → Cómo funciona*).
+- **Ligera**: unos 95 KB comprimidos de código y estilos, sin dependencias de UI pesadas. Las fuentes del estilo Industrial van incluidas (sin peticiones a terceros).
 
 ## Sintaxis
 
