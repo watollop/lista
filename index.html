@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-look="industrial">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Lista</title>
     <meta name="description" content="Lista de tareas minimalista: rápida, sin distracciones y disponible sin conexión." />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0c0c" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eeede9" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
 
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
@@ -43,7 +43,7 @@
       html[data-look="industrial"][data-theme="dark"] { background: #000000; }
     </style>
     <script>
-      try { var t = localStorage.getItem('lista.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; if (localStorage.getItem('lista.look') === 'industrial') document.documentElement.dataset.look = 'industrial'; } catch (e) {}
+      try { var t = localStorage.getItem('lista.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; if (localStorage.getItem('lista.look') === 'classic') delete document.documentElement.dataset.look; } catch (e) {}
     </script>
   </head>
   <body>
