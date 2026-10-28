@@ -5,25 +5,22 @@ import type { DropTarget } from '../lib/reschedule';
 /** Arrastre en curso (solo uno a la vez); el deslizamiento lateral lo consulta para no competir. */
 export const dragging = { id: null as ID | null };
 
-const HOLD_MS = 450; // táctil: mantener pulsado para levantar la tarea
-const SLOP = 8; // px de margen antes de decidir el gesto
 const EDGE = 90; // px desde el borde que hacen scroll automático
 const GRAB = 48; // px máximos entre el borde izquierdo de la tarea arrastrada y el cursor
 
 /**
- * Arrastrar una tarea a otro bloque de la lista. Táctil: mantener pulsado y mover; ratón: mover unos px.
- * Los destinos son elementos con data-drop="today|tomorrow|week|next|nodate".
+ * Arrastrar una tarea a otro bloque de la lista desde el asa «Mover» del editor (así no compite con
+ * seleccionar texto, el scroll o deslizar). Los destinos son elementos con data-drop="today|tomorrow|week|next|nodate".
  */
 export function useDrag(id: ID, enabled: boolean, onStart: () => void, onEnd: (target: DropTarget | null) => void) {
   const [d, setD] = useState({ x: 0, y: 0 });
   const [active, setActive] = useState(false);
   const justDragged = useRef(false);
-  const press = useRef<{ x: number; y: number; el: HTMLElement; timer?: ReturnType<typeof setTimeout>; mouse: boolean } | null>(null);
+  const press = useRef<{ x: number; y: number; el: HTMLElement; mouse: boolean } | null>(null);
 
   const begin = (startX: number, startY: number) => {
     const p = press.current;
     if (!p) return;
-    clearTimeout(p.timer);
     dragging.id = id;
     setActive(true);
     onStart();
@@ -80,31 +77,21 @@ export function useDrag(id: ID, enabled: boolean, onStart: () => void, onEnd: (t
     document.addEventListener('touchmove', noScroll, { passive: false }); // que el dedo arrastre y no haga scroll
   };
 
-  const cancel = () => { clearTimeout(press.current?.timer); press.current = null; };
+  /** Empieza a arrastrar ya (desde el asa «Mover» del editor): la fila que se mueve es la que contiene el asa. */
+  const start = (e: PointerEvent) => {
+    if (!enabled || e.button !== 0) return;
+    const el = (e.currentTarget as HTMLElement).closest<HTMLElement>('.row');
+    if (!el) return;
+    e.preventDefault();
+    press.current = { x: e.clientX, y: e.clientY, el, mouse: e.pointerType === 'mouse' };
+    begin(e.clientX, e.clientY);
+  };
 
+  // Tras soltar no debe pulsarse nada de lo que quede debajo.
   const handlers = {
-    onPointerDown: (e: PointerEvent) => {
-      if (!enabled || e.button !== 0 || (e.target as HTMLElement).closest('input, .check, .trash, .edit-actions')) return;
-      const mouse = e.pointerType === 'mouse';
-      const y = e.clientY;
-      const x = e.clientX;
-      const el = e.currentTarget as HTMLElement;
-      press.current = { x, y, el, mouse, timer: mouse ? undefined : setTimeout(() => begin(x, y), HOLD_MS) };
-    },
-    onPointerMove: (e: PointerEvent) => {
-      const p = press.current;
-      if (!p || dragging.id) return;
-      const far = Math.hypot(e.clientX - p.x, e.clientY - p.y) > SLOP;
-      if (!far) return;
-      if (p.mouse) begin(p.x, p.y); // ratón: arrastrar en cuanto se mueve
-      else cancel(); // táctil: si se mueve antes de mantener pulsado, es scroll o deslizamiento
-    },
-    onPointerUp: cancel,
-    onPointerCancel: cancel,
-    // Tras soltar no debe abrirse el editor (el clic llega al título).
     onClickCapture: (e: MouseEvent) => {
       if (justDragged.current) { e.preventDefault(); e.stopPropagation(); justDragged.current = false; }
     },
   };
-  return { handlers, active, style: active ? { '--drag-x': `${d.x}px`, '--drag-y': `${d.y}px` } : undefined };
+  return { start, handlers, active, style: active ? { '--drag-x': `${d.x}px`, '--drag-y': `${d.y}px` } : undefined };
 }
