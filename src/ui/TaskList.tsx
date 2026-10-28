@@ -114,15 +114,13 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   const isEditing = editing === task.id;
   const ref = useRef<HTMLLIElement>(null);
   const swipe = useSwipe(() => onToggle(task.id), () => onDelete(task.id), !isEditing);
-  const drag = useDrag(task.id, !isEditing && !task.done, () => onDragStart(task.id), (target) => {
+  const drag = useDrag(task.id, isEditing && !task.done, () => onDragStart(task.id), (target) => {
     onDragEnd();
+    onEdit(null);
     if (target) onMove(task.id, target);
   });
-  // Ambos gestos escuchan los mismos eventos: el arrastre (mantener pulsado) y el deslizamiento lateral.
-  const both = (k: keyof typeof drag.handlers) => (e: never) => {
-    (drag.handlers[k] as (e: never) => void)(e);
-    (swipe.handlers as Record<string, ((e: never) => void) | undefined>)[k]?.(e);
-  };
+  // El deslizamiento lateral y el arrastre (que solo empieza desde el asa del editor) comparten el clic de después.
+  const clickCapture = (e: MouseEvent) => { drag.handlers.onClickCapture(e); swipe.handlers.onClickCapture(e); };
   useEffect(() => {
     if (selected === task.id) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
@@ -135,11 +133,8 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       data-swipe={task.done ? 'Pendiente' : 'Hecha'}
       data-swipe-left="Borrar"
       style={{ ...swipe.style, ...drag.style }}
-      onPointerDown={both('onPointerDown')}
-      onPointerMove={both('onPointerMove')}
-      onPointerUp={both('onPointerUp')}
-      onPointerCancel={both('onPointerCancel')}
-      onClickCapture={both('onClickCapture')}
+      {...swipe.handlers}
+      onClickCapture={clickCapture}
     >
       <button class="check" aria-label={task.done ? 'Marcar pendiente' : 'Completar'} onClick={() => onToggle(task.id)}>
         <i />
@@ -147,7 +142,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       <div class="body">
         {isEditing ? (
           <Editor task={task} names={names} onSave={(l) => onSave(task.id, l)} onCancel={() => onEdit(null)}
-            onDelete={() => onDelete(task.id)} />
+            onDelete={() => onDelete(task.id)} onDragStart={task.done ? undefined : drag.start} />
         ) : (
           <>
             <button class={`title ${task.priority === 1 ? 'p1' : ''}`} onClick={() => { onSelect(task.id); onEdit(task.id); }}>
@@ -250,9 +245,10 @@ export function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
 
 /** Edición en línea con la misma sintaxis que la captura. Las fechas se muestran como vence:AAAA-MM-DD
  *  para que una relativa ("mañana") no se recalcule al guardar. */
-function Editor({ task, names, onSave, onCancel, onDelete }: {
+function Editor({ task, names, onSave, onCancel, onDelete, onDragStart }: {
   task: Task; names: Map<string, Entity>;
   onSave: (l: ParsedLine) => void; onCancel: () => void; onDelete: () => void;
+  onDragStart?: (e: PointerEvent) => void; // asa «Mover»: arrastrar la tarea a otro día
 }) {
   const initial = formatLine({
     title: task.title,
@@ -290,6 +286,16 @@ function Editor({ task, names, onSave, onCancel, onDelete }: {
       />
       <div class="edit-actions">
         <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
+        {onDragStart && (
+          <button class="link move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
+            onMouseDown={(e) => e.preventDefault()} onTouchStart={(e) => e.preventDefault()} onPointerDown={onDragStart}>
+            <svg class="grip" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
+              <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" /><circle cx="5.5" cy="8" r="1.4" />
+              <circle cx="10.5" cy="8" r="1.4" /><circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
+            </svg>
+            Mover
+          </button>
+        )}
         {task.due && (prefersApple() ? (
           <>
             <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToAppleCalendar(task)}><CalendarIcon />Calendario</button>

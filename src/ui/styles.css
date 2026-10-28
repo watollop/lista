@@ -923,3 +923,8 @@ section.droppable.drop-on .section { color: var(--fg); }
 .side-list li.drop-on .side-item { background: var(--surface); color: var(--fg); }
 
 .fold-body { padding: 16px 0 6px; }
+
+/* Asa «Mover» del editor: se arrastra (no se pulsa). */
+.edit-actions .move { cursor: grab; touch-action: none; }
+.edit-actions { flex-wrap: wrap; column-gap: 18px; row-gap: 0; }
+.edit-actions .grip { flex: none; }
