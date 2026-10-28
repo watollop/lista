@@ -100,7 +100,7 @@
   padding: 0 18px;
   box-shadow: 0 10px 30px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(255 255 255 / .08);
 }
-:where([data-look="industrial"]) .capture input { font-family: var(--mono); font-size: 15px; height: 58px; color: var(--screen-fg); caret-color: var(--accent); }
+:where([data-look="industrial"]) .capture input { font-family: var(--mono); font-size: 16px; /* menos de 16 px hace que iOS amplíe la página al enfocar */ height: 58px; color: var(--screen-fg); caret-color: var(--accent); }
 :where([data-look="industrial"]) .capture input::placeholder { color: rgb(241 240 234 / .45); }
 :where([data-look="industrial"]) .capture .chip { border-color: rgb(255 255 255 / .2); color: rgb(241 240 234 / .7); }
 :where([data-look="industrial"]) .capture .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -130,3 +130,4 @@
 :where([data-look="industrial"]) .side-item.on { background: var(--fg); color: var(--bg); }
 :where([data-look="industrial"]) .side-item.on .side-count { color: var(--bg); }
 :where([data-look="industrial"]) .side-search { font-family: var(--mono); font-size: 13px; }
+@media (pointer: coarse) { :where([data-look="industrial"]) .side-search { font-size: 16px; } } /* iPad: sin zoom al enfocar */
