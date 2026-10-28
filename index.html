@@ -36,9 +36,14 @@
         html:not([data-theme="light"]) { background: #0c0c0c; }
       }
       html[data-theme="dark"] { background: #0c0c0c; }
+      html[data-look="industrial"] { background: #eeede9; }
+      @media (prefers-color-scheme: dark) {
+        html[data-look="industrial"]:not([data-theme="light"]) { background: #000000; }
+      }
+      html[data-look="industrial"][data-theme="dark"] { background: #000000; }
     </style>
     <script>
-      try { var t = localStorage.getItem('lista.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+      try { var t = localStorage.getItem('lista.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; if (localStorage.getItem('lista.look') === 'industrial') document.documentElement.dataset.look = 'industrial'; } catch (e) {}
     </script>
   </head>
   <body>

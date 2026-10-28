@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
-import { getTheme, setTheme, type Theme } from './theme';
+import { getLook, getTheme, setLook, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { EntityEditor } from './EntityEditor';
@@ -109,9 +109,11 @@ function Account({ sync, state }: { sync: Sync; state: SyncState }) {
 }
 
 const THEMES: Array<[Theme, string]> = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Oscuro']];
+const LOOKS: Array<[Look, string]> = [['classic', 'Clásico'], ['industrial', 'Industrial']];
 
 function Appearance() {
   const [theme, set] = useState(getTheme);
+  const [look, setL] = useState(getLook);
   return (
     <section>
       <span class="label">Apariencia</span>
@@ -121,6 +123,13 @@ function Appearance() {
             onClick={() => { setTheme(t); set(t); }}>{l}</button>
         ))}
       </div>
+      <div class="row-btns look-btns" role="radiogroup" aria-label="Estilo">
+        {LOOKS.map(([k, l]) => (
+          <button key={k} role="radio" aria-checked={look === k} class={`btn ${look === k ? 'solid' : ''}`}
+            onClick={() => { setLook(k); setL(k); }}>{l}</button>
+        ))}
+      </div>
+      <p class="look-hint">Industrial: gris cálido, tipografía de puntos y un solo color de acento, naranja.</p>
     </section>
   );
 }
