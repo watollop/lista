@@ -1,7 +1,7 @@
 /* Estilo «Industrial» (Ajustes → Apariencia): aspecto "aparato": monocromo y de puntos (Nothing) con gris cálido, naranja y rótulos en mono (Teenage Engineering). */
-@import '@fontsource/doto/700.css';
-@import '@fontsource/space-mono/400.css';
-@import '@fontsource/space-mono/700.css';
+@import '@fontsource/doto/latin-700.css';
+@import '@fontsource/space-mono/latin-400.css';
+@import '@fontsource/space-mono/latin-700.css';
 
 :root[data-look="industrial"] {
   --bg: #eeede9;
