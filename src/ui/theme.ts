@@ -24,16 +24,15 @@ export function setTheme(t: Theme): void {
 
 export function getLook(): Look {
   try {
-    return localStorage.getItem(LOOK_KEY) === 'industrial' ? 'industrial' : 'classic';
+    return localStorage.getItem(LOOK_KEY) === 'classic' ? 'classic' : 'industrial'; // Industrial por defecto
   } catch {
-    return 'classic';
+    return 'industrial';
   }
 }
 
 export function setLook(l: Look): void {
   try {
-    if (l === 'classic') localStorage.removeItem(LOOK_KEY);
-    else localStorage.setItem(LOOK_KEY, l);
+    localStorage.setItem(LOOK_KEY, l);
   } catch { /* modo privado */ }
   applyTheme();
 }
