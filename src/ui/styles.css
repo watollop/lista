@@ -924,6 +924,9 @@ section.droppable.drop-on .section { color: var(--fg); }
 
 .fold-body { padding: 16px 0 6px; }
 
+.help-fold { margin-top: 18px; border-top: 1px solid var(--line); }
+.help-fold .ent-head { font-size: 14px; color: var(--muted); }
+
 /* Asa «Mover» del editor: se arrastra (no se pulsa). */
 .edit-actions .move { cursor: grab; touch-action: none; }
 .edit-actions { flex-wrap: wrap; column-gap: 18px; row-gap: 0; }
