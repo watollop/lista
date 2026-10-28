@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Entity, ISODate, ParsedLine } from '../types';
 import { normalizeKey, parseLine } from '../parser';
 import { collapseResults, dictationItems } from '../lib/speech';
+import { micSteps, type Blocked } from '../lib/mic';
 import { TaskChips } from './Chips';
 
 // Reconocimiento de voz del navegador (Chrome/Android: Google; Safari/iOS: Apple). Sin tipos en lib.dom.
@@ -19,11 +20,25 @@ const Ctor = () => (globalThis as unknown as { SpeechRecognition?: new () => Rec
 export const canDictate = () => typeof window !== 'undefined' && !!Ctor();
 
 const ERRORS: Record<string, string> = {
-  'not-allowed': 'Permite el micrófono para dictar.',
-  'service-not-allowed': 'El dictado no está disponible aquí.',
   'no-speech': 'No te he oído. Toca «Seguir hablando».',
   network: 'Sin conexión: el dictado necesita internet.',
 };
+
+/** Errores que significan «sin permiso»: se muestran los pasos para darlo en lugar de un aviso. */
+const BLOCKED: Record<string, Blocked> = { 'not-allowed': 'mic', 'service-not-allowed': 'service' };
+let blockedThisSession: Blocked | null = null; // al volver a tocar el micrófono, los pasos salen directamente
+
+const isStandalone = () => typeof matchMedia !== 'undefined' && (matchMedia('(display-mode: standalone)').matches
+  || (navigator as unknown as { standalone?: boolean }).standalone === true);
+
+/** ¿El navegador ya sabe que el micrófono está denegado? (Safari 16+, Chrome). Sin la API, se sabrá al empezar. */
+async function micDenied(): Promise<boolean> {
+  try {
+    return (await navigator.permissions.query({ name: 'microphone' as PermissionName })).state === 'denied';
+  } catch {
+    return false;
+  }
+}
 
 interface Props {
   names: Map<string, Entity>;
@@ -43,6 +58,7 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
+  const [blocked, setBlocked] = useState<Blocked | null>(blockedThisSession);
   const rec = useRef<Recognition | null>(null);
   const items = [...done, ...live].filter((t) => !removed.has(t));
 
@@ -67,7 +83,12 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
       current = dictationItems(phrases, cuts);
       setLive(current);
     };
-    r.onerror = (e) => { if (e.error !== 'aborted') setError(ERRORS[e.error] ?? 'No se ha podido dictar.'); };
+    r.onerror = (e) => {
+      if (e.error === 'aborted') return;
+      const b = BLOCKED[e.error];
+      if (b) { blockedThisSession = b; setBlocked(b); return; }
+      setError(ERRORS[e.error] ?? 'No se ha podido dictar.');
+    };
     r.onend = () => {
       // Lo de esta sesión pasa a fijo; «Seguir hablando» empieza una sesión nueva.
       setDone((d) => [...d, ...current]);
@@ -80,11 +101,23 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
     rec.current = r;
     r.start();
   };
+  // Reintentar tras dar permiso: si el navegador sigue diciendo que no, los pasos se quedan.
+  const retry = async () => {
+    if (await micDenied()) return;
+    blockedThisSession = null;
+    setBlocked(null);
+    start();
+  };
   const stop = () => rec.current?.stop();
 
   useEffect(() => {
-    start();
-    return () => rec.current?.abort();
+    if (blockedThisSession) return;
+    let gone = false;
+    micDenied().then((denied) => {
+      if (gone) return;
+      if (denied) { blockedThisSession = 'mic'; setBlocked('mic'); } else start();
+    });
+    return () => { gone = true; rec.current?.abort(); };
   }, []);
 
   const add = async () => {
@@ -99,9 +132,17 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
         onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
         <div class="dict-head">
           <span class={`dict-dot ${listening ? 'on' : ''}`} aria-hidden="true" />
-          <span class="label">{listening ? 'Escuchando…' : 'Dictado en pausa'}</span>
+          <span class="label">{blocked ? 'Sin acceso al micrófono' : listening ? 'Escuchando…' : 'Dictado en pausa'}</span>
         </div>
-        <p class="dict-hint">Di una tarea, haz una pausa y di la siguiente. «Prioridad alta», «tema trabajo» y «persona Ana» también valen.</p>
+        {blocked ? (
+          <div class="dict-blocked" role="alert">
+            <p>{blocked === 'service'
+              ? 'El dictado está desactivado en este dispositivo. Para usarlo:'
+              : 'Lista no tiene permiso para usar el micrófono. Para dictar:'}</p>
+            <ol>{micSteps(blocked, navigator.userAgent, isStandalone(), navigator.maxTouchPoints).map((s) => <li key={s}>{s}</li>)}</ol>
+            {blocked === 'mic' && <p class="dict-note">Mientras tanto, puedes usar el micrófono del teclado en la caja de texto.</p>}
+          </div>
+        ) : <p class="dict-hint">Di una tarea, haz una pausa y di la siguiente. «Prioridad alta», «tema trabajo» y «persona Ana» también valen.</p>}
         <ul class="dict-list">
           {items.map((t, i) => {
             const p = parseLine(t);
@@ -121,7 +162,12 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
           })}
         </ul>
         {error && <p class="err">{error}</p>}
-        <div class="ent-actions">
+        {blocked ? (
+          <div class="ent-actions">
+            <button class="btn solid" onClick={retry}>Reintentar</button>
+            <button class="link" onClick={onClose}>Cerrar</button>
+          </div>
+        ) : <div class="ent-actions">
           <button class="btn solid" disabled={!items.length} onClick={add}>
             {items.length ? `Añadir ${items.length} ${items.length === 1 ? 'tarea' : 'tareas'}` : 'Añadir'}
           </button>
@@ -129,7 +175,7 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
             ? <button class="link" onClick={stop}>Parar</button>
             : <button class="link" onClick={start}>Seguir hablando</button>}
           <button class="link" onClick={onClose}>Cancelar</button>
-        </div>
+        </div>}
       </div>
     </div>
   );
