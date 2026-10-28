@@ -1,0 +1,25 @@
+src/lib/mic.test.ts
+  s_c0c1af889a85ab::t_5f96283a8b19cc 1-38
+src/lib/mic.ts
+  s_c0c1af889a85ab::t_bf80ccab5556a8 1-16
+src/ui/Dictation.tsx
+  s_c0c1af889a85ab::t_4405e05d8bb6a6 5,27-42,61,86-91,104-110,114-120,135,137-145,165-170,178
+src/ui/styles.css
+  s_c0c1af889a85ab::t_4f606f30b1ef9b 880-883
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "912d06a0a501dc7e827c8c458afb30b3c6a414a8",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
