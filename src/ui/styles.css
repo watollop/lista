@@ -469,7 +469,8 @@ kbd {
   align-content: start;
 }
 .app.wide .top { grid-area: top; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
-.app.wide .capture { grid-area: capture; }
+/* La captura se queda bajo la cabecera: al colocar el presente arriba (hay pasadas) no se va de la vista. */
+.app.wide .capture { grid-area: capture; position: sticky; top: calc(88px + var(--sat)); z-index: 4; background: var(--bg); padding-bottom: 6px; }
 .app.wide main { grid-area: main; min-width: 0; }
 .side {
   grid-area: side;

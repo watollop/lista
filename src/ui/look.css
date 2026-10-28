@@ -52,6 +52,8 @@
 /* Secciones numeradas: 01 HOY ······ 03 */
 :where([data-look="industrial"]) main { counter-reset: sec; }
 :where([data-look="industrial"]) main section { counter-increment: sec; }
+:where([data-look="industrial"]) main section.past { counter-increment: none; } /* Pasadas no cuenta: la numeración empieza en el presente */
+:where([data-look="industrial"]) .past .section > span:first-child::before { content: '00'; }
 :where([data-look="industrial"]) .section {
   align-items: center; gap: 10px;
   color: var(--fg);

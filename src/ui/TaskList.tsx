@@ -72,7 +72,11 @@ export function TaskList(props: Props) {
     if (anchored.current === key || !nowRef.current) return;
     anchored.current = key;
     if (!pastSection) return;
-    const header = (document.querySelector('.top') as HTMLElement | null)?.offsetHeight ?? 0;
+    // Lo que queda fijo arriba: la cabecera y, en escritorio, también la captura.
+    const header = ['.top', '.capture'].reduce((h, sel) => {
+      const el = document.querySelector(sel) as HTMLElement | null;
+      return el && getComputedStyle(el).position === 'sticky' ? h + el.offsetHeight : h;
+    }, 0);
     window.scrollTo({ top: nowRef.current.getBoundingClientRect().top + window.scrollY - header });
   });
 
