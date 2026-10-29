@@ -228,7 +228,7 @@ describe('sortTasks', () => {
 });
 
 describe('groupTasks', () => {
-  it('groups children under parent, open first then order', () => {
+  it('groups children in saved order regardless of completion', () => {
     const p = mk({ id: 'P', order: 1 });
     const c1 = mk({ id: 'c1', parentId: 'P', done: 1, doneAt: 1, order: 0 });
     const c2 = mk({ id: 'c2', parentId: 'P', order: 5 });
@@ -236,7 +236,16 @@ describe('groupTasks', () => {
     const g = groupTasks([p, c2, c3, c1]);
     expect(g.length).toBe(1);
     expect(g[0].task.id).toBe('P');
-    expect(g[0].children.map((t) => t.id)).toEqual(['c3', 'c2', 'c1']);
+    expect(g[0].children.map((t) => t.id)).toEqual(['c1', 'c3', 'c2']);
+  });
+  it.each([0, 1] as const)('keeps sibling positions after sorting tasks, done=%s', (done) => {
+    const parent = mk({ id: 'P' });
+    const first = mk({ id: 'first', parentId: 'P', order: 1, createdAt: 1, done, doneAt: done ? 100 : null });
+    const second = mk({ id: 'second', parentId: 'P', order: 1, createdAt: 2, due: TODAY, priority: 1 });
+    const tasks = [parent, second, first];
+    const group = groupTasks(sortTasks(tasks, TODAY)).find((g) => g.task.id === parent.id)!;
+    expect(group.children.map((t) => t.id)).toEqual(['first', 'second']);
+    expect(tasks.map((t) => t.id)).toEqual(['P', 'second', 'first']);
   });
   it('orphan subtask (parent not in list) becomes top-level', () => {
     const orphan = mk({ id: 'O', parentId: 'GONE' });

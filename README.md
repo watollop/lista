@@ -38,6 +38,7 @@ En la captura se añaden subtareas con `<`, sin botones adicionales. Para añadi
 - Solo la fila seleccionada muestra una línea a la izquierda: en Clásico usa el color secundario si es una tarea con subtareas o una subtarea; en Industrial usa el naranja del estilo. Toca el título de la tarea principal para desplegar sus subtareas y el lápiz para editarla.
 - Dentro del grupo desplegado, toca el **+** junto a la casilla de la última subtarea, a su izquierda y al nivel de la casilla principal, para añadir más subtareas.
 - En Clásico, la línea inferior de las subtareas y los **+** usan el color secundario sin transparencia. Industrial conserva sus puntos y su acento naranja.
+- Al cerrar un grupo, la tarea principal muestra una línea inferior del color secundario como indicador en Clásico. Las subtareas conservan su posición al completarlas o reabrirlas.
 - Completar la tarea principal cierra todas sus subtareas. También se completa al terminar la última subtarea; reabrir una subtarea reabre la principal y reabrir la principal reabre todas.
 - **Deshacer** recupera el estado previo sin reabrir subtareas que ya estaban hechas.
 - En Clásico, las subtareas completadas usan el color elegido en la casilla y en la línea de tachado.

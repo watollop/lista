@@ -117,7 +117,7 @@ export function groupTasks(sorted: Task[]): Array<{ task: Task; children: Task[]
     }
   }
   for (const list of childrenOf.values()) {
-    list.sort((a, b) => a.done - b.done || a.order - b.order || a.createdAt - b.createdAt);
+    list.sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
   }
   return sorted
     .filter((t) => !(t.parentId && ids.has(t.parentId)))
