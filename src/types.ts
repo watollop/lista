@@ -58,6 +58,12 @@ export interface Filter {
   text: string; // búsqueda libre, insensible a mayúsculas y acentos
 }
 
+/** Preferencia sincronizada entre dispositivos (p. ej. la apariencia). key identifica la preferencia. */
+export interface Setting extends SyncRec {
+  key: string;
+  value: unknown;
+}
+
 export interface SavedFilter extends SyncRec {
   id: ID;
   name: string;
@@ -110,13 +116,13 @@ export interface Backup {
 
 // ---------- sync ----------
 
-export type SyncKind = 'task' | 'topic' | 'person' | 'filter';
+export type SyncKind = 'task' | 'topic' | 'person' | 'filter' | 'setting';
 
 /** Registro tal y como viaja al/desde el servidor. */
 export interface RemoteItem {
   kind: SyncKind;
   id: string; // Task.id, Entity.key o SavedFilter.id
-  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'>;
+  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'> | Omit<Setting, 'dirty'>;
   updated_at: number;
   deleted: boolean;
 }
@@ -165,6 +171,10 @@ export interface Repo {
   wipe(): Promise<void>;
   /** merge: LWW por updatedAt. replace: borra todo y carga. */
   importBackup(b: Backup, mode: 'merge' | 'replace'): Promise<void>;
+
+  /** Preferencias que viajan con la cuenta. setSetting marca dirty y notifica; las remotas llegan por applyRemote. */
+  getSetting<T = unknown>(key: string): Promise<{ value: T; updatedAt: number } | undefined>;
+  setSetting(key: string, value: unknown): Promise<void>;
 
   // --- soporte para sync ---
   pendingChanges(): Promise<RemoteItem[]>; // registros con dirty=1

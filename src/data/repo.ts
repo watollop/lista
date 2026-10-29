@@ -9,6 +9,7 @@ import type {
   RemoteItem,
   Repo,
   SavedFilter,
+  Setting,
   SyncKind,
   SyncRec,
   Task,
@@ -146,7 +147,7 @@ export function createRepo(dbName = 'lista'): Repo {
   };
   if (channel) channel.onmessage = () => emit();
 
-  const allTables = [db.tasks, db.topics, db.people, db.filters] as const;
+  const allTables = [db.tasks, db.topics, db.people, db.filters, db.settings] as const;
   const tableOf = (kind: EntityKind) => (kind === 'topic' ? db.topics : db.people);
 
   const childrenOf = async (id: ID) => live(await db.tasks.where('parentId').equals(id).toArray());
@@ -564,11 +565,12 @@ export function createRepo(dbName = 'lista'): Repo {
         const { dirty: _dirty, ...rest } = r;
         return rest as T;
       };
-      const [tasks, topics, people, filters] = await Promise.all([
+      const [tasks, topics, people, filters, settings] = await Promise.all([
         db.tasks.where('dirty').equals(1).toArray(),
         db.topics.where('dirty').equals(1).toArray(),
         db.people.where('dirty').equals(1).toArray(),
         db.filters.where('dirty').equals(1).toArray(),
+        db.settings.where('dirty').equals(1).toArray(),
       ]);
       const items: RemoteItem[] = [];
       for (const t of tasks)
@@ -579,6 +581,8 @@ export function createRepo(dbName = 'lista'): Repo {
         items.push({ kind: 'person', id: e.key, data: strip(e), updated_at: e.updatedAt, deleted: e.deleted === 1 });
       for (const f of filters)
         items.push({ kind: 'filter', id: f.id, data: strip(f), updated_at: f.updatedAt, deleted: f.deleted === 1 });
+      for (const s of settings)
+        items.push({ kind: 'setting', id: s.key, data: strip(s), updated_at: s.updatedAt, deleted: s.deleted === 1 });
       return items;
     },
 
@@ -598,6 +602,9 @@ export function createRepo(dbName = 'lista'): Repo {
             case 'filter':
               await markOne(db.filters, it.id, it.updated_at);
               break;
+            case 'setting':
+              await markOne(db.settings, it.id, it.updated_at);
+              break;
           }
         }
       });
@@ -614,6 +621,17 @@ export function createRepo(dbName = 'lista'): Repo {
         return any;
       });
       if (wrote) notify();
+    },
+
+    async getSetting<T = unknown>(key: string) {
+      const row = await db.settings.get(key);
+      return row && !row.deleted ? { value: row.value as T, updatedAt: row.updatedAt } : undefined;
+    },
+
+    async setSetting(key, value) {
+      const rec: Setting = { key, value, updatedAt: Date.now(), deleted: 0, dirty: 1 };
+      await db.settings.put(rec);
+      notify();
     },
 
     async getMeta<T = unknown>(key: string) {
@@ -650,6 +668,8 @@ export function createRepo(dbName = 'lista'): Repo {
         return applyOne(db.people, it);
       case 'filter':
         return applyOne(db.filters, it);
+      case 'setting':
+        return applyOne(db.settings, it);
     }
   }
 

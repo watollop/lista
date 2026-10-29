@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Entity, SavedFilter, Task } from '../types';
+import type { Entity, SavedFilter, Setting, Task } from '../types';
 
 export interface MetaRow {
   key: string;
@@ -12,6 +12,7 @@ export class ListaDB extends Dexie {
   declare topics: Table<Entity, string>;
   declare people: Table<Entity, string>;
   declare filters: Table<SavedFilter, string>;
+  declare settings: Table<Setting, string>;
   declare meta: Table<MetaRow, string>;
 
   constructor(name = 'lista') {
@@ -23,5 +24,6 @@ export class ListaDB extends Dexie {
       filters: 'id, dirty',
       meta: 'key',
     });
+    this.version(2).stores({ settings: 'key, dirty' });
   }
 }

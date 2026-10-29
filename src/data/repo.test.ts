@@ -795,3 +795,30 @@ describe('renameEntity / deleteEntity', () => {
     expect(f.dirty).toBe(1);
   });
 });
+
+describe('preferencias (setting)', () => {
+  const remote = (value: unknown, updated_at: number): RemoteItem => ({
+    kind: 'setting', id: 'appearance', data: { key: 'appearance', value, updatedAt: updated_at, deleted: 0 }, updated_at, deleted: false,
+  });
+
+  it('setSetting queda pendiente de subir y getSetting la devuelve', async () => {
+    const r = newRepo();
+    await r.setSetting('appearance', { look: 'classic' });
+    expect((await r.getSetting('appearance'))?.value).toEqual({ look: 'classic' });
+    const pending = await r.pendingChanges();
+    expect(pending).toHaveLength(1);
+    expect(pending[0]).toMatchObject({ kind: 'setting', id: 'appearance' });
+    await r.markPushed(pending);
+    expect(await r.pendingChanges()).toHaveLength(0);
+  });
+
+  it('lo remoto solo gana si es más reciente (LWW) y no queda pendiente', async () => {
+    const r = newRepo();
+    await r.setSetting('appearance', { look: 'classic' });
+    await r.applyRemote([remote({ look: 'industrial' }, 1)]); // más antiguo: se ignora
+    expect((await r.getSetting<{ look: string }>('appearance'))?.value.look).toBe('classic');
+    await r.applyRemote([remote({ look: 'industrial' }, Date.now() + 10_000)]);
+    expect((await r.getSetting<{ look: string }>('appearance'))?.value.look).toBe('industrial');
+    expect(await r.pendingChanges()).toHaveLength(0);
+  });
+});
