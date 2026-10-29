@@ -988,3 +988,20 @@ section.droppable.drop-on .section { color: var(--fg); }
 .edit-actions .move { cursor: grab; touch-action: none; }
 .edit-actions { flex-wrap: wrap; column-gap: 18px; row-gap: 0; }
 .edit-actions .grip { flex: none; }
+
+/* Bicho de píxeles: a los 60 s sale de la esquina derecha, hace una pirueta y se va (5 s en total). */
+.critter { position: fixed; right: 0; bottom: 24px; z-index: 5; pointer-events: none; animation: critter-move 5s linear forwards; }
+.critter-body { display: block; transform-origin: 50% 60%; animation: critter-flip 5s linear forwards; }
+@keyframes critter-move {
+  0% { transform: translateX(120%); }
+  20% { transform: translateX(-40px); }
+  70% { transform: translateX(-40px); }
+  100% { transform: translateX(120%); }
+}
+@keyframes critter-flip {
+  0%, 30% { transform: translateY(0) rotate(0); animation-timing-function: ease-out; }
+  45% { transform: translateY(-60px) rotate(-180deg); animation-timing-function: ease-in; }
+  60% { transform: translateY(0) rotate(-360deg); }
+  64% { transform: translateY(0) scale(1.15, .85) rotate(-360deg); }
+  68%, 100% { transform: translateY(0) rotate(-360deg); }
+}

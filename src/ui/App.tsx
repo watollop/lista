@@ -13,6 +13,7 @@ import { TaskList } from './TaskList';
 import type { ChipTap } from './Chips';
 import { EntityEditor } from './EntityEditor';
 import { Settings } from './Settings';
+import { Critter } from './Critter';
 import { INTRO_KEY, Onboarding } from './Onboarding';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
@@ -377,6 +378,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }} />
       )}
+      <Critter enabled={wide} />
       {intro && (
         <Onboarding onClose={closeIntro} extended={intro === 'full'}
           signIn={googleOk && syncState.status === 'signedOut' ? () => sync.signInWithGoogle() : undefined} />
