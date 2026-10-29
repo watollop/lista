@@ -34,6 +34,7 @@ La guía `#tema @persona !prioridad fecha` permanece visible mientras escribes, 
 - Las tareas se agrupan solas: Vencidas · Hoy · Mañana · Esta semana · Próximas.
 - Para cambiarla de día, tócala y arrastra **Mover**.
 - Solo la fila seleccionada muestra una línea a la izquierda: rosa si es una tarea con subtareas o una subtarea. Toca el título de la tarea principal para desplegar sus subtareas y el lápiz para editarla.
+- Dentro del grupo desplegado, toca el **+** del color elegido, alineado con las casillas, para añadir más subtareas.
 - Una tarea con subtareas se completa al terminar todas; reabrir una subtarea reabre la principal.
 
 ## 3 · Tus datos, contigo

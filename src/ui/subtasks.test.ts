@@ -244,9 +244,20 @@ describe('lista de subtareas', () => {
     await vi.waitFor(() => expect(root.querySelector('.row.sub .title')?.textContent).toBe('Paso añadido'));
     const children = (await repo.listTasks()).filter((t) => t.parentId === parent.id);
     expect(children).toHaveLength(1);
+    const add = root.querySelector('.subtask-composer [aria-label="Añadir subtarea"]');
+    expect(add?.textContent?.trim()).toBe('');
+    expect(add?.querySelector('svg')).not.toBeNull();
+    expect(root.querySelector('.subtask-composer .add-subtask')).toBeNull();
+    click(add);
+    type(input('Subtarea 1'), 'Otro paso desde el más');
+    enter(input('Subtarea 1'));
+    enter(input('Subtarea 2'));
+    await vi.waitFor(() => expect(root.querySelectorAll('.row.sub')).toHaveLength(2));
+    expect((await repo.listTasks()).filter((t) => t.parentId === parent.id)).toHaveLength(2);
+    expect(root.querySelector('.subtask-composer [aria-label="Añadir subtarea"]')).not.toBeNull();
   });
 
-  it('mantiene el icono y toda la familia al filtrar solo el título del padre', async () => {
+  it('mantiene el indicador y toda la familia al filtrar solo el título del padre', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await repo.addParsed([parseLine('Proyecto'), { ...parseLine('Paso'), isSubtask: true }]);
     localStorage.setItem('lista.filter', JSON.stringify({ text: 'Proyecto' }));

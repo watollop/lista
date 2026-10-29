@@ -124,7 +124,15 @@ export function TaskList(props: Props) {
                       {adding === g.task.id ? (
                         <SubtaskInputs label="Añadir subtareas" onCancel={() => setAdding(null)}
                           onSubmit={async (lines) => { await props.onAddSubtasks(g.task.id, lines); setAdding(null); }} />
-                      ) : <button class="link add-subtask" onClick={() => addSubtask(g.task.id)}>Subtarea</button>}
+                      ) : (
+                        <button class="add-subtask-icon" aria-label="Añadir subtarea" title="Añadir subtarea"
+                          onClick={() => addSubtask(g.task.id)}>
+                          <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                            <path d="M10 4v12M4 10h12" />
+                          </svg>
+                        </button>
+                      )}
                     </li>
                   </ul>
                 </li>

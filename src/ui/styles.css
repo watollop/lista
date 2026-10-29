@@ -377,6 +377,11 @@ button.chip { min-height: 22px; }
 }
 .subtask-group > ul { list-style: none; }
 .subtask-composer { padding-left: 34px; }
+.add-subtask-icon {
+  display: grid; place-items: center;
+  width: 44px; height: 44px; margin-left: -13px;
+  color: var(--subtask-color);
+}
 .subtask-composer .subtask-inputs { padding: 10px 0; }
 .title-line { display: flex; flex: 1; align-items: flex-start; min-width: 0; }
 .title-line .title { flex: 1; min-width: 0; }
