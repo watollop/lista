@@ -173,7 +173,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   return (
     <li
       ref={ref}
-      class={`row ${sub ? 'sub' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
+      class={`row ${sub ? 'sub' : ''} ${childrenCount ? 'has-subtasks' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
       data-id={task.id}
       data-swipe={task.done ? 'Pendiente' : 'Hecha'}
       data-swipe-left="Borrar"
@@ -197,29 +197,20 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
               <button class={`title ${task.priority === 1 ? 'p1' : ''}`}
                 aria-expanded={childrenCount ? expanded : undefined}
                 aria-controls={childrenCount && expanded ? `subtasks-${task.id}` : undefined}
+                aria-label={childrenCount ? `${task.title}: ${completedCount} de ${childrenCount} subtareas completadas` : undefined}
+                title={childrenCount ? `${expanded ? 'Ocultar' : 'Mostrar'} subtareas` : undefined}
+                onKeyDown={(e) => { if (childrenCount && (e.key === 'Enter' || e.key === ' ')) e.stopPropagation(); }}
                 onClick={() => { onSelect(task.id); if (childrenCount) onExpand?.(); else onEdit(task.id); }}>
                 <TitleText text={task.title} onChip={onChip} />
               </button>
               {childrenCount > 0 && (
-                <>
-                  <button class="subtask-toggle" aria-expanded={expanded}
-                    aria-controls={expanded ? `subtasks-${task.id}` : undefined}
-                    aria-label={`${expanded ? 'Ocultar' : 'Mostrar'} subtareas: ${completedCount} de ${childrenCount} completadas`}
-                    onClick={onExpand}>
-                    <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor"
-                      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M4 3v11h3M4 7h3M10 7h6M10 14h6" />
-                      <path d={expanded ? 'm13 3 2-2 2 2' : 'm13 1 2 2 2-2'} />
-                    </svg>
-                  </button>
-                  <button class="edit-task" aria-label="Editar tarea" title="Editar tarea"
-                    onClick={() => { onSelect(task.id); onEdit(task.id); }}>
-                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
-                      stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3" />
-                    </svg>
-                  </button>
-                </>
+                <button class="edit-task" aria-label="Editar tarea" title="Editar tarea"
+                  onClick={() => { onSelect(task.id); onEdit(task.id); }}>
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
+                    stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3" />
+                  </svg>
+                </button>
               )}
             </div>
             <div class="meta">

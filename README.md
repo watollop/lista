@@ -33,7 +33,7 @@ La guía `#tema @persona !prioridad fecha` permanece visible mientras escribes, 
 - Toca `#trabajo`, `@ana` o una fecha para ver solo eso.
 - Las tareas se agrupan solas: Vencidas · Hoy · Mañana · Esta semana · Próximas.
 - Para cambiarla de día, tócala y arrastra **Mover**.
-- Las tareas con subtareas muestran un icono rosa: toca el icono o el título para desplegarlas. El lápiz permite editar la tarea principal.
+- Las tareas con subtareas muestran una línea rosa a la izquierda: toca el título para desplegarlas. La línea continúa junto a las subtareas abiertas y el lápiz permite editar la tarea principal.
 - Una tarea con subtareas se completa al terminar todas; reabrir una subtarea reabre la principal.
 
 ## 3 · Tus datos, contigo
@@ -46,7 +46,7 @@ La guía `#tema @persona !prioridad fecha` permanece visible mientras escribes, 
 
 - Claro, oscuro o el del sistema.
 - Dos estilos: **Clásico** (blanco y negro) o **Industrial** (gris cálido, letra de puntos y naranja).
-- Color del icono de subtareas personalizable en **Ajustes → Apariencia**, con rosa por defecto.
+- Color de la línea de subtareas personalizable en **Ajustes → Apariencia**, con rosa por defecto.
 - Se instala como una app más: *Compartir → Añadir a pantalla de inicio* (iPhone) o *Instalar app* (Android y ordenador).
 
 ---

@@ -175,14 +175,14 @@ describe('lista de subtareas', () => {
     type(input('Subtarea 1'), 'Comprar billetes');
     enter(input('Subtarea 1'));
     enter(input('Subtarea 2'));
-    await vi.waitFor(() => expect(root.querySelector('.subtask-toggle')).not.toBeNull());
+    await vi.waitFor(() => expect(root.querySelector('.row.has-subtasks')).not.toBeNull());
     const tasks = await repo.listTasks();
     const parent = tasks.find((t) => t.parentId === null)!;
     expect(tasks.filter((t) => t.parentId === parent.id).map((t) => t.title)).toEqual(['Comprar billetes']);
     act(() => render(null, root));
     await app(repo);
     expect(root.querySelector('.row.sub')).toBeNull();
-    click(root.querySelector('.subtask-toggle'));
+    click(root.querySelector('.row.has-subtasks .title'));
     expect(root.querySelector('.row.sub .title')?.textContent).toBe('Comprar billetes');
   });
 
@@ -191,16 +191,22 @@ describe('lista de subtareas', () => {
       matches: wide && q === '(min-width: 1200px)', addEventListener() {}, removeEventListener() {},
     })));
     const repo = createRepo('ui-' + crypto.randomUUID());
-    const [parent, a, b] = await repo.addParsed([
+    const [parent, a, b, plain] = await repo.addParsed([
       parseLine('Proyecto'), { ...parseLine('Primer paso'), isSubtask: true }, { ...parseLine('Segundo paso'), isSubtask: true },
+      parseLine('Sin subtareas'),
     ]);
     await app(repo);
     expect(!!root.querySelector('.app.wide')).toBe(wide);
+    expect(root.querySelector(`[data-id="${plain.id}"]`)?.classList.contains('has-subtasks')).toBe(false);
+    expect(root.querySelector(`[data-id="${plain.id}"] .title`)?.hasAttribute('aria-expanded')).toBe(false);
     expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
-    const toggle = root.querySelector('.subtask-toggle');
+    const toggle = root.querySelector('.row.has-subtasks .title');
+    expect(root.querySelector('.subtask-toggle')).toBeNull();
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     click(toggle);
     expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
+    expect(root.querySelector('.subtask-group')).not.toBeNull();
+    expect(root.querySelector('.row.has-subtasks .title')?.getAttribute('aria-label')).toContain('0 de 2 subtareas');
     expect(root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .check`)?.disabled).toBe(true);
     click(root.querySelector(`[data-id="${a.id}"] .check`));
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${a.id}"]`)?.classList.contains('done')).toBe(true));
@@ -211,6 +217,19 @@ describe('lista de subtareas', () => {
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('done')).toBe(false));
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
     expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
+    expect(root.querySelector('.row.has-subtasks')).not.toBeNull();
+    expect(root.querySelector('.subtask-group')).toBeNull();
+    click(root.querySelector(`[data-id="${parent.id}"] .title`));
+    const title = root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .title`)!;
+    act(() => {
+      title.focus();
+      title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    expect(root.querySelector('input[aria-label="Editar tarea"]')).toBeNull();
+    click(title);
+    expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
+    click(root.querySelector(`[data-id="${parent.id}"] .edit-task`));
+    expect(input('Editar tarea')).not.toBeNull();
   });
 
   it('añade subtareas a una tarea existente desde su editor', async () => {
@@ -232,7 +251,7 @@ describe('lista de subtareas', () => {
     await repo.addParsed([parseLine('Proyecto'), { ...parseLine('Paso'), isSubtask: true }]);
     localStorage.setItem('lista.filter', JSON.stringify({ text: 'Proyecto' }));
     await app(repo);
-    click(root.querySelector('.subtask-toggle'));
+    click(root.querySelector('.row.has-subtasks .title'));
     expect(root.querySelector('.row.sub .title')?.textContent).toBe('Paso');
   });
 
@@ -261,8 +280,8 @@ describe('lista de subtareas', () => {
     expect(input('Subtarea 1').value).toBe('Borrador conservado');
     click(button(parentId ? 'Añadir subtareas' : 'Guardar tarea'));
     if (!parentId) {
-      await vi.waitFor(() => expect(root.querySelector('.subtask-toggle')).not.toBeNull());
-      click(root.querySelector('.subtask-toggle'));
+      await vi.waitFor(() => expect(root.querySelector('.row.has-subtasks')).not.toBeNull());
+      click(root.querySelector('.row.has-subtasks .title'));
     }
     await vi.waitFor(() => expect(root.querySelector('.row.sub .title')?.textContent).toBe('Borrador conservado'));
   });

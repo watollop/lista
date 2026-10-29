@@ -135,7 +135,7 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
-      <p class="look-hint" id="subtask-color-label">Color del icono de subtareas</p>
+      <p class="look-hint" id="subtask-color-label">Color de la línea de subtareas</p>
       <div class="row-btns look-btns" role="group" aria-labelledby="subtask-color-label">
         <button class={`btn ${color === DEFAULT_SUBTASK_COLOR ? 'solid' : ''}`}
           aria-pressed={color === DEFAULT_SUBTASK_COLOR} onClick={() => changeColor(DEFAULT_SUBTASK_COLOR)}>Rosa</button>
