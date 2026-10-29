@@ -25,5 +25,9 @@ export class ListaDB extends Dexie {
       meta: 'key',
     });
     this.version(2).stores({ settings: 'key, dirty' });
+    this.version(3).stores({}).upgrade(async (tx) => {
+      // Una versión anterior pudo avanzar el cursor ignorando preferencias aún desconocidas.
+      await tx.table('meta').delete('sync.cursor');
+    });
   }
 }

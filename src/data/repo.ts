@@ -628,10 +628,18 @@ export function createRepo(dbName = 'lista'): Repo {
       return row && !row.deleted ? { value: row.value as T, updatedAt: row.updatedAt } : undefined;
     },
 
-    async setSetting(key, value) {
-      const rec: Setting = { key, value, updatedAt: Date.now(), deleted: 0, dirty: 1 };
-      await db.settings.put(rec);
-      notify();
+    async setSetting(key, value, mode) {
+      const changed = await db.transaction('rw', db.settings, async () => {
+        const existing = await db.settings.get(key);
+        if (mode === 'initialize' && existing) return false;
+        if (existing?.deleted === 0 && JSON.stringify(existing.value) === JSON.stringify(value)) return false;
+        const rec: Setting = {
+          key, value, updatedAt: mode === 'initialize' ? 0 : stamp(existing?.updatedAt), deleted: 0, dirty: 1,
+        };
+        await db.settings.put(rec);
+        return true;
+      });
+      if (changed) notify();
     },
 
     async getMeta<T = unknown>(key: string) {
@@ -645,7 +653,7 @@ export function createRepo(dbName = 'lista'): Repo {
 
     async clearAll() {
       await db.transaction('rw', [...allTables, db.meta], async () => {
-        await Promise.all([db.tasks.clear(), db.topics.clear(), db.people.clear(), db.filters.clear(), db.meta.clear()]);
+        await Promise.all([...allTables, db.meta].map((t) => t.clear()));
       });
       notify();
     },
@@ -658,7 +666,7 @@ export function createRepo(dbName = 'lista'): Repo {
     },
   };
 
-  function applyByKind(kind: SyncKind, it: RemoteItem): Promise<boolean> {
+  async function applyByKind(kind: SyncKind, it: RemoteItem): Promise<boolean> {
     switch (kind) {
       case 'task':
         return applyOne(db.tasks, it);
@@ -668,8 +676,25 @@ export function createRepo(dbName = 'lista'): Repo {
         return applyOne(db.people, it);
       case 'filter':
         return applyOne(db.filters, it);
-      case 'setting':
-        return applyOne(db.settings, it);
+      case 'setting': {
+        const data = it.data;
+        if (!data || typeof data !== 'object' || !('key' in data) || data.key !== it.id || !('value' in data) ||
+          !Number.isFinite(it.updated_at) || it.updated_at < 0) {
+          throw new Error('Preferencia sincronizada no válida.');
+        }
+        const local = await db.settings.get(it.id);
+        const deleted = it.deleted ? 1 : 0;
+        // El servidor acepta empates. Tras confirmar nuestro envío adoptamos su ganador.
+        if (local && (it.updated_at < local.updatedAt ||
+          (it.updated_at === local.updatedAt && (local.dirty === 1 ||
+            (JSON.stringify(local.value) === JSON.stringify(data.value) && local.deleted === deleted))))) return false;
+        await db.settings.put({
+          key: it.id, value: data.value, updatedAt: it.updated_at, deleted, dirty: 0,
+        });
+        return true;
+      }
+      default:
+        throw new Error('Tipo de registro de sincronización no compatible.');
     }
   }
 

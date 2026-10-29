@@ -174,7 +174,8 @@ export interface Repo {
 
   /** Preferencias que viajan con la cuenta. setSetting marca dirty y notifica; las remotas llegan por applyRemote. */
   getSetting<T = unknown>(key: string): Promise<{ value: T; updatedAt: number } | undefined>;
-  setSetting(key: string, value: unknown): Promise<void>;
+  /** initialize migra solo si no existe el registro, con prioridad inferior a una elección sincronizada. */
+  setSetting(key: string, value: unknown, mode?: 'initialize'): Promise<void>;
 
   // --- soporte para sync ---
   pendingChanges(): Promise<RemoteItem[]>; // registros con dirty=1

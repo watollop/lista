@@ -1,14 +1,16 @@
 import type { Repo } from '../types';
 import { getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
+import { isSecondaryColor } from '../lib/preferences';
 
 /** Apariencia que viaja con la cuenta (ver Repo.setSetting). */
 export interface Appearance { theme: Theme; look: Look; subtaskColor: string }
 
 const KEY = 'appearance';
 const valid = (a: unknown): a is Appearance => {
-  const v = a as Appearance | null;
-  return !!v && ['system', 'light', 'dark'].includes(v.theme) && ['classic', 'industrial'].includes(v.look)
-    && /^#[\da-f]{6}$/i.test(v.subtaskColor);
+  return !!a && typeof a === 'object' &&
+    'theme' in a && (a.theme === 'system' || a.theme === 'light' || a.theme === 'dark') &&
+    'look' in a && (a.look === 'classic' || a.look === 'industrial') &&
+    'subtaskColor' in a && isSecondaryColor(a.subtaskColor);
 };
 const current = (): Appearance => ({ theme: getTheme(), look: getLook(), subtaskColor: getSubtaskColor() });
 const same = (a: Appearance, b: Appearance) => a.theme === b.theme && a.look === b.look && a.subtaskColor.toLowerCase() === b.subtaskColor.toLowerCase();
@@ -29,20 +31,29 @@ const hasLocalChoice = (): boolean => {
  * Mantiene la apariencia al día con la del repo: lo que llega de otro dispositivo se aplica aquí.
  * La primera vez, si este dispositivo ya tenía elecciones y la cuenta no tiene ninguna, las sube.
  */
-export function startAppearanceSync(repo: Repo): () => void {
+export function startAppearanceSync(repo: Repo, onError: (error: unknown) => void): () => void {
   let seeded = false;
+  let active = true;
+  let revision = 0;
   const apply = async () => {
-    const s = await repo.getSetting<Appearance>(KEY);
+    const reading = ++revision;
+    const s = await repo.getSetting(KEY);
+    if (!active || reading !== revision) return;
     if (!s) {
-      if (!seeded && hasLocalChoice()) { seeded = true; await saveAppearance(repo); }
+      const initialize = !seeded && hasLocalChoice();
+      seeded = true;
+      if (initialize) await repo.setSetting(KEY, current(), 'initialize');
       return;
     }
     seeded = true;
-    if (!valid(s.value) || same(s.value, current())) return;
+    if (!valid(s.value)) throw new Error('La apariencia sincronizada no es válida.');
+    if (same(s.value, current())) return;
     setTheme(s.value.theme);
     setLook(s.value.look);
     setSubtaskColor(s.value.subtaskColor);
   };
-  void apply();
-  return repo.subscribe(() => void apply());
+  const refresh = () => { void apply().catch((error) => { if (active) onError(error); }); };
+  const unsubscribe = repo.subscribe(refresh);
+  refresh();
+  return () => { active = false; unsubscribe(); };
 }

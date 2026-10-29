@@ -1,4 +1,7 @@
+import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { createRepo } from '../data/repo';
 import type { RemoteItem, Repo, SyncState } from '../types';
 import { createSync, pollInterval } from './index';
 
@@ -249,6 +252,159 @@ describe('sync: sin configuración', () => {
     await expect(sync.signIn('a@b.c', 'x')).rejects.toThrow();
     expect(sync.getState()).toEqual({ status: 'disabled' });
     expect(r.pendingChanges).not.toHaveBeenCalled();
+  });
+
+  describe('sync: color secundario entre repositorios reales', () => {
+    const writeColor = (repo: Repo, color: string, initialize = false) => repo.setSetting(
+      'appearance', { theme: 'system', look: 'classic', subtaskColor: color }, initialize ? 'initialize' : undefined,
+    );
+    const readColor = async (repo: Repo) => {
+      const setting = await repo.getSetting<{ subtaskColor: string }>('appearance');
+      if (!setting) return undefined;
+      return { value: setting.value.subtaskColor, updatedAt: setting.updatedAt,
+        dirty: (await repo.pendingChanges()).some((item) => item.kind === 'setting' && item.id === 'appearance') ? 1 : 0 };
+    };
+    function persistentDevice(server: FakeServer) {
+      const repo = createRepo('color-sync-' + crypto.randomUUID());
+      const storage = memStorage();
+      const sync = createSync(repo, CFG, { fetch: server.fetch, storage });
+      return { repo, sync, storage };
+    }
+
+    it('sincroniza ambos sentidos y recupera la elección tras recargar', async () => {
+      const server = new FakeServer();
+      server.addUser('ana@test.io', 'secreto');
+      const mobile = persistentDevice(server);
+      const web = persistentDevice(server);
+      await mobile.sync.signIn('ana@test.io', 'secreto');
+      await web.sync.signIn('ana@test.io', 'secreto');
+      await writeColor(mobile.repo, '#3689cc');
+      await mobile.sync.syncNow();
+      await web.sync.syncNow();
+      expect(await readColor(web.repo)).toMatchObject({ value: '#3689cc', dirty: 0 });
+      await writeColor(web.repo, '#7849ce');
+      await web.sync.syncNow();
+      await mobile.sync.syncNow();
+      expect(await readColor(mobile.repo)).toMatchObject({ value: '#7849ce', dirty: 0 });
+      const reloaded = persistentDevice(server);
+      await reloaded.sync.signIn('ana@test.io', 'secreto');
+      expect(await readColor(reloaded.repo)).toMatchObject({ value: '#7849ce', dirty: 0 });
+      expect(await mobile.repo.listTasks()).toEqual([]);
+      expect(await web.repo.listFilters()).toEqual([]);
+    });
+
+    it('reintenta sin conexión y conserva la selección más reciente frente a un envío antiguo', async () => {
+      const server = new FakeServer();
+      server.addUser('ana@test.io', 'secreto');
+      const mobile = persistentDevice(server);
+      const web = persistentDevice(server);
+      await mobile.sync.signIn('ana@test.io', 'secreto');
+      await web.sync.signIn('ana@test.io', 'secreto');
+      server.offline = true;
+      await writeColor(mobile.repo, '#3689cc');
+      await mobile.sync.syncNow();
+      expect(mobile.sync.getState().status).toBe('offline');
+      expect(await readColor(mobile.repo)).toMatchObject({ dirty: 1 });
+      await writeColor(web.repo, '#58a676');
+      server.offline = false;
+      await web.sync.syncNow();
+      await mobile.sync.syncNow();
+      expect(await readColor(mobile.repo)).toMatchObject({ value: '#58a676', dirty: 0 });
+      await web.sync.syncNow();
+      expect(await readColor(web.repo)).toMatchObject({ value: '#58a676', dirty: 0 });
+    });
+
+    it('la migración local antigua no sobrescribe la preferencia ya sincronizada', async () => {
+      const server = new FakeServer();
+      server.addUser('ana@test.io', 'secreto');
+      const web = persistentDevice(server);
+      await web.sync.signIn('ana@test.io', 'secreto');
+      await writeColor(web.repo, '#e68b45');
+      await web.sync.syncNow();
+      const mobile = persistentDevice(server);
+      await writeColor(mobile.repo, '#db729f', true);
+      await mobile.sync.signIn('ana@test.io', 'secreto');
+      expect(await readColor(mobile.repo)).toMatchObject({ value: '#e68b45', dirty: 0 });
+    });
+
+    it('las preferencias quedan aisladas por cuenta igual que las tareas', async () => {
+      const server = new FakeServer();
+      server.addUser('ana@test.io', 'secreto');
+      server.addUser('bea@test.io', 'secreto');
+      const a = persistentDevice(server);
+      const b = persistentDevice(server);
+      await a.sync.signIn('ana@test.io', 'secreto');
+      await writeColor(a.repo, '#7849ce');
+      await a.sync.syncNow();
+      await b.sync.signIn('bea@test.io', 'secreto');
+      expect(await readColor(b.repo)).toBeUndefined();
+      await writeColor(b.repo, '#58a676');
+      await b.sync.syncNow();
+      await a.sync.syncNow();
+      expect(await readColor(a.repo)).toMatchObject({ value: '#7849ce' });
+    });
+
+    it('converge cuando dos dispositivos migran colores antiguos distintos con versión cero', async () => {
+      const server = new FakeServer();
+      server.addUser('ana@test.io', 'secreto');
+      const a = persistentDevice(server);
+      const b = persistentDevice(server);
+      await writeColor(a.repo, '#3689cc', true);
+      await writeColor(b.repo, '#58a676', true);
+      await a.sync.signIn('ana@test.io', 'secreto');
+      await b.sync.signIn('ana@test.io', 'secreto');
+      await a.sync.syncNow();
+      await b.sync.syncNow();
+      expect(await readColor(a.repo)).toMatchObject({ value: '#58a676', updatedAt: 0, dirty: 0 });
+      expect(await readColor(b.repo)).toMatchObject({ value: '#58a676', updatedAt: 0, dirty: 0 });
+    });
+
+    it('una sesión v1 actualizada recupera el color que su cursor ya había saltado', async () => {
+      const server = new FakeServer();
+      server.addUser('ana@test.io', 'secreto');
+      const web = persistentDevice(server);
+      await web.sync.signIn('ana@test.io', 'secreto');
+      await writeColor(web.repo, '#7849ce');
+      await web.sync.syncNow();
+      const name = 'color-upgrade-' + crypto.randomUUID();
+      const old = new Dexie(name);
+      old.version(1).stores({
+        tasks: 'id, parentId, dirty, updatedAt', topics: 'key, dirty', people: 'key, dirty',
+        filters: 'id, dirty', meta: 'key',
+      });
+      await old.table('meta').put({ key: 'sync.cursor', value: new Date(BASE_TS + 864e5).toISOString() });
+      old.close();
+      const repo = createRepo(name);
+      await writeColor(repo, '#db729f', true);
+      const sync = createSync(repo, CFG, { fetch: server.fetch, storage: web.storage });
+      await sync.syncNow();
+      await sync.syncNow();
+      expect(sync.getState().status).toBe('idle');
+      expect(await readColor(repo)).toMatchObject({ value: '#7849ce', dirty: 0 });
+    });
+
+    it.each(['setting', 'unknown'])('un registro remoto no válido se muestra como error y no avanza el cursor: %s', async (kind) => {
+      const server = new FakeServer();
+      server.addUser('ana@test.io', 'secreto');
+      const device = persistentDevice(server);
+      await device.sync.signIn('ana@test.io', 'secreto');
+      const cursor = await device.repo.getMeta('sync.cursor');
+      const row: Row = {
+        user_id: 'user-1', kind, id: 'appearance',
+        data: { key: 'wrong', value: {}, updatedAt: 1, deleted: 0 },
+        updated_at: 1, deleted: false, synced_at: new Date(BASE_TS + 1000).toISOString(),
+      };
+      server.rows.set('user-1|setting|appearance', row);
+      await device.sync.syncNow();
+      expect(device.sync.getState().status).toBe('error');
+      expect(await device.repo.getMeta('sync.cursor')).toBe(cursor);
+      expect(await readColor(device.repo)).toBeUndefined();
+      row.kind = 'setting';
+      row.data = { key: 'appearance', value: { theme: 'system', look: 'classic', subtaskColor: '#7849ce' }, updatedAt: 1, deleted: 0 };
+      await device.sync.syncNow();
+      expect(device.sync.getState().status).toBe('idle');
+      expect(await readColor(device.repo)).toMatchObject({ value: '#7849ce', dirty: 0 });
+    });
   });
 });
 

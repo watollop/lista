@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
 import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
 import { saveAppearance } from './appearanceSync';
-import { DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
+import { APPEARANCE_CHANGE_EVENT, DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { EntityEditor } from './EntityEditor';
@@ -119,9 +119,18 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
   const [theme, set] = useState(getTheme);
   const [look, setL] = useState(getLook);
   const [color, setColor] = useState(getSubtaskColor);
+  useLayoutEffect(() => {
+    const update = () => { setColor(getSubtaskColor()); set(getTheme()); setL(getLook()); };
+    window.addEventListener(APPEARANCE_CHANGE_EVENT, update);
+    update();
+    return () => window.removeEventListener(APPEARANCE_CHANGE_EVENT, update);
+  }, []);
   const customColor = !SUBTASK_COLORS.some(([value]) => value === color.toLowerCase());
+  const persist = () => {
+    void saveAppearance(repo).catch((e) => toast(e instanceof Error ? e.message : 'No se pudo guardar la apariencia.'));
+  };
   const changeColor = (next: string) => {
-    try { setSubtaskColor(next); setColor(next); void saveAppearance(repo); }
+    try { setSubtaskColor(next); persist(); }
     catch (e) { toast(e instanceof Error ? e.message : 'No se pudo guardar el color.'); }
   };
   return (
@@ -130,30 +139,33 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
       <div class="row-btns" role="radiogroup" aria-label="Tema">
         {THEMES.map(([t, l]) => (
           <button key={t} role="radio" aria-checked={theme === t} class={`btn ${theme === t ? 'solid' : ''}`}
-            onClick={() => { setTheme(t); set(t); void saveAppearance(repo); }}>{l}</button>
+            onClick={() => { setTheme(t); persist(); }}>{l}</button>
         ))}
       </div>
       <div class="row-btns look-btns" role="radiogroup" aria-label="Estilo">
         {LOOKS.map(([k, l]) => (
           <button key={k} role="radio" aria-checked={look === k} class={`btn ${look === k ? 'solid' : ''}`}
-            onClick={() => { setLook(k); setL(k); void saveAppearance(repo); }}>{l}</button>
+            onClick={() => { setLook(k); persist(); }}>{l}</button>
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
-      <p class="look-hint" id="subtask-color-label">Color secundario</p>
-      <div class="row-btns look-btns subtask-colors" role="group" aria-labelledby="subtask-color-label">
-        {SUBTASK_COLORS.map(([value, name]) => (
-          <button key={value} class="color-option" aria-label={name} title={name}
-            aria-pressed={color.toLowerCase() === value} onClick={() => changeColor(value)}>
-            <span class="color-swatch" style={{ backgroundColor: value }} aria-hidden="true" />
-          </button>
-        ))}
-        <label class={`color-option color-picker ${customColor ? 'selected' : ''}`} title="Color secundario personalizado">
-          <span class="color-swatch multicolor" aria-hidden="true" />
-          <input id="subtask-color" type="color" aria-label="Color secundario personalizado"
-            value={color} onInput={(e) => changeColor(e.currentTarget.value)} />
-        </label>
-      </div>
+      {look === 'classic' && <>
+        <p class="look-hint" id="subtask-color-label">Color secundario</p>
+        <div class="row-btns look-btns subtask-colors" role="group" aria-labelledby="subtask-color-label">
+          {SUBTASK_COLORS.map(([value, name]) => (
+            <button key={value} class="color-option" aria-label={name} title={name}
+              aria-pressed={color.toLowerCase() === value} onClick={() => changeColor(value)}>
+              <span class="color-swatch" style={{ backgroundColor: value }} aria-hidden="true" />
+            </button>
+          ))}
+          <label class={`color-option color-picker ${customColor ? 'selected' : ''}`} title="Color secundario personalizado">
+            <span class="color-swatch multicolor" aria-hidden="true" />
+            <input id="subtask-color" type="color" aria-label="Color secundario personalizado"
+              value={color} onInput={(e) => changeColor(e.currentTarget.value)}
+              onChange={(e) => changeColor(e.currentTarget.value)} />
+          </label>
+        </div>
+      </>}
     </section>
   );
 }

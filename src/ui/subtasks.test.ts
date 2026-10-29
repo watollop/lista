@@ -342,27 +342,36 @@ describe('lista de subtareas', () => {
     await app(repo);
     expect(!!root.querySelector('.app.wide')).toBe(wide);
     expect(root.querySelector(`[data-id="${plain.id}"]`)?.classList.contains('has-subtasks')).toBe(false);
+    expect(root.querySelector(`[data-id="${plain.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(false);
+    expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(true);
     expect(root.querySelector(`[data-id="${plain.id}"] .title`)?.hasAttribute('aria-expanded')).toBe(false);
     expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
     const toggle = root.querySelector('.row.has-subtasks .title');
     expect(root.querySelector('.subtask-toggle')).toBeNull();
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     click(toggle);
+    expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(false);
     expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
     expect(root.querySelector('.subtask-group')).not.toBeNull();
     expect(root.querySelector('.row.has-subtasks .title')?.getAttribute('aria-label')).toContain('0 de 2 subtareas');
     expect(root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .check`)?.disabled).toBe(false);
     click(root.querySelector(`[data-id="${a.id}"] .check`));
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${a.id}"]`)?.classList.contains('done')).toBe(true));
+    expect([...root.querySelectorAll('.row.sub')].map((row) => row.getAttribute('data-id'))).toEqual([a.id, b.id]);
+    expect(root.querySelector('.row.sub:last-child')?.getAttribute('data-id')).toBe(b.id);
+    expect(root.querySelector('.row.sub:last-child [aria-label="Añadir subtarea"]')).not.toBeNull();
     expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('done')).toBe(false);
     click(root.querySelector(`[data-id="${b.id}"] .check`));
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('done')).toBe(true));
+    expect([...root.querySelectorAll('.row.sub')].map((row) => row.getAttribute('data-id'))).toEqual([a.id, b.id]);
     click(root.querySelector(`[data-id="${a.id}"] .check`));
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('done')).toBe(false));
+    expect([...root.querySelectorAll('.row.sub')].map((row) => row.getAttribute('data-id'))).toEqual([a.id, b.id]);
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
     expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
     expect(root.querySelector('.row.has-subtasks')).not.toBeNull();
     expect(root.querySelector('.subtask-group')).toBeNull();
+    expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(true);
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
     const title = root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .title`)!;
     act(() => {
@@ -521,10 +530,93 @@ describe('lista de subtareas', () => {
 });
 
 describe('color secundario', () => {
+  it('muestra errores al cargar la preferencia en lugar de fallar en silencio', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    vi.spyOn(repo, 'getSetting').mockRejectedValue(new Error('No se pudo leer el color'));
+    await app(repo);
+    await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('No se pudo leer el color'));
+  });
+
+  it.each(['input', 'change'])('guarda el selector nativo al recibir %s y conserva la última selección rápida', async (eventName) => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
+    const picker = input('Color secundario personalizado');
+    act(() => {
+      for (const value of ['#123456', '#654321', '#7849ce']) {
+        picker.value = value;
+        picker.dispatchEvent(new Event(eventName, { bubbles: true }));
+      }
+    });
+    await vi.waitFor(() => expect(getSubtaskColor()).toBe('#7849ce'));
+    await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toMatchObject({ value: { subtaskColor: '#7849ce' } }));
+    expect(picker.closest('label')?.classList.contains('selected')).toBe(true);
+    expect(picker.value).toBe('#7849ce');
+  });
+
+  it('solo muestra la paleta en Clásico y conserva el color al pasar por Industrial', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await repo.setSetting('appearance', { theme: 'system', look: 'industrial', subtaskColor: '#7849ce' });
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    expect(root.querySelector('.subtask-colors')).toBeNull();
+    expect(root.querySelector('#subtask-color-label')).toBeNull();
+    click(button('Clásico'));
+    await vi.waitFor(() => expect(input('Color secundario personalizado').value).toBe('#7849ce'));
+    click(button('Industrial'));
+    expect(root.querySelector('.subtask-colors')).toBeNull();
+    expect(getSubtaskColor()).toBe('#7849ce');
+    click(button('Clásico'));
+    expect(input('Color secundario personalizado').value).toBe('#7849ce');
+  });
+
+  it('refleja la apariencia remota con Ajustes abierto y oculta la paleta si llega Industrial', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
+    click(button('Oscuro'));
+    await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toMatchObject({ value: { theme: 'dark', look: 'classic' } }));
+    const remoteTime = (await repo.getSetting('appearance'))!.updatedAt + 1000;
+    await repo.applyRemote([{
+      kind: 'setting', id: 'appearance',
+      data: { key: 'appearance', value: { theme: 'dark', look: 'classic', subtaskColor: '#3689cc' }, updatedAt: remoteTime, deleted: 0 },
+      updated_at: remoteTime, deleted: false,
+    }]);
+    await vi.waitFor(() => expect(input('Color secundario personalizado').value).toBe('#3689cc'));
+    expect(root.querySelector('[aria-label="Azul"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe('#3689cc');
+    expect(document.documentElement.dataset.look).toBeUndefined();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    await repo.applyRemote([{
+      kind: 'setting', id: 'appearance',
+      data: { key: 'appearance', value: { theme: 'light', look: 'industrial', subtaskColor: '#58a676' }, updatedAt: remoteTime + 1000, deleted: 0 },
+      updated_at: remoteTime + 1000, deleted: false,
+    }]);
+    await vi.waitFor(() => expect(root.querySelector('.subtask-colors')).toBeNull());
+    expect(document.documentElement.dataset.look).toBe('industrial');
+    expect(document.documentElement.dataset.theme).toBe('light');
+  });
+
+  it('aplica la elección local y avisa si no puede guardarla para sincronizar', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
+    await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toBeDefined());
+    vi.spyOn(repo, 'setSetting').mockRejectedValue(new Error('Sin espacio'));
+    click(root.querySelector('[aria-label="Azul"]'));
+    await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('Sin espacio'));
+    expect(root.querySelector('[aria-label="Azul"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(getSubtaskColor()).toBe('#3689cc');
+  });
+
   it('ofrece cuatro círculos de colores y uno personalizado sin texto y conserva la elección', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
     click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
     let color = root.querySelector<HTMLInputElement>('#subtask-color')!;
     expect(root.querySelector('#subtask-color-label')?.textContent).toBe('Color secundario');
     expect(color.getAttribute('aria-label')).toBe('Color secundario personalizado');
@@ -537,7 +629,7 @@ describe('color secundario', () => {
     expect(palette.querySelector('[aria-label="Rosa"]')?.getAttribute('aria-pressed')).toBe('true');
     for (const [name, value] of [['Azul', '#3689cc'], ['Verde', '#58a676'], ['Naranja', '#e68b45'], ['Rosa', DEFAULT_SUBTASK_COLOR]]) {
       click(palette.querySelector(`[aria-label="${name}"]`));
-      expect(getSubtaskColor()).toBe(value);
+      await vi.waitFor(() => expect(getSubtaskColor()).toBe(value));
       expect(color.value).toBe(value);
       expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe(value);
       expect(palette.querySelectorAll('[aria-pressed="true"]')).toHaveLength(1);
@@ -545,7 +637,7 @@ describe('color secundario', () => {
       expect(color.closest('label')?.classList.contains('selected')).toBe(false);
     }
     type(color, '#7849ce');
-    expect(localStorage.getItem('lista.subtaskColor')).toBe('#7849ce');
+    await vi.waitFor(() => expect(localStorage.getItem('lista.subtaskColor')).toBe('#7849ce'));
     expect(palette.querySelector('[aria-pressed="true"]')).toBeNull();
     expect(color.closest('label')?.classList.contains('selected')).toBe(true);
     applyTheme('dark', 'industrial');
@@ -556,7 +648,7 @@ describe('color secundario', () => {
     expect(color.value).toBe('#7849ce');
     expect(color.closest('label')?.classList.contains('selected')).toBe(true);
     click(root.querySelector('[aria-label="Rosa"]'));
-    expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR);
+    await vi.waitFor(() => expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR));
   });
 
   it('rechaza valores no válidos y tolera preferencias corruptas', () => {

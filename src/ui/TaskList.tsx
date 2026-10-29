@@ -174,7 +174,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   return (
     <li
       ref={ref}
-      class={`row ${sub ? 'sub' : ''} ${childrenCount ? 'has-subtasks' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
+      class={`row ${sub ? 'sub' : ''} ${childrenCount ? 'has-subtasks' : ''} ${childrenCount && !expanded ? 'subtasks-collapsed' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
       data-id={task.id}
       data-swipe={task.done ? 'Pendiente' : 'Hecha'}
       data-swipe-left="Borrar"

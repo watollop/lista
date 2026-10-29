@@ -1,3 +1,5 @@
+import { DEFAULT_SECONDARY_COLOR, isSecondaryColor } from '../lib/preferences';
+
 /** Tema y estilo elegidos en Ajustes. 'system' sigue a prefers-color-scheme. index.html los aplica antes de pintar. */
 export type Theme = 'system' | 'light' | 'dark';
 export type Look = 'classic' | 'industrial';
@@ -5,21 +7,24 @@ export type Look = 'classic' | 'industrial';
 const KEY = 'lista.theme';
 const LOOK_KEY = 'lista.look';
 const SUBTASK_COLOR_KEY = 'lista.subtaskColor';
-export const DEFAULT_SUBTASK_COLOR = '#db729f';
+export const DEFAULT_SUBTASK_COLOR = DEFAULT_SECONDARY_COLOR;
+export const APPEARANCE_CHANGE_EVENT = 'lista:appearance';
 
 export function getSubtaskColor(): string {
   try {
     const color = localStorage.getItem(SUBTASK_COLOR_KEY);
-    return color && /^#[\da-f]{6}$/i.test(color) ? color : DEFAULT_SUBTASK_COLOR;
+    return isSecondaryColor(color) ? color : DEFAULT_SUBTASK_COLOR;
   } catch {
     return DEFAULT_SUBTASK_COLOR;
   }
 }
 
 export function setSubtaskColor(color: string): void {
-  if (!/^#[\da-f]{6}$/i.test(color)) throw new Error('Elige un color válido.');
+  if (!isSecondaryColor(color)) throw new Error('Elige un color válido.');
+  const changed = getSubtaskColor() !== color;
   localStorage.setItem(SUBTASK_COLOR_KEY, color);
   document.documentElement.style.setProperty('--subtask-color', color);
+  if (changed) window.dispatchEvent(new Event(APPEARANCE_CHANGE_EVENT));
 }
 
 export function getTheme(): Theme {
@@ -37,6 +42,7 @@ export function setTheme(t: Theme): void {
     else localStorage.setItem(KEY, t);
   } catch { /* modo privado */ }
   applyTheme(t);
+  window.dispatchEvent(new Event(APPEARANCE_CHANGE_EVENT));
 }
 
 export function getLook(): Look {
@@ -52,6 +58,7 @@ export function setLook(l: Look): void {
     localStorage.setItem(LOOK_KEY, l);
   } catch { /* modo privado */ }
   applyTheme();
+  window.dispatchEvent(new Event(APPEARANCE_CHANGE_EVENT));
 }
 
 /** Fondo de cada estilo en claro y oscuro: barra del navegador. */

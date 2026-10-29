@@ -224,12 +224,9 @@ button.chip { min-height: 22px; }
   animation: fade .2s ease;
   transition: opacity .25s;
 }
-.row.sub {
-  padding-left: 48px;
-  --row-line: var(--subtask-color);
-  --row-dot: var(--row-line);
-  border-bottom-color: var(--row-line);
-}
+.row.sub { padding-left: 48px; }
+:where(html:not([data-look="industrial"])) .row.sub,
+:where(html:not([data-look="industrial"])) .row.subtasks-collapsed { border-bottom-color: var(--subtask-color); }
 /* Deslizar a la derecha para completar: el contenido se desplaza y descubre la etiqueta. */
 .row { position: relative; touch-action: pan-y; isolation: isolate; }
 .row > .check, .row > .body { transform: translateX(var(--dx, 0px)); transition: transform .2s ease; }
@@ -294,8 +291,8 @@ button.chip { min-height: 22px; }
   border-width: 0 1px 1px 0;
   transform: translateY(-1px) rotate(45deg);
 }
-.row.sub.done .check i { background: var(--subtask-color); border-color: var(--subtask-color); }
-.row.sub.done .title { text-decoration-color: var(--subtask-color); }
+:where(html:not([data-look="industrial"])) .row.sub.done .check i { background: var(--subtask-color); border-color: var(--subtask-color); }
+:where(html:not([data-look="industrial"])) .row.sub.done .title { text-decoration-color: var(--subtask-color); }
 .body { flex: 1; min-width: 0; }
 .title {
   display: block;
@@ -357,14 +354,16 @@ button.chip { min-height: 22px; }
   overscroll-behavior: contain;
 }
 .subtask-field { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
-.subtask-field:focus-within { border-bottom-color: var(--subtask-color); }
+.subtask-field:focus-within { border-bottom-color: var(--accent); }
+:where(html:not([data-look="industrial"])) .subtask-field:focus-within { border-bottom-color: var(--subtask-color); }
 .subtask-field input { min-width: 0; width: 100%; font-size: 16px; min-height: 44px; }
 .remove-subtask { flex: none; width: 44px; height: 44px; color: var(--muted); font-size: 22px; }
 .subtask-help { font-size: 12px; color: var(--muted); margin-top: 8px; }
 .subtask-actions { display: flex; flex-wrap: wrap; gap: 16px; }
 .subtask-actions button:disabled { opacity: .5; cursor: wait; }
 .capture .err { padding-bottom: 10px; }
-.row.has-subtasks.sel, .row.sub.sel {
+:where(html:not([data-look="industrial"])) .row.has-subtasks.sel,
+:where(html:not([data-look="industrial"])) .row.sub.sel {
   box-shadow: inset 2px 0 0 var(--subtask-color);
 }
 .subtask-group > ul { list-style: none; }
@@ -373,8 +372,9 @@ button.chip { min-height: 22px; }
   flex: none;
   display: grid; place-items: center;
   width: 44px; height: 44px;
-  color: var(--subtask-color);
+  color: var(--accent);
 }
+:where(html:not([data-look="industrial"])) .add-subtask-action { color: var(--subtask-color); }
 .add-subtask-icon { position: absolute; left: -13px; top: 1px; }
 .row.sub.sel .add-subtask-icon { left: -3px; }
 .subtask-composer .subtask-inputs { padding: 10px 0; }

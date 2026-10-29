@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createRepo } from './repo';
 import type { Backup, ParsedLine, RemoteItem, Task } from '../types';
@@ -19,6 +20,100 @@ function line(title: string, extra: Partial<ParsedLine> = {}): ParsedLine {
 }
 
 const newRepo = () => createRepo('test-' + crypto.randomUUID());
+
+describe('preferencia de color secundario', () => {
+  it('no borra cambios pendientes cuando llega la confirmación de una elección anterior', async () => {
+    const r = newRepo();
+    await r.setSetting('appearance', { subtaskColor: '#3689cc' });
+    const sent = await r.pendingChanges();
+    await r.setSetting('appearance', { subtaskColor: '#58a676' });
+    await r.markPushed(sent);
+    expect(await r.pendingChanges()).toHaveLength(1);
+    await r.markPushed(await r.pendingChanges());
+    expect(await r.pendingChanges()).toEqual([]);
+    expect(await r.getSetting('appearance')).toMatchObject({ value: { subtaskColor: '#58a676' } });
+  });
+
+  it('aplica LWW y permite cambiar un color remoto con reloj adelantado', async () => {
+    const r = newRepo();
+    const future = Date.now() + 864e5;
+    const remote: RemoteItem = {
+      kind: 'setting', id: 'appearance',
+      data: { key: 'appearance', value: { subtaskColor: '#58a676' }, updatedAt: future, deleted: 0 },
+      updated_at: future, deleted: false,
+    };
+    await r.applyRemote([remote]);
+    await r.setSetting('appearance', { subtaskColor: '#7849ce' });
+    expect((await r.getSetting('appearance'))!.updatedAt).toBeGreaterThan(future);
+  });
+
+  it('rechaza preferencias remotas inválidas y revierte el lote completo', async () => {
+    const r = newRepo();
+    const valid: RemoteItem = {
+      kind: 'setting', id: 'appearance',
+      data: { key: 'appearance', value: { subtaskColor: '#58a676' }, updatedAt: 1, deleted: 0 },
+      updated_at: 1, deleted: false,
+    };
+    const invalid: RemoteItem[] = [
+      { ...valid, id: 'unknownPreference' },
+      { ...valid, updated_at: Number.NaN },
+      { ...valid, updated_at: -1 },
+    ];
+    for (const item of invalid) {
+      await expect(r.applyRemote([valid, item])).rejects.toThrow('no válida');
+      expect(await r.getSetting('appearance')).toBeUndefined();
+    }
+  });
+
+  it.each(['wipe', 'clearAll'] as const)('elimina la preferencia al borrar todos los datos: %s', async (method) => {
+    const r = newRepo();
+    await r.setSetting('appearance', { subtaskColor: '#7849ce' });
+    await r[method]();
+    expect(await r.getSetting('appearance')).toBeUndefined();
+    expect(await r.pendingChanges()).toEqual([]);
+  });
+
+  it('actualiza una base v1 conservando tareas y forzando un pull completo de las preferencias antes ignoradas', async () => {
+    const seed = newRepo();
+    const [task] = await seed.addParsed([line('Antes de actualizar')]);
+    const name = 'v1-' + crypto.randomUUID();
+    const old = new Dexie(name);
+    old.version(1).stores({
+      tasks: 'id, parentId, dirty, updatedAt', topics: 'key, dirty', people: 'key, dirty',
+      filters: 'id, dirty', meta: 'key',
+    });
+    await old.table('tasks').put(task);
+    await old.table('meta').put({ key: 'sync.cursor', value: 'cursor anterior' });
+    await old.table('meta').put({ key: 'sync.lastSync', value: 123 });
+    old.close();
+    const current = createRepo(name);
+    expect(await current.listTasks()).toEqual([task]);
+    expect(await current.getMeta('sync.cursor')).toBeUndefined();
+    expect(await current.getMeta('sync.lastSync')).toBe(123);
+    await current.setSetting('appearance', { subtaskColor: '#7849ce' });
+    expect(await current.getSetting('appearance')).toMatchObject({ value: { subtaskColor: '#7849ce' } });
+  });
+
+  it('resuelve empates con el ganador remoto solo tras confirmar el envío local', async () => {
+    const r = newRepo();
+    await r.setSetting('appearance', { subtaskColor: '#3689cc' }, 'initialize');
+    const remote: RemoteItem = {
+      kind: 'setting', id: 'appearance',
+      data: { key: 'appearance', value: { subtaskColor: '#58a676' }, updatedAt: 0, deleted: 0 },
+      updated_at: 0, deleted: false,
+    };
+    await r.applyRemote([remote]);
+    expect(await r.getSetting('appearance')).toMatchObject({ value: { subtaskColor: '#3689cc' }, updatedAt: 0 });
+    expect(await r.pendingChanges()).toHaveLength(1);
+    await r.markPushed(await r.pendingChanges());
+    await r.applyRemote([remote]);
+    expect(await r.getSetting('appearance')).toMatchObject({ value: { subtaskColor: '#58a676' }, updatedAt: 0 });
+    const changed = vi.fn();
+    r.subscribe(changed);
+    await r.applyRemote([remote]);
+    expect(changed).not.toHaveBeenCalled();
+  });
+});
 
 afterEach(() => {
   vi.useRealTimers();
@@ -817,7 +912,7 @@ describe('preferencias (setting)', () => {
     await r.setSetting('appearance', { look: 'classic' });
     await r.applyRemote([remote({ look: 'industrial' }, 1)]); // más antiguo: se ignora
     expect((await r.getSetting<{ look: string }>('appearance'))?.value.look).toBe('classic');
-    await r.applyRemote([remote({ look: 'industrial' }, Date.now() + 10_000)]);
+    await r.applyRemote([remote({ look: 'industrial' }, (await r.getSetting('appearance'))!.updatedAt + 10_000)]);
     expect((await r.getSetting<{ look: string }>('appearance'))?.value.look).toBe('industrial');
     expect(await r.pendingChanges()).toHaveLength(0);
   });
