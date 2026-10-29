@@ -1,5 +1,5 @@
 // Cliente PostgREST mínimo (sin supabase-js). Solo usa fetch.
-import type { RemoteItem } from '../types';
+import type { EncRow, KeyRowData, PairingRow, RemoteItem, ServerKind } from '../types';
 import type { Session, SyncConfig } from './auth';
 
 export class HttpError extends Error {
@@ -53,7 +53,7 @@ interface PullRow {
 export async function pushItems(
   cfg: SyncConfig,
   session: Session,
-  items: RemoteItem[],
+  items: (RemoteItem | EncRow)[],
   fetchImpl: typeof fetch,
 ): Promise<void> {
   for (let i = 0; i < items.length; i += PUSH_CHUNK) {
@@ -140,4 +140,206 @@ export async function deleteRemoteAccount(
   });
   if (!del.ok) throw await httpErrorFrom(del);
   return { account: false };
+}
+
+// ---------- cifrado: fila marcador (kind 'key', id 'dk') ----------
+
+/** Lee la fila marcador de la clave de cifrado. Devuelve null si no existe (cifrado no activado). */
+export async function fetchKeyRow(
+  cfg: SyncConfig,
+  session: Session,
+  fetchImpl: typeof fetch,
+): Promise<KeyRowData | null> {
+  const res = await fetchImpl(`${cfg.url}/rest/v1/items?select=data&kind=eq.key&id=eq.dk`, {
+    method: 'GET',
+    headers: authHeaders(cfg, session),
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+  const rows = (await res.json()) as Array<{ data: KeyRowData }>;
+  return rows.length > 0 ? rows[0].data : null;
+}
+
+/**
+ * Inserta la fila marcador si no existe (ignorando el conflicto) y devuelve la que queda en el servidor,
+ * que puede ser la de otro dispositivo si se adelantó.
+ */
+export async function putKeyRow(
+  cfg: SyncConfig,
+  session: Session,
+  data: KeyRowData,
+  fetchImpl: typeof fetch,
+): Promise<KeyRowData> {
+  const res = await fetchImpl(`${cfg.url}/rest/v1/items?on_conflict=user_id,kind,id`, {
+    method: 'POST',
+    headers: { ...authHeaders(cfg, session), Prefer: 'resolution=ignore-duplicates,return=minimal' },
+    body: JSON.stringify([
+      { user_id: session.userId, kind: 'key', id: 'dk', data, updated_at: Date.now(), deleted: false },
+    ]),
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+  const stored = await fetchKeyRow(cfg, session, fetchImpl);
+  if (!stored) throw new Error('No se pudo guardar la fila de clave de cifrado');
+  return stored;
+}
+
+/** Sustituye el contenido de la fila marcador (p. ej. para añadir la clave de recuperación). */
+export async function updateKeyRow(
+  cfg: SyncConfig,
+  session: Session,
+  data: KeyRowData,
+  fetchImpl: typeof fetch,
+): Promise<void> {
+  const res = await fetchImpl(`${cfg.url}/rest/v1/items?kind=eq.key&id=eq.dk`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+    body: JSON.stringify({ data, updated_at: Date.now() }),
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+}
+
+/** Borra la fila marcador de la clave de cifrado. */
+export async function deleteKeyRow(cfg: SyncConfig, session: Session, fetchImpl: typeof fetch): Promise<void> {
+  const res = await fetchImpl(`${cfg.url}/rest/v1/items?kind=eq.key&id=eq.dk`, {
+    method: 'DELETE',
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+}
+
+// ---------- cifrado: borrados ----------
+
+const DELETE_CHUNK = 100;
+
+/**
+ * Borra filas en claro de un tipo dado (p. ej. tras migrar a cifrado), en lotes de 100.
+ * Cada id va entre comillas dobles (escapando \ y ") y se codifica para la URL, porque puede contener
+ * espacios o comas (las claves de tema). No hace ninguna petición si ids está vacío.
+ */
+export async function deleteItems(
+  cfg: SyncConfig,
+  session: Session,
+  kind: ServerKind,
+  ids: string[],
+  fetchImpl: typeof fetch,
+): Promise<void> {
+  for (let i = 0; i < ids.length; i += DELETE_CHUNK) {
+    const list = ids
+      .slice(i, i + DELETE_CHUNK)
+      .map((id) => encodeURIComponent(`"${id.replace(/["\\]/g, '\\$&')}"`))
+      .join(',');
+    const res = await fetchImpl(`${cfg.url}/rest/v1/items?kind=eq.${kind}&id=in.(${list})`, {
+      method: 'DELETE',
+      headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+    });
+    if (!res.ok) throw await httpErrorFrom(res);
+  }
+}
+
+/** Borra todas las filas cifradas (kind 'enc') del usuario actual. */
+export async function deleteAllEnc(cfg: SyncConfig, session: Session, fetchImpl: typeof fetch): Promise<void> {
+  const res = await fetchImpl(
+    `${cfg.url}/rest/v1/items?kind=eq.enc&user_id=eq.${encodeURIComponent(session.userId)}`,
+    {
+      method: 'DELETE',
+      headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+    },
+  );
+  if (!res.ok) throw await httpErrorFrom(res);
+}
+
+// ---------- enlace de dispositivos (tabla pairings, ver docs/plan-cifrado.md §4) ----------
+
+const PAIRINGS = '/rest/v1/pairings';
+
+/** Crea una petición de enlace con la clave pública y el compromiso del dispositivo B. Devuelve la fila creada. */
+export async function createPairing(
+  cfg: SyncConfig,
+  session: Session,
+  body: { pk_b: string; commit_b: string },
+  fetchImpl: typeof fetch,
+): Promise<PairingRow> {
+  const res = await fetchImpl(`${cfg.url}${PAIRINGS}`, {
+    method: 'POST',
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=representation' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+  const rows = (await res.json()) as PairingRow[];
+  if (rows.length === 0) throw new Error('No se pudo crear la petición de enlace');
+  return rows[0];
+}
+
+/** Lee una petición de enlace por id. null si no existe (o ya fue borrada). */
+export async function getPairing(
+  cfg: SyncConfig,
+  session: Session,
+  id: string,
+  fetchImpl: typeof fetch,
+): Promise<PairingRow | null> {
+  const res = await fetchImpl(`${cfg.url}${PAIRINGS}?select=*&id=eq.${encodeURIComponent(id)}`, {
+    method: 'GET',
+    headers: authHeaders(cfg, session),
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+  const rows = (await res.json()) as PairingRow[];
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/** Actualiza campos de una petición de enlace (nonce, clave pública de A, DK envuelta...). */
+export async function updatePairing(
+  cfg: SyncConfig,
+  session: Session,
+  id: string,
+  patch: Partial<Omit<PairingRow, 'id' | 'created_at' | 'expires_at'>>,
+  fetchImpl: typeof fetch,
+): Promise<void> {
+  const res = await fetchImpl(`${cfg.url}${PAIRINGS}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+}
+
+/** Borra una petición de enlace por id. */
+export async function deletePairing(
+  cfg: SyncConfig,
+  session: Session,
+  id: string,
+  fetchImpl: typeof fetch,
+): Promise<void> {
+  const res = await fetchImpl(`${cfg.url}${PAIRINGS}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
+}
+
+/** Peticiones de enlace vigentes (no caducadas), más recientes primero. */
+export async function listPendingPairings(
+  cfg: SyncConfig,
+  session: Session,
+  fetchImpl: typeof fetch,
+): Promise<PairingRow[]> {
+  const now = encodeURIComponent(new Date().toISOString());
+  const res = await fetchImpl(
+    `${cfg.url}${PAIRINGS}?select=*&expires_at=gt.${now}&order=created_at.desc`,
+    { method: 'GET', headers: authHeaders(cfg, session) },
+  );
+  if (!res.ok) throw await httpErrorFrom(res);
+  return (await res.json()) as PairingRow[];
+}
+
+/** Borra las peticiones de enlace caducadas. */
+export async function deleteExpiredPairings(
+  cfg: SyncConfig,
+  session: Session,
+  fetchImpl: typeof fetch,
+): Promise<void> {
+  const now = encodeURIComponent(new Date().toISOString());
+  const res = await fetchImpl(`${cfg.url}${PAIRINGS}?expires_at=lt.${now}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
+  });
+  if (!res.ok) throw await httpErrorFrom(res);
 }

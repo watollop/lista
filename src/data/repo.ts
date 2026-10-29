@@ -623,6 +623,41 @@ export function createRepo(dbName = 'lista'): Repo {
       if (wrote) notify();
     },
 
+    async markAllDirty() {
+      await db.transaction('rw', allTables, async () => {
+        // Sin tocar updatedAt: los registros conservan su versión LWW, solo se vuelven a subir.
+        await db.tasks.toCollection().modify({ dirty: 1 });
+        await db.topics.toCollection().modify({ dirty: 1 });
+        await db.people.toCollection().modify({ dirty: 1 });
+        await db.filters.toCollection().modify({ dirty: 1 });
+        await db.settings.toCollection().modify({ dirty: 1 });
+      });
+    },
+
+    async markDirty(refs) {
+      await db.transaction('rw', allTables, async () => {
+        for (const ref of refs) {
+          switch (ref.kind) {
+            case 'task':
+              await db.tasks.update(ref.id, { dirty: 1 });
+              break;
+            case 'topic':
+              await db.topics.update(ref.id, { dirty: 1 });
+              break;
+            case 'person':
+              await db.people.update(ref.id, { dirty: 1 });
+              break;
+            case 'filter':
+              await db.filters.update(ref.id, { dirty: 1 });
+              break;
+            case 'setting':
+              await db.settings.update(ref.id, { dirty: 1 });
+              break;
+          }
+        }
+      });
+    },
+
     async getSetting<T = unknown>(key: string) {
       const row = await db.settings.get(key);
       return row && !row.deleted ? { value: row.value as T, updatedAt: row.updatedAt } : undefined;

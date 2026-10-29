@@ -1041,6 +1041,27 @@ section.droppable.drop-on .section { color: var(--fg); }
   55.01%, 58% { visibility: hidden; } 58.01%, 61% { visibility: visible; } 61.01%, 64% { visibility: hidden; }
   64.01%, 100% { visibility: visible; }
 }
+/* ---------- cifrado: sección y enlace entre dispositivos ---------- */
+.link-box { margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.link-box p { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
+.link-box .row-btns { margin-top: 4px; }
+.link-title { display: block; font-size: 15px; color: var(--fg); margin-bottom: 10px; }
+.link-code { font: 2em ui-monospace, Menlo, monospace; letter-spacing: .12em; margin: 4px 0 14px; user-select: all; }
+.link-float {
+  position: fixed; z-index: 21; left: var(--gutter); right: var(--gutter);
+  bottom: calc(84px + var(--sab) + var(--kb)); max-width: 480px; margin: 0 auto;
+  background: var(--bg); box-shadow: 0 10px 30px rgb(0 0 0 / .18);
+}
+.recovery-key {
+  display: block; padding: 12px; margin: 4px 0 14px; background: var(--surface); border-radius: var(--radius);
+  font: 14px/1.6 ui-monospace, Menlo, monospace; overflow-wrap: anywhere; user-select: all;
+}
+.unlock-form { display: grid; gap: 10px; margin-bottom: 14px; }
+.unlock-form input { font-size: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.unlock-form input:focus { border-bottom-color: var(--fg); }
+.enc-small { margin: 14px 0 0; font-size: 13px; }
+.enc-small .link { font-size: 13px; min-height: 36px; }
+
 @keyframes critter-claws-snap {
   0%, 18% { visibility: hidden; } 18.01%, 22% { visibility: visible; } 22.01%, 55% { visibility: hidden; }
   55.01%, 58% { visibility: visible; } 58.01%, 61% { visibility: hidden; } 61.01%, 64% { visibility: visible; }
