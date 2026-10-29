@@ -36,7 +36,7 @@ export function Critter({ enabled }: { enabled: boolean }) {
       <svg class="critter-body" width={SPRITE[0].length * PX} height={SPRITE.length * PX}
         viewBox={`0 0 ${SPRITE[0].length} ${SPRITE.length}`} shape-rendering="crispEdges">
         {SPRITE.flatMap((row, y) => [...row].map((c, x) => c === '.' ? null : (
-          <rect key={`${x},${y}`} x={x} y={y} width="1" height="1" fill={c === 'e' ? '#1f1e1d' : '#d97757'} />
+          <rect key={`${x},${y}`} x={x} y={y} width="1" height="1" class={c === 'e' ? 'critter-eye' : 'critter-px'} />
         )))}
       </svg>
     </div>
