@@ -523,7 +523,7 @@ describe('lista de subtareas', () => {
 describe('color secundario', () => {
   it('muestra errores al cargar la preferencia en lugar de fallar en silencio', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
-    vi.spyOn(repo, 'getSecondaryColor').mockRejectedValue(new Error('No se pudo leer el color'));
+    vi.spyOn(repo, 'getSetting').mockRejectedValue(new Error('No se pudo leer el color'));
     await app(repo);
     await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('No se pudo leer el color'));
   });
@@ -541,14 +541,14 @@ describe('color secundario', () => {
       }
     });
     await vi.waitFor(() => expect(getSubtaskColor()).toBe('#7849ce'));
-    expect(await repo.getSecondaryColor()).toMatchObject({ value: '#7849ce', dirty: 1 });
+    await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toMatchObject({ value: { subtaskColor: '#7849ce' } }));
     expect(picker.closest('label')?.classList.contains('selected')).toBe(true);
     expect(picker.value).toBe('#7849ce');
   });
 
   it('solo muestra la paleta en Clásico y conserva el color al pasar por Industrial', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
-    await repo.setSecondaryColor('#7849ce');
+    await repo.setSetting('appearance', { theme: 'system', look: 'industrial', subtaskColor: '#7849ce' });
     await app(repo);
     click(root.querySelector('[aria-label="Ajustes"]'));
     expect(root.querySelector('.subtask-colors')).toBeNull();
@@ -562,36 +562,45 @@ describe('color secundario', () => {
     expect(input('Color secundario personalizado').value).toBe('#7849ce');
   });
 
-  it('refleja colores remotos con Ajustes abierto sin cambiar el estilo ni el tema local', async () => {
+  it('refleja la apariencia remota con Ajustes abierto y oculta la paleta si llega Industrial', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
     click(root.querySelector('[aria-label="Ajustes"]'));
     click(button('Clásico'));
     click(button('Oscuro'));
+    await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toMatchObject({ value: { theme: 'dark', look: 'classic' } }));
+    const remoteTime = (await repo.getSetting('appearance'))!.updatedAt + 1000;
     await repo.applyRemote([{
-      kind: 'preference', id: 'secondaryColor',
-      data: { id: 'secondaryColor', value: '#3689cc', updatedAt: Date.now() + 1000, deleted: 0 },
-      updated_at: Date.now() + 1000, deleted: false,
+      kind: 'setting', id: 'appearance',
+      data: { key: 'appearance', value: { theme: 'dark', look: 'classic', subtaskColor: '#3689cc' }, updatedAt: remoteTime, deleted: 0 },
+      updated_at: remoteTime, deleted: false,
     }]);
     await vi.waitFor(() => expect(input('Color secundario personalizado').value).toBe('#3689cc'));
     expect(root.querySelector('[aria-label="Azul"]')?.getAttribute('aria-pressed')).toBe('true');
     expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe('#3689cc');
     expect(document.documentElement.dataset.look).toBeUndefined();
     expect(document.documentElement.dataset.theme).toBe('dark');
-    click(button('Industrial'));
-    expect(root.querySelector('.subtask-colors')).toBeNull();
+    await repo.applyRemote([{
+      kind: 'setting', id: 'appearance',
+      data: { key: 'appearance', value: { theme: 'light', look: 'industrial', subtaskColor: '#58a676' }, updatedAt: remoteTime + 1000, deleted: 0 },
+      updated_at: remoteTime + 1000, deleted: false,
+    }]);
+    await vi.waitFor(() => expect(root.querySelector('.subtask-colors')).toBeNull());
+    expect(document.documentElement.dataset.look).toBe('industrial');
+    expect(document.documentElement.dataset.theme).toBe('light');
   });
 
-  it('avisa cuando no puede guardar sin señalar un color que no se guardó', async () => {
+  it('aplica la elección local y avisa si no puede guardarla para sincronizar', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
-    vi.spyOn(repo, 'setSecondaryColor').mockRejectedValue(new Error('Sin espacio'));
     await app(repo);
     click(root.querySelector('[aria-label="Ajustes"]'));
     click(button('Clásico'));
+    await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toBeDefined());
+    vi.spyOn(repo, 'setSetting').mockRejectedValue(new Error('Sin espacio'));
     click(root.querySelector('[aria-label="Azul"]'));
     await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('Sin espacio'));
-    expect(root.querySelector('[aria-label="Rosa"]')?.getAttribute('aria-pressed')).toBe('true');
-    expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR);
+    expect(root.querySelector('[aria-label="Azul"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(getSubtaskColor()).toBe('#3689cc');
   });
 
   it('ofrece cuatro círculos de colores y uno personalizado sin texto y conserva la elección', async () => {

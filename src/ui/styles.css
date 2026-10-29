@@ -333,6 +333,10 @@ button.chip { min-height: 22px; }
   padding: 0 calc(var(--gutter) + var(--sar)) calc(8px + var(--sab)) calc(var(--gutter) + var(--sal));
 }
 .capture.kb { padding-bottom: 8px; }
+/* Con teclado: anclada al borde inferior del visual viewport (sigue al scroll de iOS), no al del layout. */
+@media (max-width: 899px) {
+  .capture.kb { top: var(--vv-bottom); bottom: auto; transform: translateY(-100%); }
+}
 .capture-inner { max-width: calc(var(--maxw) - 2 * var(--gutter)); margin: 0 auto; position: relative; }
 .capture input {
   width: 100%;

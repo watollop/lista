@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
 import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
-import { COLOR_CHANGE_EVENT, DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setTheme, type Look, type Theme } from './theme';
+import { saveAppearance } from './appearanceSync';
+import { APPEARANCE_CHANGE_EVENT, DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { EntityEditor } from './EntityEditor';
@@ -119,16 +120,18 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
   const [look, setL] = useState(getLook);
   const [color, setColor] = useState(getSubtaskColor);
   useLayoutEffect(() => {
-    const update = () => setColor(getSubtaskColor());
-    window.addEventListener(COLOR_CHANGE_EVENT, update);
+    const update = () => { setColor(getSubtaskColor()); set(getTheme()); setL(getLook()); };
+    window.addEventListener(APPEARANCE_CHANGE_EVENT, update);
     update();
-    return () => window.removeEventListener(COLOR_CHANGE_EVENT, update);
+    return () => window.removeEventListener(APPEARANCE_CHANGE_EVENT, update);
   }, []);
   const customColor = !SUBTASK_COLORS.some(([value]) => value === color.toLowerCase());
+  const persist = () => {
+    void saveAppearance(repo).catch((e) => toast(e instanceof Error ? e.message : 'No se pudo guardar la apariencia.'));
+  };
   const changeColor = (next: string) => {
-    void repo.setSecondaryColor(next).catch((e) => {
-      toast(e instanceof Error ? e.message : 'No se pudo guardar el color.');
-    });
+    try { setSubtaskColor(next); persist(); }
+    catch (e) { toast(e instanceof Error ? e.message : 'No se pudo guardar el color.'); }
   };
   return (
     <section>
@@ -136,13 +139,13 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
       <div class="row-btns" role="radiogroup" aria-label="Tema">
         {THEMES.map(([t, l]) => (
           <button key={t} role="radio" aria-checked={theme === t} class={`btn ${theme === t ? 'solid' : ''}`}
-            onClick={() => { setTheme(t); set(t); }}>{l}</button>
+            onClick={() => { setTheme(t); persist(); }}>{l}</button>
         ))}
       </div>
       <div class="row-btns look-btns" role="radiogroup" aria-label="Estilo">
         {LOOKS.map(([k, l]) => (
           <button key={k} role="radio" aria-checked={look === k} class={`btn ${look === k ? 'solid' : ''}`}
-            onClick={() => { setLook(k); setL(k); }}>{l}</button>
+            onClick={() => { setLook(k); persist(); }}>{l}</button>
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>

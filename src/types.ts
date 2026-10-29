@@ -18,11 +18,6 @@ export interface SyncRec {
   dirty: 0 | 1; // 1 = pendiente de subir al servidor
 }
 
-export interface ColorPreference extends SyncRec {
-  id: 'secondaryColor';
-  value: string;
-}
-
 export interface Task extends SyncRec {
   id: ID;
   title: string; // texto sin tokens
@@ -61,6 +56,12 @@ export interface Filter {
   priorities: Priority[];
   status: StatusFilter;
   text: string; // búsqueda libre, insensible a mayúsculas y acentos
+}
+
+/** Preferencia sincronizada entre dispositivos (p. ej. la apariencia). key identifica la preferencia. */
+export interface Setting extends SyncRec {
+  key: string;
+  value: unknown;
 }
 
 export interface SavedFilter extends SyncRec {
@@ -111,18 +112,17 @@ export interface Backup {
   topics: Entity[];
   people: Entity[];
   filters: SavedFilter[];
-  preferences?: ColorPreference[]; // opcional para aceptar copias anteriores
 }
 
 // ---------- sync ----------
 
-export type SyncKind = 'task' | 'topic' | 'person' | 'filter' | 'preference';
+export type SyncKind = 'task' | 'topic' | 'person' | 'filter' | 'setting';
 
 /** Registro tal y como viaja al/desde el servidor. */
 export interface RemoteItem {
   kind: SyncKind;
   id: string; // Task.id, Entity.key o SavedFilter.id
-  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'> | Omit<ColorPreference, 'dirty'>;
+  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'> | Omit<Setting, 'dirty'>;
   updated_at: number;
   deleted: boolean;
 }
@@ -139,10 +139,6 @@ export interface Repo {
   listTopics(): Promise<Entity[]>; // no borradas, orden alfabético
   listPeople(): Promise<Entity[]>;
   listFilters(): Promise<SavedFilter[]>; // no borrados, por order
-  getSecondaryColor(): Promise<ColorPreference | undefined>;
-  setSecondaryColor(color: string): Promise<ColorPreference>;
-  /** Migra solo si no existe un registro, con prioridad inferior a una elección sincronizada. */
-  initializeSecondaryColor(color: string): Promise<void>;
 
   /** Crea tareas desde líneas parseadas. Una línea isSubtask cuelga de la última no-subtarea del lote
    *  o, si no hay, de defaultParentId (si es null se crea como tarea normal). Crea Topic/Person si no existen. */
@@ -175,6 +171,11 @@ export interface Repo {
   wipe(): Promise<void>;
   /** merge: LWW por updatedAt. replace: borra todo y carga. */
   importBackup(b: Backup, mode: 'merge' | 'replace'): Promise<void>;
+
+  /** Preferencias que viajan con la cuenta. setSetting marca dirty y notifica; las remotas llegan por applyRemote. */
+  getSetting<T = unknown>(key: string): Promise<{ value: T; updatedAt: number } | undefined>;
+  /** initialize migra solo si no existe el registro, con prioridad inferior a una elección sincronizada. */
+  setSetting(key: string, value: unknown, mode?: 'initialize'): Promise<void>;
 
   // --- soporte para sync ---
   pendingChanges(): Promise<RemoteItem[]>; // registros con dirty=1

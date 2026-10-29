@@ -1,4 +1,3 @@
-import type { Repo } from '../types';
 import { DEFAULT_SECONDARY_COLOR, isSecondaryColor } from '../lib/preferences';
 
 /** Tema y estilo elegidos en Ajustes. 'system' sigue a prefers-color-scheme. index.html los aplica antes de pintar. */
@@ -9,7 +8,7 @@ const KEY = 'lista.theme';
 const LOOK_KEY = 'lista.look';
 const SUBTASK_COLOR_KEY = 'lista.subtaskColor';
 export const DEFAULT_SUBTASK_COLOR = DEFAULT_SECONDARY_COLOR;
-export const COLOR_CHANGE_EVENT = 'lista:secondary-color';
+export const APPEARANCE_CHANGE_EVENT = 'lista:appearance';
 
 export function getSubtaskColor(): string {
   try {
@@ -25,29 +24,7 @@ export function setSubtaskColor(color: string): void {
   const changed = getSubtaskColor() !== color;
   localStorage.setItem(SUBTASK_COLOR_KEY, color);
   document.documentElement.style.setProperty('--subtask-color', color);
-  if (changed) window.dispatchEvent(new Event(COLOR_CHANGE_EVENT));
-}
-
-/** IndexedDB es la fuente de verdad; localStorage solo evita un salto de color al arrancar. */
-export function bindSecondaryColor(repo: Repo, onError: (error: unknown) => void): () => void {
-  let active = true;
-  let revision = 0;
-  const refresh = () => {
-    const current = ++revision;
-    void repo.getSecondaryColor().then((preference) => {
-      if (!active || current !== revision) return;
-      setSubtaskColor(preference?.value ?? DEFAULT_SUBTASK_COLOR);
-      if (!preference) localStorage.removeItem(SUBTASK_COLOR_KEY);
-    }).catch((error) => { if (active) onError(error); });
-  };
-  const unsubscribe = repo.subscribe(refresh);
-  void (async () => {
-    let legacy: string | null = null;
-    try { legacy = localStorage.getItem(SUBTASK_COLOR_KEY); } catch { /* modo privado */ }
-    if (isSecondaryColor(legacy)) await repo.initializeSecondaryColor(legacy);
-    if (active) refresh();
-  })().catch((error) => { if (active) onError(error); });
-  return () => { active = false; unsubscribe(); };
+  if (changed) window.dispatchEvent(new Event(APPEARANCE_CHANGE_EVENT));
 }
 
 export function getTheme(): Theme {
@@ -65,6 +42,7 @@ export function setTheme(t: Theme): void {
     else localStorage.setItem(KEY, t);
   } catch { /* modo privado */ }
   applyTheme(t);
+  window.dispatchEvent(new Event(APPEARANCE_CHANGE_EVENT));
 }
 
 export function getLook(): Look {
@@ -80,6 +58,7 @@ export function setLook(l: Look): void {
     localStorage.setItem(LOOK_KEY, l);
   } catch { /* modo privado */ }
   applyTheme();
+  window.dispatchEvent(new Event(APPEARANCE_CHANGE_EVENT));
 }
 
 /** Fondo de cada estilo en claro y oscuro: barra del navegador. */

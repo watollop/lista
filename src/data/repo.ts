@@ -1,7 +1,6 @@
 import type { Table } from 'dexie';
 import type {
   Backup,
-  ColorPreference,
   Entity,
   EntityKind,
   Filter,
@@ -10,6 +9,7 @@ import type {
   RemoteItem,
   Repo,
   SavedFilter,
+  Setting,
   SyncKind,
   SyncRec,
   Task,
@@ -19,17 +19,6 @@ import { nextOccurrence } from '../lib/recurrence';
 import { addDays, diffDays, todayISO } from '../lib/date';
 import { retagTitle } from '../parser/retag';
 import { ListaDB } from './db';
-import { isSecondaryColor } from '../lib/preferences';
-
-function validatePreference(data: unknown): asserts data is Omit<ColorPreference, 'dirty'> {
-  if (!data || typeof data !== 'object' ||
-    !('id' in data) || data.id !== 'secondaryColor' ||
-    !('value' in data) || !isSecondaryColor(data.value) ||
-    !('updatedAt' in data) || typeof data.updatedAt !== 'number' || !Number.isFinite(data.updatedAt) || data.updatedAt < 0 ||
-    !('deleted' in data) || (data.deleted !== 0 && data.deleted !== 1)) {
-    throw new Error('Preferencia de color no válida.');
-  }
-}
 
 /** Reloj monotónico: dos escrituras en el mismo ms reciben valores estrictamente crecientes. */
 let lastStamp = 0;
@@ -158,7 +147,7 @@ export function createRepo(dbName = 'lista'): Repo {
   };
   if (channel) channel.onmessage = () => emit();
 
-  const allTables = [db.tasks, db.topics, db.people, db.filters, db.preferences] as const;
+  const allTables = [db.tasks, db.topics, db.people, db.filters, db.settings] as const;
   const tableOf = (kind: EntityKind) => (kind === 'topic' ? db.topics : db.people);
 
   const childrenOf = async (id: ID) => live(await db.tasks.where('parentId').equals(id).toArray());
@@ -247,39 +236,6 @@ export function createRepo(dbName = 'lista'): Repo {
   }
 
   const repo: Repo = {
-    async getSecondaryColor() {
-      const preference = await db.preferences.get('secondaryColor');
-      return preference?.deleted === 0 ? preference : undefined;
-    },
-
-    async setSecondaryColor(color) {
-      if (!isSecondaryColor(color)) throw new Error('Elige un color válido.');
-      const { preference, changed } = await db.transaction('rw', db.preferences, async () => {
-        const existing = await db.preferences.get('secondaryColor');
-        if (existing?.deleted === 0 && existing.value.toLowerCase() === color.toLowerCase()) {
-          return { preference: existing, changed: false };
-        }
-        const preference: ColorPreference = {
-          id: 'secondaryColor', value: color.toLowerCase(), updatedAt: stamp(existing?.updatedAt),
-          deleted: 0, dirty: 1,
-        };
-        await db.preferences.put(preference);
-        return { preference, changed: true };
-      });
-      if (changed) notify();
-      return preference;
-    },
-
-    async initializeSecondaryColor(color) {
-      if (!isSecondaryColor(color)) throw new Error('Elige un color válido.');
-      const changed = await db.transaction('rw', db.preferences, async () => {
-        if (await db.preferences.get('secondaryColor')) return false;
-        await db.preferences.put({ id: 'secondaryColor', value: color.toLowerCase(), updatedAt: 0, deleted: 0, dirty: 1 });
-        return true;
-      });
-      if (changed) notify();
-    },
-
     async listTasks() {
       return live(await db.tasks.toArray());
     },
@@ -555,8 +511,8 @@ export function createRepo(dbName = 'lista'): Repo {
     },
 
     async exportBackup(): Promise<Backup> {
-      const [tasks, topics, people, filters, preferences] = await db.transaction('r', allTables, async () =>
-        Promise.all([db.tasks.toArray(), db.topics.toArray(), db.people.toArray(), db.filters.toArray(), db.preferences.toArray()]),
+      const [tasks, topics, people, filters] = await db.transaction('r', allTables, async () =>
+        Promise.all([db.tasks.toArray(), db.topics.toArray(), db.people.toArray(), db.filters.toArray()]),
       );
       return {
         app: 'lista',
@@ -566,7 +522,6 @@ export function createRepo(dbName = 'lista'): Repo {
         topics: live(topics),
         people: live(people),
         filters: live(filters),
-        preferences: live(preferences),
       };
     },
 
@@ -582,10 +537,6 @@ export function createRepo(dbName = 'lista'): Repo {
       ) {
         throw new Error('Copia de seguridad no válida');
       }
-      if (b.preferences !== undefined) {
-        if (!Array.isArray(b.preferences)) throw new Error('Copia de seguridad no válida');
-        for (const preference of b.preferences) validatePreference(preference);
-      }
       await db.transaction('rw', allTables, async () => {
         const now = stamp();
         if (mode === 'replace') {
@@ -598,16 +549,11 @@ export function createRepo(dbName = 'lista'): Repo {
           await db.topics.bulkPut(put(b.topics));
           await db.people.bulkPut(put(b.people));
           await db.filters.bulkPut(put(b.filters));
-          if (b.preferences !== undefined) {
-            await tombstoneAll(db.preferences, now);
-            await db.preferences.bulkPut(put(b.preferences));
-          }
         } else {
           for (const t of b.tasks) await mergeOne(db.tasks, t, (r) => r.id);
           for (const t of b.topics) await mergeOne(db.topics, t, (r) => r.key);
           for (const t of b.people) await mergeOne(db.people, t, (r) => r.key);
           for (const f of b.filters) await mergeOne(db.filters, f, (r) => r.id);
-          for (const p of b.preferences ?? []) await mergeOne(db.preferences, p, (r) => r.id);
         }
         await reconcileFamilies();
       });
@@ -619,12 +565,12 @@ export function createRepo(dbName = 'lista'): Repo {
         const { dirty: _dirty, ...rest } = r;
         return rest as T;
       };
-      const [tasks, topics, people, filters, preferences] = await Promise.all([
+      const [tasks, topics, people, filters, settings] = await Promise.all([
         db.tasks.where('dirty').equals(1).toArray(),
         db.topics.where('dirty').equals(1).toArray(),
         db.people.where('dirty').equals(1).toArray(),
         db.filters.where('dirty').equals(1).toArray(),
-        db.preferences.where('dirty').equals(1).toArray(),
+        db.settings.where('dirty').equals(1).toArray(),
       ]);
       const items: RemoteItem[] = [];
       for (const t of tasks)
@@ -635,8 +581,8 @@ export function createRepo(dbName = 'lista'): Repo {
         items.push({ kind: 'person', id: e.key, data: strip(e), updated_at: e.updatedAt, deleted: e.deleted === 1 });
       for (const f of filters)
         items.push({ kind: 'filter', id: f.id, data: strip(f), updated_at: f.updatedAt, deleted: f.deleted === 1 });
-      for (const p of preferences)
-        items.push({ kind: 'preference', id: p.id, data: strip(p), updated_at: p.updatedAt, deleted: p.deleted === 1 });
+      for (const s of settings)
+        items.push({ kind: 'setting', id: s.key, data: strip(s), updated_at: s.updatedAt, deleted: s.deleted === 1 });
       return items;
     },
 
@@ -656,8 +602,8 @@ export function createRepo(dbName = 'lista'): Repo {
             case 'filter':
               await markOne(db.filters, it.id, it.updated_at);
               break;
-            case 'preference':
-              await markOne(db.preferences, it.id, it.updated_at);
+            case 'setting':
+              await markOne(db.settings, it.id, it.updated_at);
               break;
           }
         }
@@ -675,6 +621,25 @@ export function createRepo(dbName = 'lista'): Repo {
         return any;
       });
       if (wrote) notify();
+    },
+
+    async getSetting<T = unknown>(key: string) {
+      const row = await db.settings.get(key);
+      return row && !row.deleted ? { value: row.value as T, updatedAt: row.updatedAt } : undefined;
+    },
+
+    async setSetting(key, value, mode) {
+      const changed = await db.transaction('rw', db.settings, async () => {
+        const existing = await db.settings.get(key);
+        if (mode === 'initialize' && existing) return false;
+        if (existing?.deleted === 0 && JSON.stringify(existing.value) === JSON.stringify(value)) return false;
+        const rec: Setting = {
+          key, value, updatedAt: mode === 'initialize' ? 0 : stamp(existing?.updatedAt), deleted: 0, dirty: 1,
+        };
+        await db.settings.put(rec);
+        return true;
+      });
+      if (changed) notify();
     },
 
     async getMeta<T = unknown>(key: string) {
@@ -711,19 +676,20 @@ export function createRepo(dbName = 'lista'): Repo {
         return applyOne(db.people, it);
       case 'filter':
         return applyOne(db.filters, it);
-      case 'preference': {
-        validatePreference(it.data);
-        if (it.id !== 'secondaryColor' || !Number.isFinite(it.updated_at) || it.updated_at < 0) {
-          throw new Error('Preferencia de color no válida.');
+      case 'setting': {
+        const data = it.data;
+        if (!data || typeof data !== 'object' || !('key' in data) || data.key !== it.id || !('value' in data) ||
+          !Number.isFinite(it.updated_at) || it.updated_at < 0) {
+          throw new Error('Preferencia sincronizada no válida.');
         }
-        const local = await db.preferences.get(it.id);
+        const local = await db.settings.get(it.id);
         const deleted = it.deleted ? 1 : 0;
         // El servidor acepta empates. Tras confirmar nuestro envío adoptamos su ganador.
         if (local && (it.updated_at < local.updatedAt ||
           (it.updated_at === local.updatedAt && (local.dirty === 1 ||
-            (local.value === it.data.value && local.deleted === deleted))))) return false;
-        await db.preferences.put({
-          id: 'secondaryColor', value: it.data.value, updatedAt: it.updated_at, deleted, dirty: 0,
+            (JSON.stringify(local.value) === JSON.stringify(data.value) && local.deleted === deleted))))) return false;
+        await db.settings.put({
+          key: it.id, value: data.value, updatedAt: it.updated_at, deleted, dirty: 0,
         });
         return true;
       }
