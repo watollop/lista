@@ -372,11 +372,9 @@ button.chip { min-height: 22px; }
 .capture .subtask-actions .link { color: inherit; }
 .capture .subtask-field { border-bottom-color: currentColor; }
 .capture .err { padding-bottom: 10px; }
-.row.has-subtasks, .row.has-subtasks.sel, .subtask-group {
+.row.has-subtasks.sel, .row.sub.sel {
   box-shadow: inset 2px 0 0 var(--subtask-color);
-  padding-left: 10px; margin-left: -10px;
 }
-.subtask-group .row.sub.sel { box-shadow: none; }
 .subtask-group > ul { list-style: none; }
 .subtask-composer { padding-left: 34px; }
 .subtask-composer .subtask-inputs { padding: 10px 0; }
