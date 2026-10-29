@@ -1,105 +1,160 @@
-# Lista
+<p align="center">
+  <img src="public/icons/icon-192.png" alt="Icono de Lista" width="64" height="64">
+</p>
 
-**Una lista. Nada más.**
+<h1 align="center">Lista</h1>
 
-Una app de tareas sin cuentas, sin menús y sin ruido. Escribes, la haces, la tachas.
+<p align="center">
+  <strong>Una lista. Nada más.</strong><br>
+  Escribe lo que tienes en la cabeza. Lista lo pone en su sitio.
+</p>
 
-→ **[Pruébala](https://lista-7bi.pages.dev/)** · funciona en iPhone, Android y ordenador.
+<p align="center">
+  <a href="https://lista-7bi.pages.dev/"><strong>Abrir Lista</strong></a>
+  · <a href="#escribe-como-piensas">Cómo se usa</a>
+  · <a href="#desarrollo">Desarrollo</a>
+</p>
+
+<p align="center">
+  <img src="docs/lista-preview.webp" alt="Lista con tareas de ejemplo: estilo Industrial en ordenador y Clásico en móvil, con subtareas desplegadas." width="1280">
+</p>
+
+<p align="center">
+  <sub>Sin cuenta para empezar · Funciona sin conexión · iPhone, Android y ordenador</sub>
+</p>
+
+## Escribe como piensas
+
+Una tarea, una línea. Las fechas, las etiquetas y las prioridades van contigo.
+
+```text
+Llamar mañana #trabajo @ana !alta
+```
+
+| Para añadir… | Escribe… |
+|---|---|
+| Una fecha | `hoy`, `mañana`, `el viernes`, `15 nov` |
+| Un periodo | `esta semana`, `este mes`, `este trimestre` |
+| Un tema o una persona | `#trabajo`, `@ana` |
+| Una prioridad | `!alta`, `!media`, `!baja` |
+| Una repetición | `cada lunes`, `cada mes`, `a diario` |
+| Una subtarea | `<Reservar alojamiento` |
+
+Pulsa **Enter** para guardarla. También puedes dictar con el micrófono, una tarea tras otra.
+Al empezar a escribir desaparece el ejemplo, pero queda una guía discreta de las opciones.
+
+## Divide lo grande en pasos
+
+Añade subtareas con `<`, sin salir del campo de escritura:
+
+```text
+Viaje <Billetes mañana !alta <Mochila
+```
+
+Una tarea principal, dos subtareas. Cada paso puede tener su propia fecha, prioridad y etiquetas.
+Toca el título de la principal para desplegarlos: **se quedan en su sitio aunque los marques**.
+
+<details>
+<summary>Más sobre las subtareas</summary>
+
+- Para añadir pasos a una tarea existente, pulsa **+** en su editor o junto a la casilla de la última subtarea del grupo desplegado.
+- En esos campos, **Enter** con texto abre el siguiente; **Enter** en uno vacío guarda los pasos. También puedes pulsar **Añadir subtareas**.
+- Completar la principal cierra todos sus pasos; completar el último paso cierra la principal.
+- Reabrir un paso reabre la principal. Reabrir la principal reabre todos sus pasos.
+- **Deshacer** recupera el estado anterior, sin reabrir pasos que ya estaban hechos.
+- En Clásico, un grupo cerrado se reconoce por el subrayado del color secundario. Al desplegarlo, ese color aparece en las líneas inferiores de sus subtareas, los **+** y las casillas y tachados de los pasos completados.
+
+</details>
+
+## Hazla, táchala, sigue
+
+- **Completa o borra.** Desliza a la derecha para tachar; a la izquierda para borrar.
+- **Encuentra lo importante.** Toca un tema, una persona o una fecha para filtrar.
+- **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas.
+- **Cambia de planes.** Selecciona una tarea y arrastra **Mover** para cambiarla de día; usa el lápiz para editarla.
+
+## A tu manera
+
+**Dos estilos, la misma calma.** Clásico, en blanco y negro; Industrial, con gris cálido, letra de puntos y acento naranja. Ambos con tema claro, oscuro o el del sistema.
+
+**Un toque de color.** En **Ajustes → Apariencia**, Clásico permite elegir un color secundario: rosa (por defecto), azul, verde, naranja o uno personalizado. Industrial conserva su naranja y no muestra la paleta; tu elección se guarda para cuando vuelvas a Clásico.
+
+**Solo lo que seleccionas.** La línea izquierda marca únicamente la fila seleccionada. Clásico usa el color secundario para las tareas con subtareas y sus pasos; Industrial, su naranja.
+
+**Igual en todos tus dispositivos.** Con la misma cuenta, el tema, el estilo y el color se sincronizan. Si cambias algo sin conexión, se envía al volver; ante cambios simultáneos gana el más reciente.
+
+## Tus tareas, contigo
+
+Todo se guarda primero **en tu dispositivo**. Puedes usar Lista sin cuenta y sin conexión;
+si quieres llevar tus tareas del móvil al ordenador, entra con **Google**.
+Desde Ajustes puedes exportarlo todo o borrarlo todo.
+
+Para tenerla siempre a mano, instálala como una app:
+
+- **iPhone:** Compartir → Añadir a pantalla de inicio.
+- **Android y ordenador:** Instalar app desde el navegador.
 
 ---
 
-## 1 · Escribe en una línea
+## Desarrollo
 
-```
-Revisar ventas cada lunes #trabajo !alta
-```
+Vite · TypeScript · Preact · Dexie / IndexedDB · Supabase · Cloudflare Pages.
 
-Lista entiende lo que escribes y lo ordena sola:
-
-- **Cuándo**: `hoy`, `mañana`, `el viernes`, `15 nov`, `esta semana`, `este trimestre`
-- **Tema**: `#trabajo` · **Persona**: `@ana`
-- **Prioridad**: `!alta` `!media` `!baja`
-- **Repetir**: `cada lunes`, `cada mes`, `a diario`
-
-También puedes dictarla con el micrófono, una tarea tras otra.
-
-El campo vacío muestra el ejemplo `Viaje <Billetes mañana !alta #ocio @ana`. Al escribir desaparece el ejemplo, pero la guía `#tema @persona !prioridad fecha <subtarea` permanece visible, con letra más pequeña y menor opacidad.
-
-**Subtareas**: separa las subtareas con `<` en la misma línea, por ejemplo `Tarea A <Subtarea B <Subtarea C !alta mañana #tema`. Enter guarda la tarea con dos subtareas hermanas; cada una tiene sus propios metadatos (en el ejemplo, solo C recibe prioridad, fecha y tema).
-
-En la captura se añaden subtareas con `<`, sin botones adicionales. Para añadirlas a una tarea existente, abre su editor y pulsa **+** o usa el **+** del grupo desplegado. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda las subtareas. También puedes usar **Añadir subtareas**.
-
-## 2 · Completa y filtra
-
-- Desliza a la **derecha** para completarla y a la **izquierda** para borrarla.
-- Toca `#trabajo`, `@ana` o una fecha para ver solo eso.
-- Las tareas se agrupan solas: Vencidas · Hoy · Mañana · Esta semana · Próximas.
-- Para cambiarla de día, tócala y arrastra **Mover**.
-- Solo la fila seleccionada muestra una línea a la izquierda: en Clásico usa el color secundario si es una tarea con subtareas o una subtarea; en Industrial usa el naranja del estilo. Toca el título de la tarea principal para desplegar sus subtareas y el lápiz para editarla.
-- Dentro del grupo desplegado, toca el **+** junto a la casilla de la última subtarea, a su izquierda y al nivel de la casilla principal, para añadir más subtareas.
-- En Clásico, la línea inferior de las subtareas y los **+** usan el color secundario sin transparencia. Industrial conserva sus puntos y su acento naranja.
-- Al cerrar un grupo, la tarea principal muestra una línea inferior del color secundario como indicador en Clásico. Las subtareas conservan su posición al completarlas o reabrirlas.
-- Completar la tarea principal cierra todas sus subtareas. También se completa al terminar la última subtarea; reabrir una subtarea reabre la principal y reabrir la principal reabre todas.
-- **Deshacer** recupera el estado previo sin reabrir subtareas que ya estaban hechas.
-- En Clásico, las subtareas completadas usan el color elegido en la casilla y en la línea de tachado.
-
-## 3 · Tus datos, contigo
-
-- Todo se guarda **en tu dispositivo** y funciona sin conexión.
-- Si quieres verlas en el móvil y en el ordenador, entra con **Google** y se sincronizan.
-- Puedes exportarlo todo o borrarlo todo desde Ajustes.
-
-## 4 · A tu gusto
-
-- Claro, oscuro o el del sistema.
-- Dos estilos: **Clásico** (blanco y negro) o **Industrial** (gris cálido, letra de puntos y naranja).
-- **Color secundario**, solo en **Clásico**, en **Ajustes → Apariencia**: círculos rosa (por defecto), azul, verde y naranja, y uno multicolor para elegir un color personalizado. La elección se conserva al cambiar de estilo; Industrial no la utiliza ni muestra la paleta.
-- Con la misma cuenta, la apariencia existente (tema, estilo y color) se sincroniza entre móvil y ordenador. Sin conexión queda guardada en el dispositivo y se envía al recuperar la conexión; ante cambios simultáneos gana el más reciente.
-- Se instala como una app más: *Compartir → Añadir a pantalla de inicio* (iPhone) o *Instalar app* (Android y ordenador).
-
----
-
-## Parte técnica
-
-**Stack**: Vite · TypeScript · Preact · Dexie (IndexedDB) · Supabase · Cloudflare Pages.
+Con **Node.js 22**:
 
 ```bash
-npm install
+npm ci
 npm run dev     # http://localhost:5173
+```
+
+Sin configurar nada más, funciona en local sin sincronización.
+
+<details>
+<summary>Tests, cobertura y build</summary>
+
+```bash
 npm test
 npm run test:coverage
 npm run build
 ```
 
-Sin configurar nada, funciona en local sin sincronización.
+La cobertura incluye todo `src/` y genera informes LCOV y JSON en `coverage/`, excluidos de Git.
 
-La cobertura incluye todo `src/` y genera los informes LCOV y JSON en `coverage/`, excluidos de Git.
+</details>
 
-**Sincronización (opcional)**
+<details>
+<summary>Sincronización con Supabase (opcional)</summary>
+
 1. Crea un proyecto en Supabase y ejecuta [`supabase/schema.sql`](supabase/schema.sql).
-2. Copia `.env.example` a `.env` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+2. Copia [`.env.example`](.env.example) a `.env` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 3. Activa Google en *Authentication → Providers* y añade tu URL en *Redirect URLs*.
 
-**Instalaciones existentes:** si todavía no has actualizado Supabase para la sincronización de apariencia, ejecuta `supabase/migrations/20261029_appearance_settings.sql` en el SQL editor, o vuelve a ejecutar `supabase/schema.sql`. Es el mismo tipo `setting` utilizado en `main`, sin una segunda implementación de preferencias ni cambios en las políticas por usuario. Un servidor antiguo rechazará los envíos de apariencia hasta actualizar el esquema.
+**Si ya tenías una instalación:** para sincronizar la apariencia, ejecuta la [migración de ajustes](supabase/migrations/20261029_appearance_settings.sql) en el SQL editor, o vuelve a ejecutar el esquema. Utiliza el tipo `setting`, sin duplicar preferencias ni cambiar las políticas por usuario. Un servidor antiguo rechazará los envíos de apariencia hasta actualizarlo.
 
-La apariencia anterior guardada en el dispositivo se migra una sola vez. No sobrescribe una elección ya sincronizada. Si varios dispositivos conservaban elecciones antiguas distintas, convergen en la aceptada por el servidor. Al actualizar, la base local fuerza una descarga completa para recuperar preferencias que una versión anterior pudo ignorar.
+La apariencia guardada en el dispositivo se migra una sola vez, sin sobrescribir una elección ya sincronizada. Si varios dispositivos tenían elecciones antiguas distintas, convergen en la aceptada por el servidor. Al actualizar, la base local fuerza una descarga completa para recuperar preferencias que una versión anterior pudo ignorar.
 
-**Despliegue**: cada merge a `main` pasa los tests y publica en Cloudflare Pages ([`deploy.yml`](.github/workflows/deploy.yml)). Necesita los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`, y los de Supabase si usas sincronización.
+</details>
 
-**Cómo está hecho**
-- Local-first: cada cambio se guarda al instante y se sube en segundo plano; si hay conflicto gana el más reciente.
-- Los datos de cada usuario están protegidos con RLS en Supabase.
-- Service worker propio: funciona sin conexión y se actualiza solo.
-- Sin peticiones a terceros: las fuentes van incluidas y la CSP es estricta.
+<details>
+<summary>Arquitectura y despliegue</summary>
 
-| Carpeta | Qué hay |
+- **Local-first:** cada cambio se guarda al instante y se sincroniza en segundo plano. Ante conflictos gana el más reciente.
+- **Datos separados por usuario:** RLS en Supabase.
+- **Sin conexión:** service worker propio, con actualización automática.
+- **Recursos locales:** fuentes incluidas en la app y CSP estricta.
+
+| Carpeta | Contenido |
 |---|---|
-| `src/parser/` | Entiende la línea que escribes |
+| `src/parser/` | Interpreta lo que escribes |
 | `src/data/` | Base de datos local |
 | `src/sync/` | Sincronización con Supabase |
 | `src/ui/` | Pantallas y estilos |
 | `src/pwa/` | Service worker |
 
----
+Cada merge a `main` ejecuta los tests y publica en Cloudflare Pages mediante [`deploy.yml`](.github/workflows/deploy.yml). Necesita `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`, además de los secretos de Supabase si usas sincronización.
 
-Código Do Norte ♥ Coruña
+</details>
+
+<p align="center">
+  <sub>Código Do Norte ♥ Coruña</sub>
+</p>
