@@ -1,0 +1,19 @@
+src/ui/Critter.tsx
+  s_c7d15b540bf786::t_ac55b5b4284491 6,8-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "75839a46cddcda20ee1494178d3e75497db35b20",
+  "prompts": {},
+  "sessions": {
+    "s_c7d15b540bf786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "407821e8-55aa-4e8a-a245-4803a60061b3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
