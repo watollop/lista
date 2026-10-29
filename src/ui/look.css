@@ -102,7 +102,8 @@
   padding: 0 18px;
   box-shadow: 0 10px 30px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(255 255 255 / .08);
 }
-:where([data-look="industrial"]) .capture input, :where([data-look="industrial"]) .capture-guide { font-family: var(--mono); font-size: 16px; font-weight: 400; }
+:where([data-look="industrial"]) .capture input, :where([data-look="industrial"]) .capture-guide { font-family: var(--mono); font-weight: 400; }
+:where([data-look="industrial"]) .capture input { font-size: 16px; }
 :where([data-look="industrial"]) .capture input { height: 58px; color: var(--screen-fg); caret-color: var(--accent); }
 :where([data-look="industrial"]) .capture input::placeholder { color: rgb(241 240 234 / .45); }
 :where([data-look="industrial"]) .capture .chip { border-color: rgb(255 255 255 / .2); color: rgb(241 240 234 / .7); }
@@ -125,7 +126,7 @@
   :where([data-look="industrial"]) .brand { font-size: 32px; }
   :where([data-look="industrial"]) .capture { border-bottom: 0; margin-top: 18px; }
   :where([data-look="industrial"]) .capture input { height: 66px; }
-  :where([data-look="industrial"]) .capture input, :where([data-look="industrial"]) .capture-guide { font-size: 18px; }
+  :where([data-look="industrial"]) .capture input { font-size: 18px; }
 }
 :where([data-look="industrial"]) .app.wide .top { border-bottom: 0; background: var(--bg) radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 100% / 6px 2px repeat-x; }
 :where([data-look="industrial"]) .side-group > .label { color: var(--fg); }

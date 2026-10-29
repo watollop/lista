@@ -135,10 +135,16 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
-      <div class="subtask-color">
-        <label for="subtask-color">Color del icono de subtareas</label>
-        <input id="subtask-color" type="color" value={color} onInput={(e) => changeColor(e.currentTarget.value)} />
-        <button class="link" onClick={() => changeColor(DEFAULT_SUBTASK_COLOR)}>Restablecer rosa</button>
+      <p class="look-hint" id="subtask-color-label">Color del icono de subtareas</p>
+      <div class="row-btns look-btns" role="group" aria-labelledby="subtask-color-label">
+        <button class={`btn ${color === DEFAULT_SUBTASK_COLOR ? 'solid' : ''}`}
+          aria-pressed={color === DEFAULT_SUBTASK_COLOR} onClick={() => changeColor(DEFAULT_SUBTASK_COLOR)}>Rosa</button>
+        <label class={`btn color-picker ${color !== DEFAULT_SUBTASK_COLOR ? 'solid' : ''}`}>
+          <span class="color-swatch" style={{ backgroundColor: color }} aria-hidden="true" />
+          Personalizado
+          <input id="subtask-color" type="color" aria-label="Color personalizado de subtareas"
+            value={color} onInput={(e) => changeColor(e.currentTarget.value)} />
+        </label>
       </div>
     </section>
   );

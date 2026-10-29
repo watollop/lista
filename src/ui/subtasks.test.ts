@@ -78,10 +78,9 @@ describe('captura con subtareas', () => {
   it('mantiene la guía al escribir y guarda el conjunto al dar Enter en vacío', async () => {
     const add = capture();
     type(input('Nueva tarea'), 'Preparar viaje #casa');
-    expect(root.querySelector('.capture-guide')?.textContent).toContain('#tema');
-    expect(root.querySelector('.capture-guide')?.textContent).toContain('@persona');
+    expect(root.querySelector('.capture-guide')?.textContent).toBe('#tema @persona !prioridad fecha');
     expect(input('Nueva tarea').getAttribute('aria-describedby')).toBe('capture-guide');
-    click(button('+ subtarea'));
+    click(button('Subtarea'));
     expect(document.activeElement).toBe(input('Subtarea 1'));
     type(input('Subtarea 1'), 'Comprar billetes @ana');
     enter(input('Subtarea 1'), true);
@@ -105,7 +104,7 @@ describe('captura con subtareas', () => {
   it('no pierde texto ante un fallo ni duplica guardados pendientes', async () => {
     const add = capture(vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockRejectedValue(new Error('Sin espacio')));
     type(input('Nueva tarea'), 'Mi proyecto');
-    click(button('+ subtarea'));
+    click(button('Subtarea'));
     type(input('Subtarea 1'), 'Primer paso');
     enter(input('Subtarea 1'));
     enter(input('Subtarea 2'));
@@ -119,7 +118,7 @@ describe('captura con subtareas', () => {
   it('ofrece guardado táctil y evita guardar metadatos sin título', async () => {
     const add = capture();
     type(input('Nueva tarea'), 'Proyecto');
-    click(button('+ subtarea'));
+    click(button('Subtarea'));
     type(input('Subtarea 1'), '!alta');
     click(button('Guardar tarea'));
     expect(root.querySelector('[role="alert"]')?.textContent).toContain('título');
@@ -132,11 +131,38 @@ describe('captura con subtareas', () => {
   it('cancelar las subtareas conserva la tarea principal', () => {
     capture();
     type(input('Nueva tarea'), 'Proyecto');
-    click(button('+ subtarea'));
+    click(button('Subtarea'));
     type(input('Subtarea 1'), 'Paso');
     click(button('Cancelar'));
     expect(input('Nueva tarea').value).toBe('Proyecto');
     expect(root.querySelector('.subtask-inputs')).toBeNull();
+  });
+
+  it('aplaza las escrituras de layout del observador y no repite alturas idénticas', () => {
+    let notify = () => {};
+    const disconnect = vi.fn();
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { notify = callback; }
+      observe() {}
+      disconnect = disconnect;
+    });
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => { frames.push(cb); return frames.length; }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    capture();
+    const box = root.querySelector('.capture')!;
+    Object.defineProperty(box, 'offsetHeight', { configurable: true, value: 140 });
+    const write = vi.spyOn(document.documentElement.style, 'setProperty');
+    act(() => notify());
+    expect(write).not.toHaveBeenCalled();
+    act(() => { frames.shift()?.(0); });
+    expect(write).toHaveBeenCalledExactlyOnceWith('--capture-height', '140px');
+    act(() => notify());
+    act(() => { frames.shift()?.(0); });
+    expect(write).toHaveBeenCalledTimes(1);
+    act(() => render(null, root));
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(cancelAnimationFrame).toHaveBeenCalled();
   });
 });
 
@@ -145,7 +171,7 @@ describe('lista de subtareas', () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
     type(input('Nueva tarea'), 'Viaje #casa');
-    click(button('+ subtarea'));
+    click(button('Subtarea'));
     type(input('Subtarea 1'), 'Comprar billetes');
     enter(input('Subtarea 1'));
     enter(input('Subtarea 2'));
@@ -192,7 +218,7 @@ describe('lista de subtareas', () => {
     const [parent] = await repo.addParsed([parseLine('Proyecto')]);
     await app(repo);
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
-    click(button('+ subtarea'));
+    click(button('Subtarea'));
     type(input('Subtarea 1'), 'Paso añadido');
     enter(input('Subtarea 1'));
     enter(input('Subtarea 2'));
@@ -209,6 +235,37 @@ describe('lista de subtareas', () => {
     click(root.querySelector('.subtask-toggle'));
     expect(root.querySelector('.row.sub .title')?.textContent).toBe('Paso');
   });
+
+  it.each(['captura', 'existente'])('usar Ajustes no roba el foco ni pierde el borrador de subtarea en %s', async (surface) => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    let parentId = '';
+    if (surface === 'existente') {
+      const [parent] = await repo.addParsed([parseLine('Proyecto')]);
+      parentId = parent.id;
+    }
+    await app(repo);
+    if (parentId) click(root.querySelector(`[data-id="${parentId}"] .title`));
+    else type(input('Nueva tarea'), 'Proyecto');
+    click(button('Subtarea'));
+    type(input('Subtarea 1'), 'Borrador conservado');
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    const focus = vi.spyOn(input('Subtarea 1'), 'focus');
+    for (const name of ['Oscuro', 'Clásico', 'Claro', 'Industrial', 'Sistema']) {
+      const control = button(name);
+      act(() => control.focus());
+      click(control);
+      expect(document.activeElement).toBe(control);
+    }
+    expect(focus).not.toHaveBeenCalled();
+    click(button('Cerrar'));
+    expect(input('Subtarea 1').value).toBe('Borrador conservado');
+    click(button(parentId ? 'Añadir subtareas' : 'Guardar tarea'));
+    if (!parentId) {
+      await vi.waitFor(() => expect(root.querySelector('.subtask-toggle')).not.toBeNull());
+      click(root.querySelector('.subtask-toggle'));
+    }
+    await vi.waitFor(() => expect(root.querySelector('.row.sub .title')?.textContent).toBe('Borrador conservado'));
+  });
 });
 
 describe('color de subtareas', () => {
@@ -218,11 +275,12 @@ describe('color de subtareas', () => {
     click(root.querySelector('[aria-label="Ajustes"]'));
     const color = root.querySelector<HTMLInputElement>('#subtask-color')!;
     expect(color.value).toBe(DEFAULT_SUBTASK_COLOR);
+    expect(color.closest('label')?.classList.contains('btn')).toBe(true);
     type(color, '#3689cc');
     expect(localStorage.getItem('lista.subtaskColor')).toBe('#3689cc');
     applyTheme('dark', 'industrial');
     expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe('#3689cc');
-    click(button('Restablecer rosa'));
+    click(button('Rosa'));
     expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR);
   });
 

@@ -30,16 +30,29 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const container = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    const measure = () => document.documentElement.style.setProperty('--capture-height', `${container.current?.offsetHeight ?? 0}px`);
+    let frame = 0;
+    const measure = () => {
+      const height = `${container.current?.offsetHeight ?? 0}px`;
+      const style = document.documentElement.style;
+      if (style.getPropertyValue('--capture-height') !== height) style.setProperty('--capture-height', height);
+    };
     measure();
-    const observer = new ResizeObserver(measure);
+    // Cambiar el espaciado desde ResizeObserver puede realimentar su propio cálculo de layout.
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    });
     if (container.current) observer.observe(container.current);
-    return () => { observer.disconnect(); document.documentElement.style.removeProperty('--capture-height'); };
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      document.documentElement.style.removeProperty('--capture-height');
+    };
   }, []);
   useLayoutEffect(() => {
     if (!busy && refocus.current) {
-      inputRef.current?.focus();
       refocus.current = false;
+      inputRef.current?.focus();
     }
   }, [busy, subtasks]);
 
@@ -163,11 +176,9 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           </button>
         )}
         </div>
-        <div id="capture-guide" class="capture-guide">
-          <span>#tema</span><span>@persona</span><span>mañana</span><span>!alta</span><span>cada lunes</span>
-        </div>
+        <div id="capture-guide" class="capture-guide">#tema @persona !prioridad fecha</div>
         {parsed?.title && !subtasks && (
-          <button class="link add-subtask" disabled={busy} onClick={() => setSubtasks(true)}>+ subtarea</button>
+          <button class="link add-subtask" disabled={busy} onClick={() => setSubtasks(true)}>Subtarea</button>
         )}
         {subtasks && <SubtaskInputs onSubmit={submit} onCancel={() => { setSubtasks(false); inputRef.current?.focus(); }} />}
         {error && <p class="err" role="alert">{error}</p>}

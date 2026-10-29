@@ -23,9 +23,9 @@ Lista entiende lo que escribes y lo ordena sola:
 
 También puedes dictarla con el micrófono, una tarea tras otra.
 
-La guía de sintaxis permanece visible mientras escribes, con el mismo tamaño de letra y menor opacidad.
+La guía `#tema @persona !prioridad fecha` permanece visible mientras escribes, con letra más pequeña y menor opacidad.
 
-**Subtareas**: pulsa **+ subtarea** al escribir una tarea. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda la tarea con todas sus subtareas. También puedes usar **Guardar tarea**. Para añadirlas a una tarea existente, abre su editor y pulsa **+ subtarea**.
+**Subtareas**: pulsa **Subtarea** al escribir una tarea. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda la tarea con todas sus subtareas. También puedes usar **Guardar tarea**. Para añadirlas a una tarea existente, abre su editor y pulsa **Subtarea**.
 
 ## 2 · Completa y filtra
 

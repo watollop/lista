@@ -16,9 +16,10 @@ export function SubtaskInputs({ onSubmit, onCancel, label = 'Guardar tarea' }: {
 
   useLayoutEffect(() => {
     if (focus.current === null) return;
-    inputs.current[focus.current]?.focus();
-    inputs.current[focus.current]?.scrollIntoView({ block: 'nearest' });
+    const input = inputs.current[focus.current];
     focus.current = null;
+    input?.focus();
+    input?.scrollIntoView({ block: 'nearest' });
   });
 
   const submit = async () => {

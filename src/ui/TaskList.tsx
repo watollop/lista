@@ -124,7 +124,7 @@ export function TaskList(props: Props) {
                       {adding === g.task.id ? (
                         <SubtaskInputs label="Añadir subtareas" onCancel={() => setAdding(null)}
                           onSubmit={async (lines) => { await props.onAddSubtasks(g.task.id, lines); setAdding(null); }} />
-                      ) : <button class="link add-subtask" onClick={() => addSubtask(g.task.id)}>+ subtarea</button>}
+                      ) : <button class="link add-subtask" onClick={() => addSubtask(g.task.id)}>Subtarea</button>}
                     </li>
                   </ul>
                 </li>
@@ -363,7 +363,7 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSub
         <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
         {onAddSubtask && (
           <button class="link add-subtask" onMouseDown={(e) => e.preventDefault()}
-            onClick={() => { save(); onAddSubtask(); }}>+ subtarea</button>
+            onClick={() => { save(); onAddSubtask(); }}>Subtarea</button>
         )}
         {onDragStart && (
           <button class="link move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
