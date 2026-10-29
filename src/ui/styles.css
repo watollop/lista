@@ -340,16 +340,12 @@ button.chip { min-height: 22px; }
 .capture-inner { max-width: calc(var(--maxw) - 2 * var(--gutter)); margin: 0 auto; position: relative; }
 .capture input {
   width: 100%;
-  height: 56px;
+  height: 48px;
   font-size: 17px;
 }
 .capture input::placeholder { color: var(--faint); }
 .capture input:disabled { opacity: .6; }
-.capture-guide {
-  padding-bottom: 10px;
-  font-size: 12px;
-  opacity: .45;
-}
+.capture-guide { display: none; } /* la caja es de una sola línea; la guía sigue para lectores de pantalla (aria-describedby) */
 .subtask-inputs { min-width: 0; width: 100%; }
 .subtask-fields {
   max-height: clamp(48px, calc(100dvh - var(--kb) - 280px), 168px);
@@ -495,11 +491,10 @@ kbd {
     padding: 0;
     margin-top: 8px;
   }
-  .capture input { height: 64px; }
+  .capture input { height: 52px; }
   .capture input { font-size: 22px; font-weight: 300; }
-  .capture-guide { font-size: 13px; }
   .preview { padding: 0 0 12px; }
-  .suggest { bottom: auto; top: 64px; margin: 0; z-index: 2; }
+  .suggest { bottom: auto; top: 52px; margin: 0; z-index: 2; }
   .title, .edit { font-size: 17px; line-height: 22px; }
   .row { padding-top: 15px; padding-bottom: 15px; }
   .toast { bottom: 32px; }
