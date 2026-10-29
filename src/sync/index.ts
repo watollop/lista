@@ -137,11 +137,23 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     const s = session;
     if (!s) throw new SessionLost('Sesión cerrada');
 
-    const pending = await repo.pendingChanges();
+    const all = await repo.pendingChanges();
+    const pending = all.filter((it) => it.kind !== 'setting');
     if (pending.length > 0) {
       lastActivity = now();
       await pushItems(c, s, pending, fetchImpl);
       await repo.markPushed(pending);
+    }
+    // Las preferencias van en su propia petición: si el servidor aún no tiene el tipo 'setting'
+    // (hay que actualizar supabase/schema.sql), el 400 no debe impedir que sincronicen las tareas.
+    const prefs = all.filter((it) => it.kind === 'setting');
+    if (prefs.length > 0) {
+      try {
+        await pushItems(c, s, prefs, fetchImpl);
+        await repo.markPushed(prefs);
+      } catch (e) {
+        if (!(e instanceof HttpError && e.status === 400)) throw e;
+      }
     }
 
     const stored = await repo.getMeta<string>(CURSOR_KEY);

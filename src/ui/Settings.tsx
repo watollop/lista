@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
+import { saveAppearance } from './appearanceSync';
 import { DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
@@ -31,7 +32,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <button class="link on" onClick={onClose}>Cerrar</button>
         </div>
         <Account sync={sync} state={state} />
-        <Appearance toast={toast} />
+        <Appearance repo={repo} toast={toast} />
         <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
         {editing && editEnt && (
           <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
@@ -114,13 +115,13 @@ const SUBTASK_COLORS: Array<[string, string]> = [
   [DEFAULT_SUBTASK_COLOR, 'Rosa'], ['#3689cc', 'Azul'], ['#58a676', 'Verde'], ['#e68b45', 'Naranja'],
 ];
 
-function Appearance({ toast }: { toast: (msg: string) => void }) {
+function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void }) {
   const [theme, set] = useState(getTheme);
   const [look, setL] = useState(getLook);
   const [color, setColor] = useState(getSubtaskColor);
   const customColor = !SUBTASK_COLORS.some(([value]) => value === color.toLowerCase());
   const changeColor = (next: string) => {
-    try { setSubtaskColor(next); setColor(next); }
+    try { setSubtaskColor(next); setColor(next); void saveAppearance(repo); }
     catch (e) { toast(e instanceof Error ? e.message : 'No se pudo guardar el color.'); }
   };
   return (
@@ -129,13 +130,13 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
       <div class="row-btns" role="radiogroup" aria-label="Tema">
         {THEMES.map(([t, l]) => (
           <button key={t} role="radio" aria-checked={theme === t} class={`btn ${theme === t ? 'solid' : ''}`}
-            onClick={() => { setTheme(t); set(t); }}>{l}</button>
+            onClick={() => { setTheme(t); set(t); void saveAppearance(repo); }}>{l}</button>
         ))}
       </div>
       <div class="row-btns look-btns" role="radiogroup" aria-label="Estilo">
         {LOOKS.map(([k, l]) => (
           <button key={k} role="radio" aria-checked={look === k} class={`btn ${look === k ? 'solid' : ''}`}
-            onClick={() => { setLook(k); setL(k); }}>{l}</button>
+            onClick={() => { setLook(k); setL(k); void saveAppearance(repo); }}>{l}</button>
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>

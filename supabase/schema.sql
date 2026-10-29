@@ -1,11 +1,11 @@
 -- Esquema de sincronización de Lista.
 -- Idempotente: se puede ejecutar varias veces en el SQL editor de Supabase.
 
--- Una fila por registro (tarea, tema, persona o filtro) y usuario.
+-- Una fila por registro (tarea, tema, persona, filtro o preferencia) y usuario.
 -- Los borrados son tombstones (deleted = true); nunca se borra la fila.
 create table if not exists public.items (
   user_id    uuid    not null default auth.uid() references auth.users on delete cascade,
-  kind       text    not null check (kind in ('task', 'topic', 'person', 'filter')),
+  kind       text    not null,
   id         text    not null,
   data       jsonb   not null,
   updated_at bigint  not null,            -- ms epoch, fijado por el cliente
@@ -14,6 +14,12 @@ create table if not exists public.items (
   synced_at  timestamptz not null default clock_timestamp(),
   primary key (user_id, kind, id)
 );
+
+-- Tipos de registro admitidos. Se declara aparte (y no inline) para que ejecutar de nuevo este archivo
+-- también actualice proyectos ya creados: 'setting' = preferencias como la apariencia.
+alter table public.items drop constraint if exists items_kind_check;
+alter table public.items add constraint items_kind_check
+  check (kind in ('task', 'topic', 'person', 'filter', 'setting'));
 
 comment on table public.items is 'Registros sincronizados de Lista (last-write-wins por updated_at).';
 comment on column public.items.updated_at is 'Marca de tiempo (ms epoch) de la última escritura local; decide el ganador LWW.';
