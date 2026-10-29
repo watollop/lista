@@ -23,9 +23,11 @@ Lista entiende lo que escribes y lo ordena sola:
 
 También puedes dictarla con el micrófono, una tarea tras otra.
 
-La guía de sintaxis permanece visible mientras escribes, con el mismo tamaño de letra y menor opacidad.
+El campo vacío muestra el ejemplo `Viaje <Billetes mañana !alta #ocio @ana`. Al escribir desaparece el ejemplo, pero la guía `#tema @persona !prioridad fecha <subtarea` permanece visible, con letra más pequeña y menor opacidad.
 
-**Subtareas**: pulsa **+ subtarea** al escribir una tarea. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda la tarea con todas sus subtareas. También puedes usar **Guardar tarea**. Para añadirlas a una tarea existente, abre su editor y pulsa **+ subtarea**.
+**Subtareas**: separa las subtareas con `<` en la misma línea, por ejemplo `Tarea A <Subtarea B <Subtarea C !alta mañana #tema`. Enter guarda la tarea con dos subtareas hermanas; cada una tiene sus propios metadatos (en el ejemplo, solo C recibe prioridad, fecha y tema).
+
+En la captura se añaden subtareas con `<`, sin botones adicionales. Para añadirlas a una tarea existente, abre su editor y pulsa **+** o usa el **+** del grupo desplegado. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda las subtareas. También puedes usar **Añadir subtareas**.
 
 ## 2 · Completa y filtra
 
@@ -33,8 +35,12 @@ La guía de sintaxis permanece visible mientras escribes, con el mismo tamaño d
 - Toca `#trabajo`, `@ana` o una fecha para ver solo eso.
 - Las tareas se agrupan solas: Vencidas · Hoy · Mañana · Esta semana · Próximas.
 - Para cambiarla de día, tócala y arrastra **Mover**.
-- Las tareas con subtareas muestran un icono rosa: toca el icono o el título para desplegarlas. El lápiz permite editar la tarea principal.
-- Una tarea con subtareas se completa al terminar todas; reabrir una subtarea reabre la principal.
+- Solo la fila seleccionada muestra una línea a la izquierda: del color secundario si es una tarea con subtareas o una subtarea. Toca el título de la tarea principal para desplegar sus subtareas y el lápiz para editarla.
+- Dentro del grupo desplegado, toca el **+** junto a la casilla de la última subtarea, a su izquierda y al nivel de la casilla principal, para añadir más subtareas.
+- La línea inferior de las subtareas y los **+** usan el color secundario sin transparencia, conservando el estilo de puntos en Industrial.
+- Completar la tarea principal cierra todas sus subtareas. También se completa al terminar la última subtarea; reabrir una subtarea reabre la principal y reabrir la principal reabre todas.
+- **Deshacer** recupera el estado previo sin reabrir subtareas que ya estaban hechas.
+- Las subtareas completadas usan el color elegido en la casilla y en la línea de tachado.
 
 ## 3 · Tus datos, contigo
 
@@ -46,7 +52,7 @@ La guía de sintaxis permanece visible mientras escribes, con el mismo tamaño d
 
 - Claro, oscuro o el del sistema.
 - Dos estilos: **Clásico** (blanco y negro) o **Industrial** (gris cálido, letra de puntos y naranja).
-- Color del icono de subtareas personalizable en **Ajustes → Apariencia**, con rosa por defecto.
+- **Color secundario** en **Ajustes → Apariencia**: círculos rosa (por defecto), azul, verde y naranja, y uno multicolor para elegir un color personalizado.
 - Se instala como una app más: *Compartir → Añadir a pantalla de inicio* (iPhone) o *Instalar app* (Android y ordenador).
 
 ---
@@ -59,10 +65,13 @@ La guía de sintaxis permanece visible mientras escribes, con el mismo tamaño d
 npm install
 npm run dev     # http://localhost:5173
 npm test
+npm run test:coverage
 npm run build
 ```
 
 Sin configurar nada, funciona en local sin sincronización.
+
+La cobertura incluye todo `src/` y genera los informes LCOV y JSON en `coverage/`, excluidos de Git.
 
 **Sincronización (opcional)**
 1. Crea un proyecto en Supabase y ejecuta [`supabase/schema.sql`](supabase/schema.sql).

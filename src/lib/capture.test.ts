@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { externalCapture } from './capture';
+import { externalCapture, validateCapture } from './capture';
+import { parseBlock } from '../parser';
+
+describe('validación compartida de captura', () => {
+  it('conserva familias y normaliza la primera línea como tarea principal', () => {
+    const lines = validateCapture(parseBlock('> Viaje <Billetes\nCompra <Pan'));
+    expect(lines.map((line) => line.isSubtask)).toEqual([false, true, false, true]);
+  });
+
+  it.each(['', '<Paso', 'Proyecto <', 'Proyecto <<Paso', 'Proyecto <!alta'])('rechaza títulos vacíos: %s', (text) => {
+    expect(() => validateCapture(parseBlock(text))).toThrow('título');
+  });
+});
 
 describe('captura desde fuera', () => {
   it('?nueva= con la sintaxis de la app', () => {

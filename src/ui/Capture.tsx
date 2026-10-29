@@ -1,9 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Entity, ISODate, ParsedLine } from '../types';
-import { activeToken, normalizeKey, parseBlock, parseLine } from '../parser';
+import { activeToken, normalizeKey, parseBlock } from '../parser';
+import { validateCapture } from '../lib/capture';
 import { TaskChips } from './Chips';
 import { Dictation, canDictate } from './Dictation';
-import { SubtaskInputs } from './SubtaskInputs';
 
 interface Props {
   topics: Entity[];
@@ -22,7 +22,6 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const composing = useRef(false);
   const [dictating, setDictating] = useState(false);
   const [mic] = useState(canDictate);
-  const [subtasks, setSubtasks] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const saving = useRef(false);
@@ -30,20 +29,34 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const container = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    const measure = () => document.documentElement.style.setProperty('--capture-height', `${container.current?.offsetHeight ?? 0}px`);
+    let frame = 0;
+    const measure = () => {
+      const height = `${container.current?.offsetHeight ?? 0}px`;
+      const style = document.documentElement.style;
+      if (style.getPropertyValue('--capture-height') !== height) style.setProperty('--capture-height', height);
+    };
     measure();
-    const observer = new ResizeObserver(measure);
+    // Cambiar el espaciado desde ResizeObserver puede realimentar su propio cálculo de layout.
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    });
     if (container.current) observer.observe(container.current);
-    return () => { observer.disconnect(); document.documentElement.style.removeProperty('--capture-height'); };
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      document.documentElement.style.removeProperty('--capture-height');
+    };
   }, []);
   useLayoutEffect(() => {
     if (!busy && refocus.current) {
-      inputRef.current?.focus();
       refocus.current = false;
+      inputRef.current?.focus();
     }
-  }, [busy, subtasks]);
+  }, [busy]);
 
-  const parsed = useMemo(() => (value.trim() ? parseLine(value) : null), [value, today]);
+  const lines = useMemo(() => (value.trim() ? parseBlock(value) : []), [value, today]);
+  const parsed = lines[lines.length - 1];
   const active = useMemo(() => activeToken(value, caret), [value, caret]);
   const suggestions = useMemo(() => {
     if (!active) return [];
@@ -62,25 +75,24 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const accept = (e: Entity) => {
     if (!active) return;
     const sym = active.type === 'topic' ? '#' : '@';
-    const next = value.slice(0, active.start) + sym + e.name + ' ' + value.slice(active.end).replace(/^\S*\s?/, '');
+    const next = value.slice(0, active.start) + sym + e.name + ' ' + value.slice(active.end).replace(/^[^\s<]*\s?/, '');
     const pos = active.start + sym.length + e.name.length + 1;
     setValue(next);
     setCaret(pos);
     requestAnimationFrame(() => inputRef.current?.setSelectionRange(pos, pos));
   };
 
-  const submit = async (children: ParsedLine[] = []) => {
-    if (!parsed?.title) throw new Error('Escribe un título para la tarea.');
+  const submit = async () => {
+    const captured = validateCapture(lines);
     if (saving.current) return;
     saving.current = true;
     setBusy(true);
     setError('');
     try {
-      await onAdd([{ ...parsed, isSubtask: false }, ...children]);
+      await onAdd(captured);
       setValue('');
       setCaret(0);
       refocus.current = true;
-      setSubtasks(false);
     } finally {
       saving.current = false;
       setBusy(false);
@@ -96,11 +108,9 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (subtasks) container.current?.querySelector<HTMLInputElement>('.subtask-field input')?.focus();
-      else if (value.trim()) void submit().catch((e: Error) => setError(e.message));
+      if (value.trim()) void submit().catch((e: Error) => setError(e.message));
     }
     if (e.key === 'Escape') {
-      if (subtasks) return;
       if (value) { setValue(''); setError(''); }
       else (e.target as HTMLInputElement).blur();
     }
@@ -110,13 +120,13 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     const text = e.clipboardData?.getData('text') ?? '';
     if (!text.includes('\n')) return;
     e.preventDefault();
-    if (subtasks || busy) {
+    if (busy) {
       setError('Guarda primero la tarea con sus subtareas antes de pegar varias líneas.');
       return;
     }
-    const lines = parseBlock(text).filter((l) => l.title);
-    if (lines.length) {
-      try { await onAdd(lines); }
+    const pasted = parseBlock(text);
+    if (pasted.length) {
+      try { await onAdd(validateCapture(pasted)); }
       catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron añadir las tareas.'); }
     }
   };
@@ -141,7 +151,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           ref={inputRef}
           value={value}
           disabled={busy}
-          placeholder="Nueva tarea…"
+          placeholder="Viaje <Billetes mañana !alta #ocio @ana"
           aria-label="Nueva tarea"
           aria-describedby="capture-guide"
           autocomplete="off"
@@ -155,7 +165,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           onCompositionEnd={() => (composing.current = false)}
         />
         {mic && (
-          <button class="mic" disabled={busy || subtasks} aria-label="Dictar tareas" title="Dictar tareas" onClick={() => setDictating(true)}>
+          <button class="mic" disabled={busy} aria-label="Dictar tareas" title="Dictar tareas" onClick={() => setDictating(true)}>
             <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
               stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5" /><path d="M3 7.5a5 5 0 0 0 10 0M8 12.5v2" />
@@ -163,16 +173,10 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           </button>
         )}
         </div>
-        <div id="capture-guide" class="capture-guide">
-          <span>#tema</span><span>@persona</span><span>mañana</span><span>!alta</span><span>cada lunes</span>
-        </div>
-        {parsed?.title && !subtasks && (
-          <button class="link add-subtask" disabled={busy} onClick={() => setSubtasks(true)}>+ subtarea</button>
-        )}
-        {subtasks && <SubtaskInputs onSubmit={submit} onCancel={() => { setSubtasks(false); inputRef.current?.focus(); }} />}
+        <div id="capture-guide" class="capture-guide">#tema @persona !prioridad fecha &lt;subtarea</div>
         {error && <p class="err" role="alert">{error}</p>}
         <div class="preview">
-          {!subtasks && parsed && parsed.tokens.length > 0 && (
+          {parsed && parsed.tokens.length > 0 && (
             <TaskChips
               due={parsed.due}
               period={parsed.period}

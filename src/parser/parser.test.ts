@@ -7,6 +7,42 @@ const now = new Date(2026, 9, 27, 10, 0);
 
 const due = (s: string) => parseLine(s, now).due;
 
+describe('subtareas en una línea con <', () => {
+  it('crea subtareas hermanas y aplica los metadatos a su propio segmento', () => {
+    const [parent, b, c] = parseBlock('Tarea A <Subtarea B <Subtarea C !alta mañana #tema @ana', now);
+    expect([parent, b, c].map((line) => line.isSubtask)).toEqual([false, true, true]);
+    expect(parent).toMatchObject({ title: 'Tarea A', priority: null, due: null, topics: [], people: [] });
+    expect(b).toMatchObject({ title: 'Subtarea B', priority: null, due: null, topics: [], people: [] });
+    expect(c).toMatchObject({ title: 'Subtarea C #tema @ana', priority: 1, due: '2026-10-28', topics: ['tema'], people: ['ana'] });
+  });
+
+  it('admite separadores sin espacios y no hereda metadatos del padre', () => {
+    const [parent, child] = parseBlock('Proyecto #casa !baja<Comprar pan @ana', now);
+    expect(parent).toMatchObject({ title: 'Proyecto #casa', priority: 3, topics: ['casa'] });
+    expect(child).toMatchObject({ title: 'Comprar pan @ana', priority: null, topics: [], people: ['ana'], isSubtask: true });
+  });
+
+  it('combina varias familias, indentación y el marcador anterior >', () => {
+    const lines = parseBlock('  Viaje <Billetes <Hotel\n  Maleta <Ropa\nOtra tarea <Paso\n> Otro paso', now);
+    expect(lines.map((line) => [line.title, line.isSubtask])).toEqual([
+      ['Viaje', false], ['Billetes', true], ['Hotel', true], ['Maleta', true], ['Ropa', true],
+      ['Otra tarea', false], ['Paso', true], ['Otro paso', true],
+    ]);
+  });
+
+  it('conserva los segmentos vacíos para que la captura pueda informar del error', () => {
+    expect(parseBlock('Proyecto <<Paso <', now).map((line) => [line.title, line.isSubtask])).toEqual([
+      ['Proyecto', false], ['', true], ['Paso', true], ['', true],
+    ]);
+    expect(parseBlock('<Paso', now)[0].title).toBe('');
+  });
+
+  it('autocompleta etiquetas inmediatamente después del separador', () => {
+    expect(activeToken('Tarea<#ca', 9)).toMatchObject({ type: 'topic', prefix: 'ca', start: 6 });
+    expect(activeToken('Tarea<@an', 9)).toMatchObject({ type: 'person', prefix: 'an', start: 6 });
+  });
+});
+
 describe('parseLine: ejemplo completo', () => {
   const l = parseLine('Revisar informe @ana #aura mañana !1 cada lunes', now);
   it('título, personas, temas, prioridad y recurrencia', () => {

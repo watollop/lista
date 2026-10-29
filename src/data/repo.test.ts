@@ -175,7 +175,6 @@ describe('ciclo de vida de subtareas', () => {
   it('solo completa el padre al terminar todas y lo reabre al reabrir una', async () => {
     const r = newRepo();
     const [p, a, b] = await r.addParsed([line('P'), line('a', { isSubtask: true }), line('b', { isSubtask: true })]);
-    await expect(r.toggleDone(p.id)).rejects.toThrow('Completa primero');
     await r.toggleDone(a.id);
     expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
     await r.toggleDone(b.id);
@@ -230,6 +229,127 @@ describe('ciclo de vida de subtareas', () => {
     await r.toggleDone(b.id);
     await r.toggleDone(p.id);
     expect((await r.listTasks()).every((t) => !t.done && t.doneAt === null)).toBe(true);
+  });
+
+  it('completar el padre cierra sus subtareas sin modificar las ya completadas', async () => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([line('P'), line('a', { isSubtask: true }), line('b', { isSubtask: true })]);
+    await r.toggleDone(a.id);
+    await r.markPushed(await r.pendingChanges());
+    const previous = (await r.listTasks()).find((t) => t.id === a.id)!;
+    const { task, spawned } = await r.toggleDone(p.id);
+    const tasks = await r.listTasks();
+    expect(task.done).toBe(1);
+    expect(spawned).toBeNull();
+    expect(tasks.every((t) => t.done)).toBe(true);
+    expect(tasks.find((t) => t.id === a.id)).toEqual(previous);
+    expect(tasks.find((t) => t.id === b.id)).toMatchObject({ doneAt: task.doneAt, updatedAt: task.updatedAt, dirty: 1 });
+    expect((await r.pendingChanges()).map((t) => t.id).sort()).toEqual([p.id, b.id].sort());
+  });
+
+  it.each([false, true])('cerrar el padre no genera hijas recurrentes pendientes en el grupo cerrado; padre recurrente=%s', async (recurring) => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([
+      line('P', { recurrence: recurring ? { unit: 'week', every: 1 } : null }),
+      line('a', { isSubtask: true, recurrence: { unit: 'day', every: 1 } }),
+      line('b', { isSubtask: true }),
+    ]);
+    const { spawned } = await r.toggleDone(p.id);
+    const tasks = await r.listTasks();
+    expect(tasks.filter((t) => [p.id, a.id, b.id].includes(t.id)).every((t) => t.done)).toBe(true);
+    expect(tasks.filter((t) => t.parentId === p.id)).toHaveLength(2);
+    if (recurring) {
+      expect(spawned).not.toBeNull();
+      const children = tasks.filter((t) => t.parentId === spawned!.id);
+      expect(children).toHaveLength(2);
+      expect(children.every((t) => !t.done && !t.nextId)).toBe(true);
+      expect(children.find((t) => t.title === 'a')?.recurrence).toEqual({ unit: 'day', every: 1 });
+      expect(tasks).toHaveLength(6);
+    } else {
+      expect(spawned).toBeNull();
+      expect(tasks).toHaveLength(3);
+    }
+    await r.toggleDone(p.id);
+    const reopened = await r.listTasks();
+    expect(reopened).toHaveLength(3);
+    expect(reopened.every((t) => !t.done && t.doneAt === null)).toBe(true);
+  });
+
+  it.each([false, true])('deshacer un cierre parcial conserva las subtareas ya hechas y las ediciones posteriores; recurrente=%s', async (recurring) => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([
+      line('P', { recurrence: recurring ? { unit: 'day', every: 1 } : null }),
+      line('a', { isSubtask: true }), line('b', { isSubtask: true }),
+    ]);
+    await r.toggleDone(a.id);
+    await r.markPushed(await r.pendingChanges());
+    const previous = (await r.listTasks()).find((t) => t.id === a.id)!;
+    const { undo } = await r.toggleDone(p.id);
+    await r.replaceParsed(b.id, line('Edición posterior'));
+    expect(undo).not.toBeNull();
+    await undo!();
+    const tasks = await r.listTasks();
+    expect(tasks).toHaveLength(3);
+    expect(tasks.find((t) => t.id === a.id)).toEqual(previous);
+    expect(tasks.find((t) => t.id === b.id)).toMatchObject({ title: 'Edición posterior', done: 0, doneAt: null, dirty: 1 });
+    expect(tasks.find((t) => t.id === p.id)).toMatchObject({ done: 0, doneAt: null, nextId: null, dirty: 1 });
+  });
+
+  it('deshacer la última subtarea restaura el padre sin reabrir las otras subtareas', async () => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([
+      line('P', { recurrence: { unit: 'day', every: 1 } }), line('a', { isSubtask: true }), line('b', { isSubtask: true }),
+    ]);
+    await r.toggleDone(a.id);
+    const previous = (await r.listTasks()).find((t) => t.id === a.id)!;
+    const { spawned, undo } = await r.toggleDone(b.id);
+    expect(spawned).not.toBeNull();
+    await undo!();
+    const tasks = await r.listTasks();
+    expect(tasks).toHaveLength(3);
+    expect(tasks.find((t) => t.id === a.id)).toEqual(previous);
+    expect(tasks.find((t) => t.id === b.id)?.done).toBe(0);
+    expect(tasks.find((t) => t.id === p.id)?.done).toBe(0);
+  });
+
+  it.each(['editada', 'añadida', 'borrada'])('deshacer un cierre conserva la siguiente familia con una subtarea %s', async (change) => {
+    const r = newRepo();
+    const [p] = await r.addParsed([
+      line('P', { recurrence: { unit: 'day', every: 1 } }), line('Paso', { isSubtask: true }),
+    ]);
+    const { spawned, undo } = await r.toggleDone(p.id);
+    const nextChild = (await r.listTasks()).find((t) => t.parentId === spawned!.id)!;
+    if (change === 'editada') await r.replaceParsed(nextChild.id, line('Editada'));
+    if (change === 'añadida') await r.addParsed([line('Extra', { isSubtask: true })], spawned!.id);
+    if (change === 'borrada') await r.deleteTask(nextChild.id);
+    await undo!();
+    const tasks = await r.listTasks();
+    expect(tasks.find((t) => t.id === p.id)?.done).toBe(0);
+    expect(tasks.find((t) => t.id === spawned!.id)).toBeDefined();
+    if (change !== 'borrada') expect(tasks.find((t) => t.id === nextChild.id)).toBeDefined();
+  });
+
+  it.each(['estado cambiado', 'borrada'])('no sobrescribe cambios de finalización posteriores al deshacer: %s', async (change) => {
+    const r = newRepo();
+    const [p] = await r.addParsed([line('P'), line('Paso', { isSubtask: true })]);
+    const { undo } = await r.toggleDone(p.id);
+    if (change === 'borrada') await r.deleteTask(p.id);
+    else await r.updateTask(p.id, { doneAt: 123 });
+    const before = await r.listTasks();
+    await expect(undo!()).rejects.toThrow('ha cambiado');
+    expect(await r.listTasks()).toEqual(before);
+  });
+
+  it('revierte el cierre de toda la familia si falla la generación de la siguiente ocurrencia', async () => {
+    const r = newRepo();
+    const [p] = await r.addParsed([
+      line('P', { recurrence: { unit: 'day', every: 1 } }), line('a', { isSubtask: true }), line('b', { isSubtask: true }),
+    ]);
+    const before = await r.listTasks();
+    const uuid = vi.spyOn(crypto, 'randomUUID').mockImplementationOnce(() => { throw new Error('Sin espacio'); });
+    try { await expect(r.toggleDone(p.id)).rejects.toThrow('Sin espacio'); }
+    finally { uuid.mockRestore(); }
+    expect(await r.listTasks()).toEqual(before);
   });
 
   it('una recurrente genera otra familia con subtareas pendientes y fechas desplazadas', async () => {

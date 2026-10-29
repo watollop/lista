@@ -151,11 +151,11 @@ export function createRepo(dbName = 'lista'): Repo {
 
   const childrenOf = async (id: ID) => live(await db.tasks.where('parentId').equals(id).toArray());
 
-  async function changeDone(task: Task, done: 0 | 1, now: number): Promise<{ task: Task; spawned: Task | null }> {
+  async function changeDone(task: Task, done: 0 | 1, now: number, spawnRecurrence = true): Promise<{ task: Task; spawned: Task | null }> {
     if (task.done === done) return { task, spawned: null };
     let spawned: Task | null = null;
     let nextId = task.nextId;
-    if (done && task.recurrence && !nextId) {
+    if (done && task.recurrence && !nextId && spawnRecurrence) {
       const rec = { ...task.recurrence };
       if ((rec.unit === 'month' || rec.unit === 'year') && !rec.monthDay && task.due) rec.monthDay = +task.due.slice(8);
       const due = nextOccurrence(rec, task.due, todayISO());
@@ -333,13 +333,33 @@ export function createRepo(dbName = 'lista'): Repo {
         const task = await db.tasks.get(id);
         if (!task || task.deleted === 1) throw new Error('Tarea no encontrada');
         const children = await childrenOf(id);
-        if (!task.done && children.some((c) => !c.done)) throw new Error('Completa primero todas las subtareas.');
-        if (task.done) {
-          for (const child of children) await changeDone(child, 0, now);
+        const done = task.done ? 0 : 1;
+        const changes: { before: Task; after: Task }[] = [];
+        // Cerrar el grupo no debe generar nuevas subtareas pendientes dentro de una tarea completada.
+        for (const child of children) {
+          const saved = await changeDone(child, done, now, false);
+          if (child.done !== saved.task.done) changes.push({ before: child, after: saved.task });
         }
-        const result = await changeDone(task, task.done ? 0 : 1, now);
+        const result = await changeDone(task, done, now);
+        changes.push({ before: task, after: result.task });
+        const parentBefore = task.parentId ? await db.tasks.get(task.parentId) : undefined;
         const parent = await reconcileParent(task.parentId, now);
-        return { ...result, spawned: result.spawned ?? parent?.spawned ?? null };
+        if (parentBefore && parent) changes.push({ before: parentBefore, after: parent.task });
+        const undo = done ? async () => {
+          await db.transaction('rw', db.tasks, async () => {
+            const now = stamp();
+            for (const { before, after } of changes) {
+              const current = await db.tasks.get(before.id);
+              if (!current || current.deleted || current.done !== after.done ||
+                current.doneAt !== after.doneAt || current.nextId !== after.nextId) {
+                throw new Error('La tarea ha cambiado; no se puede deshacer esta acción.');
+              }
+              await changeDone(current, before.done, now, false);
+            }
+          });
+          notify();
+        } : null;
+        return { ...result, spawned: result.spawned ?? parent?.spawned ?? null, undo };
       });
       notify();
       return result;

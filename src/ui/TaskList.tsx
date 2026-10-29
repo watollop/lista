@@ -110,7 +110,7 @@ export function TaskList(props: Props) {
       </h2>
       <ul class="list">
         {s.items.map((g) => {
-          const open = expanded.has(g.task.id) || adding === g.task.id;
+          const open = (g.children.length > 0 && expanded.has(g.task.id)) || adding === g.task.id;
           return (
             <Fragment key={g.task.id}>
               <Row task={g.task} section={s.key} {...rowProps} childrenCount={g.children.length}
@@ -119,13 +119,14 @@ export function TaskList(props: Props) {
               {open && (
                 <li class="subtask-group">
                   <ul id={`subtasks-${g.task.id}`} aria-label={`Subtareas de ${g.task.title}`}>
-                    {g.children.map((c) => <Row key={c.id} task={c} sub section={s.key} {...rowProps} />)}
-                    <li class="subtask-composer">
-                      {adding === g.task.id ? (
+                    {g.children.map((c, i) => <Row key={c.id} task={c} sub section={s.key} {...rowProps}
+                      onAddSubtask={i === g.children.length - 1 && adding !== g.task.id ? () => addSubtask(g.task.id) : undefined} />)}
+                    {adding === g.task.id && (
+                      <li class="subtask-composer">
                         <SubtaskInputs label="Añadir subtareas" onCancel={() => setAdding(null)}
                           onSubmit={async (lines) => { await props.onAddSubtasks(g.task.id, lines); setAdding(null); }} />
-                      ) : <button class="link add-subtask" onClick={() => addSubtask(g.task.id)}>+ subtarea</button>}
-                    </li>
+                      </li>
+                    )}
                   </ul>
                 </li>
               )}
@@ -158,7 +159,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
     childrenCount?: number; completedCount?: number; expanded?: boolean; onExpand?: () => void; onAddSubtask?: () => void }) {
   const isEditing = editing === task.id;
   const ref = useRef<HTMLLIElement>(null);
-  const swipe = useSwipe(() => { if (!childrenCount) onToggle(task.id); }, () => onDelete(task.id), !isEditing);
+  const swipe = useSwipe(() => onToggle(task.id), () => onDelete(task.id), !isEditing);
   const drag = useDrag(task.id, isEditing && !task.done, () => onDragStart(task.id), (target) => {
     onDragEnd();
     onEdit(null);
@@ -173,7 +174,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   return (
     <li
       ref={ref}
-      class={`row ${sub ? 'sub' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
+      class={`row ${sub ? 'sub' : ''} ${childrenCount ? 'has-subtasks' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
       data-id={task.id}
       data-swipe={task.done ? 'Pendiente' : 'Hecha'}
       data-swipe-left="Borrar"
@@ -181,9 +182,10 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       {...swipe.handlers}
       onClickCapture={clickCapture}
     >
-      <button class="check" disabled={childrenCount > 0}
-        aria-label={childrenCount ? `${completedCount} de ${childrenCount} subtareas completadas` : task.done ? 'Marcar pendiente' : 'Completar'}
-        title={childrenCount ? 'Se completa al terminar todas las subtareas' : undefined} onClick={() => onToggle(task.id)}>
+      {sub && onAddSubtask && <AddSubtaskButton onClick={onAddSubtask} />}
+      <button class="check" aria-pressed={!!task.done}
+        aria-label={childrenCount ? task.done ? 'Reabrir tarea y subtareas' : 'Completar tarea y subtareas' : task.done ? 'Marcar pendiente' : 'Completar'}
+        title={childrenCount ? 'Cambiar también todas sus subtareas' : undefined} onClick={() => onToggle(task.id)}>
         <i />
       </button>
       <div class="body">
@@ -197,29 +199,20 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
               <button class={`title ${task.priority === 1 ? 'p1' : ''}`}
                 aria-expanded={childrenCount ? expanded : undefined}
                 aria-controls={childrenCount && expanded ? `subtasks-${task.id}` : undefined}
+                aria-label={childrenCount ? `${task.title}: ${completedCount} de ${childrenCount} subtareas completadas` : undefined}
+                title={childrenCount ? `${expanded ? 'Ocultar' : 'Mostrar'} subtareas` : undefined}
+                onKeyDown={(e) => { if (childrenCount && (e.key === 'Enter' || e.key === ' ')) e.stopPropagation(); }}
                 onClick={() => { onSelect(task.id); if (childrenCount) onExpand?.(); else onEdit(task.id); }}>
                 <TitleText text={task.title} onChip={onChip} />
               </button>
               {childrenCount > 0 && (
-                <>
-                  <button class="subtask-toggle" aria-expanded={expanded}
-                    aria-controls={expanded ? `subtasks-${task.id}` : undefined}
-                    aria-label={`${expanded ? 'Ocultar' : 'Mostrar'} subtareas: ${completedCount} de ${childrenCount} completadas`}
-                    onClick={onExpand}>
-                    <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor"
-                      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M4 3v11h3M4 7h3M10 7h6M10 14h6" />
-                      <path d={expanded ? 'm13 3 2-2 2 2' : 'm13 1 2 2 2-2'} />
-                    </svg>
-                  </button>
-                  <button class="edit-task" aria-label="Editar tarea" title="Editar tarea"
-                    onClick={() => { onSelect(task.id); onEdit(task.id); }}>
-                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
-                      stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3" />
-                    </svg>
-                  </button>
-                </>
+                <button class="edit-task" aria-label="Editar tarea" title="Editar tarea"
+                  onClick={() => { onSelect(task.id); onEdit(task.id); }}>
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
+                    stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3" />
+                  </svg>
+                </button>
               )}
             </div>
             <div class="meta">
@@ -317,6 +310,18 @@ export function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
   return <>{parts}</>;
 }
 
+function AddSubtaskButton({ onClick, inline = false }: { onClick: () => void; inline?: boolean }) {
+  return (
+    <button class={`add-subtask-action ${inline ? '' : 'add-subtask-icon'}`} aria-label="Añadir subtarea" title="Añadir subtarea"
+      onMouseDown={(e) => { if (inline) e.preventDefault(); }} onClick={onClick}>
+      <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M10 4v12M4 10h12" />
+      </svg>
+    </button>
+  );
+}
+
 /** Edición en línea con la misma sintaxis que la captura. Las fechas se muestran como vence:AAAA-MM-DD
  *  para que una relativa ("mañana") no se recalcule al guardar. */
 function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSubtask }: {
@@ -362,8 +367,7 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSub
       <div class="edit-actions">
         <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
         {onAddSubtask && (
-          <button class="link add-subtask" onMouseDown={(e) => e.preventDefault()}
-            onClick={() => { save(); onAddSubtask(); }}>+ subtarea</button>
+          <AddSubtaskButton inline onClick={() => { save(); onAddSubtask(); }} />
         )}
         {onDragStart && (
           <button class="link move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"

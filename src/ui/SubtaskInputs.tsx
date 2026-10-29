@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ParsedLine } from '../types';
-import { parseLine } from '../parser';
+import { parseBlock } from '../parser';
 
 export function SubtaskInputs({ onSubmit, onCancel, label = 'Guardar tarea' }: {
   onSubmit: (lines: ParsedLine[]) => Promise<void>;
@@ -16,14 +16,15 @@ export function SubtaskInputs({ onSubmit, onCancel, label = 'Guardar tarea' }: {
 
   useLayoutEffect(() => {
     if (focus.current === null) return;
-    inputs.current[focus.current]?.focus();
-    inputs.current[focus.current]?.scrollIntoView({ block: 'nearest' });
+    const input = inputs.current[focus.current];
     focus.current = null;
+    input?.focus();
+    input?.scrollIntoView({ block: 'nearest' });
   });
 
   const submit = async () => {
     if (saving.current) return;
-    const lines = values.filter((v) => v.trim()).map((v) => ({ ...parseLine(v), isSubtask: true }));
+    const lines = values.filter((v) => v.trim()).flatMap((v) => parseBlock(v).map((line) => ({ ...line, isSubtask: true })));
     if (lines.some((l) => !l.title)) {
       setError('Escribe un título para cada subtarea, además de sus etiquetas.');
       return;
@@ -54,7 +55,7 @@ export function SubtaskInputs({ onSubmit, onCancel, label = 'Guardar tarea' }: {
                 if (e.isComposing || e.key !== 'Enter') return;
                 e.preventDefault();
                 if (!v.trim()) { void submit(); return; }
-                if (!parseLine(v).title) { setError('Escribe un título para la subtarea.'); return; }
+                if (parseBlock(v).some((line) => !line.title)) { setError('Escribe un título para cada subtarea.'); return; }
                 if (i < values.length - 1) inputs.current[i + 1]?.focus();
                 else {
                   focus.current = i + 1;

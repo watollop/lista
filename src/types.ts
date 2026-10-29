@@ -84,7 +84,7 @@ export interface ParsedLine {
   period: Period | null;
   priority: Priority | null;
   recurrence: Recurrence | null;
-  isSubtask: boolean; // empieza por '>' o va indentada
+  isSubtask: boolean; // empieza por '>', va indentada o es un segmento tras '<'
   tokens: ParsedToken[]; // ordenados por start
 }
 
@@ -140,9 +140,10 @@ export interface Repo {
   /** Sustituye título/tokens de una tarea existente con una línea parseada (edición). */
   replaceParsed(id: ID, line: ParsedLine): Promise<Task>;
   updateTask(id: ID, patch: Partial<Omit<Task, 'id'>>): Promise<Task>;
-  /** Alterna done y deriva el estado del padre de sus subtareas. No permite completar padres con pendientes.
-   *  Al completar una recurrente crea la siguiente ocurrencia con copias pendientes de sus subtareas. */
-  toggleDone(id: ID): Promise<{ task: Task; spawned: Task | null }>;
+  /** Alterna done; un padre cambia también sus subtareas en la misma transacción.
+   *  Cambiar una subtarea deriva el estado del padre. Una recurrente genera la siguiente familia pendiente.
+   *  Al completar devuelve undo para restaurar solo los estados cambiados por esa operación. */
+  toggleDone(id: ID): Promise<{ task: Task; spawned: Task | null; undo: (() => Promise<void>) | null }>;
   deleteTask(id: ID): Promise<void>; // tombstone de la tarea y sus subtareas
   restoreTask(id: ID): Promise<void>; // deshacer borrado (tarea y subtareas borradas en la misma operación)
   /** Mueve la tarea antes de beforeId (o al final si null) recalculando order. */
