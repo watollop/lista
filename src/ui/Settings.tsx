@@ -110,11 +110,15 @@ function Account({ sync, state }: { sync: Sync; state: SyncState }) {
 
 const THEMES: Array<[Theme, string]> = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Oscuro']];
 const LOOKS: Array<[Look, string]> = [['classic', 'Clásico'], ['industrial', 'Industrial']];
+const SUBTASK_COLORS: Array<[string, string]> = [
+  [DEFAULT_SUBTASK_COLOR, 'Rosa'], ['#3689cc', 'Azul'], ['#58a676', 'Verde'], ['#e68b45', 'Naranja'],
+];
 
 function Appearance({ toast }: { toast: (msg: string) => void }) {
   const [theme, set] = useState(getTheme);
   const [look, setL] = useState(getLook);
   const [color, setColor] = useState(getSubtaskColor);
+  const customColor = !SUBTASK_COLORS.some(([value]) => value === color.toLowerCase());
   const changeColor = (next: string) => {
     try { setSubtaskColor(next); setColor(next); }
     catch (e) { toast(e instanceof Error ? e.message : 'No se pudo guardar el color.'); }
@@ -135,13 +139,16 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
-      <p class="look-hint" id="subtask-color-label">Color de la línea de subtareas</p>
+      <p class="look-hint" id="subtask-color-label">Color de subtareas</p>
       <div class="row-btns look-btns" role="group" aria-labelledby="subtask-color-label">
-        <button class={`btn ${color === DEFAULT_SUBTASK_COLOR ? 'solid' : ''}`}
-          aria-pressed={color === DEFAULT_SUBTASK_COLOR} onClick={() => changeColor(DEFAULT_SUBTASK_COLOR)}>Rosa</button>
-        <label class={`btn color-picker ${color !== DEFAULT_SUBTASK_COLOR ? 'solid' : ''}`}>
-          <span class="color-swatch" style={{ backgroundColor: color }} aria-hidden="true" />
-          Personalizado
+        {SUBTASK_COLORS.map(([value, name]) => (
+          <button key={value} class="color-option" aria-label={name} title={name}
+            aria-pressed={color.toLowerCase() === value} onClick={() => changeColor(value)}>
+            <span class="color-swatch" style={{ backgroundColor: value }} aria-hidden="true" />
+          </button>
+        ))}
+        <label class={`color-option color-picker ${customColor ? 'selected' : ''}`} title="Color personalizado">
+          <span class="color-swatch multicolor" aria-hidden="true" />
           <input id="subtask-color" type="color" aria-label="Color personalizado de subtareas"
             value={color} onInput={(e) => changeColor(e.currentTarget.value)} />
         </label>

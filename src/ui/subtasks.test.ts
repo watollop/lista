@@ -299,18 +299,39 @@ describe('lista de subtareas', () => {
 });
 
 describe('color de subtareas', () => {
-  it('usa rosa, permite personalizarlo en ajustes y lo conserva al aplicar el tema', async () => {
+  it('ofrece cuatro círculos de colores y uno personalizado sin texto y conserva la elección', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
     click(root.querySelector('[aria-label="Ajustes"]'));
-    const color = root.querySelector<HTMLInputElement>('#subtask-color')!;
+    let color = root.querySelector<HTMLInputElement>('#subtask-color')!;
+    const palette = color.closest('[role="group"]')!;
+    expect(palette.textContent?.trim()).toBe('');
+    expect(palette.querySelectorAll('.color-option')).toHaveLength(5);
+    expect(palette.querySelectorAll('button')).toHaveLength(4);
+    expect(palette.querySelector('.multicolor')).not.toBeNull();
     expect(color.value).toBe(DEFAULT_SUBTASK_COLOR);
-    expect(color.closest('label')?.classList.contains('btn')).toBe(true);
-    type(color, '#3689cc');
-    expect(localStorage.getItem('lista.subtaskColor')).toBe('#3689cc');
+    expect(palette.querySelector('[aria-label="Rosa"]')?.getAttribute('aria-pressed')).toBe('true');
+    for (const [name, value] of [['Azul', '#3689cc'], ['Verde', '#58a676'], ['Naranja', '#e68b45'], ['Rosa', DEFAULT_SUBTASK_COLOR]]) {
+      click(palette.querySelector(`[aria-label="${name}"]`));
+      expect(getSubtaskColor()).toBe(value);
+      expect(color.value).toBe(value);
+      expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe(value);
+      expect(palette.querySelectorAll('[aria-pressed="true"]')).toHaveLength(1);
+      expect(palette.querySelector(`[aria-label="${name}"]`)?.getAttribute('aria-pressed')).toBe('true');
+      expect(color.closest('label')?.classList.contains('selected')).toBe(false);
+    }
+    type(color, '#7849ce');
+    expect(localStorage.getItem('lista.subtaskColor')).toBe('#7849ce');
+    expect(palette.querySelector('[aria-pressed="true"]')).toBeNull();
+    expect(color.closest('label')?.classList.contains('selected')).toBe(true);
     applyTheme('dark', 'industrial');
-    expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe('#3689cc');
-    click(button('Rosa'));
+    expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe('#7849ce');
+    click(button('Cerrar'));
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    color = root.querySelector<HTMLInputElement>('#subtask-color')!;
+    expect(color.value).toBe('#7849ce');
+    expect(color.closest('label')?.classList.contains('selected')).toBe(true);
+    click(root.querySelector('[aria-label="Rosa"]'));
     expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR);
   });
 

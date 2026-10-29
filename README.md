@@ -47,7 +47,7 @@ La guía `#tema @persona !prioridad fecha` permanece visible mientras escribes, 
 
 - Claro, oscuro o el del sistema.
 - Dos estilos: **Clásico** (blanco y negro) o **Industrial** (gris cálido, letra de puntos y naranja).
-- Color de la línea de subtareas personalizable en **Ajustes → Apariencia**, con rosa por defecto.
+- Color de subtareas en **Ajustes → Apariencia**: círculos rosa (por defecto), azul, verde y naranja, y uno multicolor para elegir un color personalizado.
 - Se instala como una app más: *Compartir → Añadir a pantalla de inicio* (iPhone) o *Instalar app* (Android y ordenador).
 
 ---
