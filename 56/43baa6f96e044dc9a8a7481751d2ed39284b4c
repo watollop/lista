@@ -1,0 +1,35 @@
+src/data/db.ts
+  s_c7d15b540bf786::t_422f4e6ace0525 2,15,27
+src/data/repo.test.ts
+  s_c7d15b540bf786::t_4a162464945017 798-824
+src/data/repo.ts
+  s_c7d15b540bf786::t_b587dad3a35445 12,150,568,573,584-585,605-607,626-636,671-672
+src/main.tsx
+  s_c7d15b540bf786::t_49332a2b0d44f7 9,16
+src/sync/index.ts
+  s_c7d15b540bf786::t_b0c876db13863d 140-141,147-157
+src/types.ts
+  s_c7d15b540bf786::t_69baed4c766eee 61-66,119,125,175-178
+src/ui/Settings.tsx
+  s_c7d15b540bf786::t_1c0143b4fe56ee 3,35,118,124,133,139
+src/ui/appearanceSync.ts
+  s_c7d15b540bf786::t_47dd29d6d933f9 1-48
+supabase/schema.sql
+  s_c7d15b540bf786::t_d48cbf7120813e 4,8,18-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5643baa6f96e044dc9a8a7481751d2ed39284b4c",
+  "prompts": {},
+  "sessions": {
+    "s_c7d15b540bf786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "407821e8-55aa-4e8a-a245-4803a60061b3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
