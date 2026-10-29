@@ -1,0 +1,59 @@
+src/data/repo.test.ts
+  s_da7ca17ebbef85::t_08d326492b9b06 27,29,31,33-34,41-42,46-47,53-54,64,70,72,93-94,99,101-102,106-107,110,893-919
+src/data/repo.ts
+  s_da7ca17ebbef85::t_b063977c8926c6 12,150,514-515,568,573,584-585,605-606,626-644,679-683,685,690-692
+src/sync/index.ts
+  s_8ca88c36d97e6a::t_16f6c73d5fd7c8 140-141,147-157
+src/ui/appearanceSync.test.ts
+  s_da7ca17ebbef85::t_a531f6832ff054 6-7,10,16,25-26,28,31-34,41,46-49,51,54,57-60,62-63,65-66,69-71,73,75,77,79,86-89,92,96-98,100,104,106-107,109,114-124,126-133
+src/ui/appearanceSync.ts
+  s_da7ca17ebbef85::t_ec92cf4a5507ce 1-59
+src/ui/hooks.ts
+  s_8ca88c36d97e6a::t_649e3dccc04774 70-74,80-82,85,88-94,102
+src/ui/styles.css
+  s_8ca88c36d97e6a::t_9659e26495307b 336-339
+src/ui/subtasks.test.ts
+  s_da7ca17ebbef85::t_fa0706b02380d9 526,544,551,565,571-572,574-576,583-590,593,598-599,602-603
+README.md
+  s_da7ca17ebbef85::t_e098637df6a300 56,82,84
+src/data/db.ts
+  s_da7ca17ebbef85::t_2d263f3ebf8d1c 2,15,27-28
+src/sync/sync.test.ts
+  s_da7ca17ebbef85::t_517b9fd11ac6ff 258-266,281,284-285,288,291,304,307-308,312,314,322,325,327,337,340-341,344,352-353,358-359,367,378,383,386,393-394,397,401-403,406
+src/types.ts
+  s_da7ca17ebbef85::t_aefa219bfeb424 61-66,119,125,175-179
+src/ui/App.tsx
+  s_da7ca17ebbef85::t_2958eaffd53f47 18,66-67
+src/ui/Settings.tsx
+  s_da7ca17ebbef85::t_bcf275a223113a 3-4,123-124,126,129-131,133-134,142,148
+src/ui/theme.ts
+  s_da7ca17ebbef85::t_e0982b8bd741e8 11,27,45,61
+supabase/migrations/20261029_appearance_settings.sql
+  s_da7ca17ebbef85::t_d227ad8840d83d 1,7
+supabase/schema.sql
+  s_da7ca17ebbef85::t_60bfe3f696f252 8,18-19,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9d8687f7aea7fd4d3fe6d509daae040160ee1962",
+  "prompts": {},
+  "sessions": {
+    "s_8ca88c36d97e6a": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "e1179aa3-835c-40da-84d8-bfae53148d0e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Elena Sanchez Gonzalez <elenasg@inditex.com>"
+    },
+    "s_da7ca17ebbef85": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "c02fdcac-94df-457b-b54c-211a847ee68a",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Elena Sanchez Gonzalez <elenasg@inditex.com>"
+    }
+  }
+}
