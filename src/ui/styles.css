@@ -989,21 +989,50 @@ section.droppable.drop-on .section { color: var(--fg); }
 .edit-actions { flex-wrap: wrap; column-gap: 18px; row-gap: 0; }
 .edit-actions .grip { flex: none; }
 
-/* Bicho de píxeles: a los 60 s sale de la esquina derecha, hace una pirueta y se va (5 s en total). */
+/* Cangrejo de píxeles: a los 60 s sale de la esquina derecha, corretea, hace una pirueta y se va (5 s en total).
+   Todo va "a saltos" (steps) para que se mueva como un sprite de 8 bits. */
 .critter { position: fixed; right: 0; bottom: 24px; z-index: 5; pointer-events: none; animation: critter-move 5s linear forwards; }
-.critter-body { display: block; transform-origin: 50% 60%; animation: critter-flip 5s linear forwards; }
-@keyframes critter-move {
-  0% { transform: translateX(120%); }
-  20% { transform: translateX(-40px); }
-  70% { transform: translateX(-40px); }
-  100% { transform: translateX(120%); }
-}
-@keyframes critter-flip {
-  0%, 30% { transform: translateY(0) rotate(0); animation-timing-function: ease-out; }
-  45% { transform: translateY(-60px) rotate(-180deg); animation-timing-function: ease-in; }
-  60% { transform: translateY(0) rotate(-360deg); }
-  64% { transform: translateY(0) scale(1.15, .85) rotate(-360deg); }
-  68%, 100% { transform: translateY(0) rotate(-360deg); }
-}
+.critter-hop { animation: critter-hop 5s linear forwards; }
+.critter-body { display: block; animation: critter-spin 5s linear forwards; }
 .critter-px { fill: var(--critter, #ff4f00); }
 .critter-eye { fill: var(--critter-eye, #141414); }
+
+/* Recorrido: entra corriendo hacia la izquierda, se para, y al final sale corriendo hacia la derecha. */
+@keyframes critter-move {
+  0% { transform: translateX(120%); animation-timing-function: steps(12, end); }
+  20% { transform: translateX(-40px); }
+  66% { transform: translateX(-40px); animation-timing-function: steps(14, end); }
+  100% { transform: translateX(130%); }
+}
+/* Salto de la pirueta (suave, es la parte "realista") con un aplastón al caer. */
+@keyframes critter-hop {
+  0%, 28% { transform: translateY(0) scale(1, 1); animation-timing-function: ease-out; }
+  38% { transform: translateY(-64px) scale(1, 1); animation-timing-function: ease-in; }
+  48% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(0) scale(1.18, .78); }
+  54%, 100% { transform: translateY(0) scale(1, 1); }
+}
+/* Voltereta en cuatro poses de 90° por vuelta, como un sprite. */
+@keyframes critter-spin {
+  0%, 28% { transform: rotate(0); animation-timing-function: steps(4, end); }
+  38% { transform: rotate(-360deg); animation-timing-function: steps(4, end); }
+  48%, 100% { transform: rotate(-720deg); }
+}
+/* Patas: dos poses que se alternan mientras corre (y en el aire). */
+.critter-legs-a { animation: critter-flip-a .22s steps(1, end) infinite; }
+.critter-legs-b { animation: critter-flip-b .22s steps(1, end) infinite; }
+@keyframes critter-flip-a { 0%, 49.9% { visibility: visible; } 50%, 100% { visibility: hidden; } }
+@keyframes critter-flip-b { 0%, 49.9% { visibility: hidden; } 50%, 100% { visibility: visible; } }
+/* Pinzas: abiertas casi todo el rato, y chascan tres veces tras la pirueta. */
+.critter-claws-open { animation: critter-claws-open 5s steps(1, end) forwards; }
+.critter-claws-snap { visibility: hidden; animation: critter-claws-snap 5s steps(1, end) forwards; }
+@keyframes critter-claws-open {
+  0%, 18% { visibility: visible; } 18.01%, 22% { visibility: hidden; } 22.01%, 55% { visibility: visible; }
+  55.01%, 58% { visibility: hidden; } 58.01%, 61% { visibility: visible; } 61.01%, 64% { visibility: hidden; }
+  64.01%, 100% { visibility: visible; }
+}
+@keyframes critter-claws-snap {
+  0%, 18% { visibility: hidden; } 18.01%, 22% { visibility: visible; } 22.01%, 55% { visibility: hidden; }
+  55.01%, 58% { visibility: visible; } 58.01%, 61% { visibility: hidden; } 61.01%, 64% { visibility: visible; }
+  64.01%, 100% { visibility: hidden; }
+}
