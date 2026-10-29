@@ -67,21 +67,31 @@ export function useWide(query = '(min-width: 1200px)'): boolean {
   return wide;
 }
 
-/** iOS: mantiene la caja de captura por encima del teclado usando visualViewport. */
+/**
+ * iOS: mantiene la caja de captura pegada al borde de arriba del teclado usando visualViewport.
+ * Al hacer scroll con el teclado abierto, iOS desplaza el visual viewport y los `fixed` se quedan atrás
+ * (la caja desaparecía bajo el teclado), así que mientras hay teclado se recoloca en cada fotograma.
+ */
 export function useKeyboardInset(): boolean {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    const root = document.documentElement.style;
+    let frame = 0;
+    let isOpen = false;
     const update = () => {
       // Solo hay teclado si hay un campo de texto enfocado. Durante el rebote de iOS al pasarse del
-      // principio o del final, offsetTop sale negativo y sin estas guardas parecía un teclado abierto.
+      // principio o del final, offsetTop sale negativo y sin esta guarda parecía un teclado abierto.
       const el = document.activeElement;
       const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
-      const raw = window.innerHeight - vv.height - Math.max(0, vv.offsetTop);
-      const kb = typing && raw > 80 ? raw : 0;
-      document.documentElement.style.setProperty('--kb', `${Math.round(kb)}px`);
-      setOpen(kb > 0);
+      const kb = typing && window.innerHeight - vv.height > 80 ? window.innerHeight - vv.height : 0;
+      root.setProperty('--kb', `${Math.round(kb)}px`);
+      // Borde inferior del visual viewport (en coordenadas del layout): ahí se ancla la caja.
+      root.setProperty('--vv-bottom', `${Math.round(Math.max(0, vv.offsetTop) + vv.height)}px`);
+      if (kb > 0 !== isOpen) { isOpen = kb > 0; setOpen(isOpen); }
+      cancelAnimationFrame(frame);
+      if (isOpen) frame = requestAnimationFrame(update);
     };
     const afterFocus = () => setTimeout(update, 0); // activeElement aún no está actualizado en focusout
     vv.addEventListener('resize', update);
@@ -89,6 +99,7 @@ export function useKeyboardInset(): boolean {
     document.addEventListener('focusin', afterFocus);
     document.addEventListener('focusout', afterFocus);
     return () => {
+      cancelAnimationFrame(frame);
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
       document.removeEventListener('focusin', afterFocus);
