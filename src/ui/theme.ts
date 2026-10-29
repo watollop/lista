@@ -4,6 +4,23 @@ export type Look = 'classic' | 'industrial';
 
 const KEY = 'lista.theme';
 const LOOK_KEY = 'lista.look';
+const SUBTASK_COLOR_KEY = 'lista.subtaskColor';
+export const DEFAULT_SUBTASK_COLOR = '#db729f';
+
+export function getSubtaskColor(): string {
+  try {
+    const color = localStorage.getItem(SUBTASK_COLOR_KEY);
+    return color && /^#[\da-f]{6}$/i.test(color) ? color : DEFAULT_SUBTASK_COLOR;
+  } catch {
+    return DEFAULT_SUBTASK_COLOR;
+  }
+}
+
+export function setSubtaskColor(color: string): void {
+  if (!/^#[\da-f]{6}$/i.test(color)) throw new Error('Elige un color válido.');
+  localStorage.setItem(SUBTASK_COLOR_KEY, color);
+  document.documentElement.style.setProperty('--subtask-color', color);
+}
 
 export function getTheme(): Theme {
   try {
@@ -42,6 +59,7 @@ const BG: Record<Look, [string, string]> = { classic: ['#ffffff', '#0c0c0c'], in
 
 export function applyTheme(t: Theme = getTheme(), l: Look = getLook()): void {
   const root = document.documentElement;
+  root.style.setProperty('--subtask-color', getSubtaskColor());
   if (t === 'system') delete root.dataset.theme;
   else root.dataset.theme = t;
   if (l === 'classic') delete root.dataset.look;

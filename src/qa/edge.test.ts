@@ -550,10 +550,11 @@ describe('7. filtros', () => {
     expect(shown).toEqual([abierta.id]);
   });
 
-  it('NOTA: padre hecho con hijo abierto aparece en el filtro vacío (el padre se muestra por su hijo)', async () => {
+  it('el padre sigue pendiente mientras haya subtareas abiertas y ambos aparecen en el filtro vacío', async () => {
     const r = newRepo();
     const [p] = await r.addParsed(parseBlock('Mudanza\n  Cajas', at(2026, 10, 27)));
-    await r.toggleDone(p.id);
+    await expect(r.toggleDone(p.id)).rejects.toThrow('Completa primero todas las subtareas');
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
     const shown = applyFilter(await r.listTasks(), emptyFilter(), TODAY).map((t) => t.title);
     expect(shown.sort()).toEqual(['Cajas', 'Mudanza']);
   });

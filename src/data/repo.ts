@@ -15,14 +15,14 @@ import type {
 } from '../types';
 import { normalizeKey } from '../lib/text';
 import { nextOccurrence } from '../lib/recurrence';
-import { todayISO } from '../lib/date';
+import { addDays, diffDays, todayISO } from '../lib/date';
 import { retagTitle } from '../parser/retag';
 import { ListaDB } from './db';
 
 /** Reloj monotónico: dos escrituras en el mismo ms reciben valores estrictamente crecientes. */
 let lastStamp = 0;
-function stamp(): number {
-  const now = Date.now();
+function stamp(after = 0): number {
+  const now = Math.max(Date.now(), after + 1);
   lastStamp = now <= lastStamp ? lastStamp + 1 : now;
   return lastStamp;
 }
@@ -149,6 +149,66 @@ export function createRepo(dbName = 'lista'): Repo {
   const allTables = [db.tasks, db.topics, db.people, db.filters] as const;
   const tableOf = (kind: EntityKind) => (kind === 'topic' ? db.topics : db.people);
 
+  const childrenOf = async (id: ID) => live(await db.tasks.where('parentId').equals(id).toArray());
+
+  async function changeDone(task: Task, done: 0 | 1, now: number): Promise<{ task: Task; spawned: Task | null }> {
+    if (task.done === done) return { task, spawned: null };
+    let spawned: Task | null = null;
+    let nextId = task.nextId;
+    if (done && task.recurrence && !nextId) {
+      const rec = { ...task.recurrence };
+      if ((rec.unit === 'month' || rec.unit === 'year') && !rec.monthDay && task.due) rec.monthDay = +task.due.slice(8);
+      const due = nextOccurrence(rec, task.due, todayISO());
+      spawned = {
+        ...task, id: crypto.randomUUID(), due, recurrence: rec, done: 0, doneAt: null, nextId: null,
+        order: nextOrder(await db.tasks.toArray(), task.parentId),
+        createdAt: now, updatedAt: now, dirty: 1,
+      };
+      await db.tasks.put(spawned);
+      const shift = task.due ? diffDays(task.due, due) : 0;
+      const children = await childrenOf(task.id);
+      if (children.length) {
+        const parentId = spawned.id;
+        await db.tasks.bulkPut(children.map((child) => ({
+          ...child, id: crypto.randomUUID(), parentId,
+          due: child.due && shift ? addDays(child.due, shift) : child.due,
+          done: 0 as const, doneAt: null, nextId: null, createdAt: now, updatedAt: now, dirty: 1 as const,
+        })));
+      }
+      nextId = spawned.id;
+    } else if (!done && nextId) {
+      const next = await db.tasks.get(nextId);
+      const children = await db.tasks.where('parentId').equals(nextId).toArray();
+      // Solo deshacemos la familia generada si nadie ha editado, añadido o borrado una subtarea.
+      if (next && !next.deleted && !next.done && next.updatedAt === next.createdAt &&
+        children.every((c) => !c.deleted && !c.done && c.updatedAt === c.createdAt && c.createdAt === next.createdAt)) {
+        await db.tasks.bulkPut([next, ...children].map((t) => ({ ...t, deleted: 1 as const, dirty: 1 as const, updatedAt: now })));
+      }
+      nextId = null;
+    }
+    const saved: Task = { ...task, done, doneAt: done ? now : null, nextId, updatedAt: now, dirty: 1 };
+    await db.tasks.put(saved);
+    return { task: saved, spawned };
+  }
+
+  async function reconcileParent(id: ID | null, now: number) {
+    if (!id) return null;
+    const parent = await db.tasks.get(id);
+    if (!parent || parent.deleted) return null;
+    const children = await childrenOf(id);
+    if (!children.length) return null;
+    const done = children.every((c) => c.done) ? 1 : 0;
+    if (parent.done === done) return null;
+    return changeDone(parent, done, now);
+  }
+
+  async function reconcileFamilies(): Promise<void> {
+    const rows = await db.tasks.toArray();
+    const now = stamp(rows.reduce((max, t) => Math.max(max, t.updatedAt), 0));
+    const parents = new Set(live(rows).map((t) => t.parentId).filter((id) => id !== null));
+    for (const id of parents) await reconcileParent(id, now);
+  }
+
   /** Sustituye la clave en tareas y filtros vivos que la contienen. Devuelve nº de tareas cambiadas y sus versiones anteriores. */
   async function retagAll(kind: EntityKind, key: string, newKey: string | null, to: string | null, now: number) {
     const oldTasks: Task[] = [];
@@ -198,7 +258,9 @@ export function createRepo(dbName = 'lista'): Repo {
         let defaultParent: ID | null = null;
         if (defaultParentId) {
           const p = rows.find((t) => t.id === defaultParentId && t.deleted === 0);
-          if (p) defaultParent = p.parentId ?? p.id;
+          if (!p) throw new Error('La tarea principal ya no existe.');
+          defaultParent = p.parentId ?? p.id;
+          if (!rows.some((t) => t.id === defaultParent && !t.deleted)) throw new Error('La tarea principal ya no existe.');
         }
         const out: Task[] = [];
         let lastTop: ID | null = null;
@@ -228,6 +290,7 @@ export function createRepo(dbName = 'lista'): Repo {
           out.push(task);
           if (!line.isSubtask) lastTop = task.id;
         }
+        for (const id of new Set(out.map((t) => t.parentId))) await reconcileParent(id, now);
         return out;
       });
       if (created.length) notify();
@@ -269,50 +332,14 @@ export function createRepo(dbName = 'lista'): Repo {
         const now = stamp();
         const task = await db.tasks.get(id);
         if (!task || task.deleted === 1) throw new Error('Tarea no encontrada');
-
-        if (task.done === 0) {
-          let spawned: Task | null = null;
-          let saved: Task = { ...task, done: 1, doneAt: now, updatedAt: now, dirty: 1 };
-          if (task.recurrence) {
-            const rows = await db.tasks.toArray();
-            // Mensual/anual: fija el día ancla la primera vez para que 31 ene -> 28 feb -> 31 mar.
-            const rec = { ...task.recurrence };
-            if ((rec.unit === 'month' || rec.unit === 'year') && !rec.monthDay && task.due) rec.monthDay = +task.due.slice(8);
-            spawned = {
-              id: crypto.randomUUID(),
-              title: task.title,
-              topics: task.topics,
-              people: task.people,
-              due: nextOccurrence(rec, task.due, todayISO()),
-              priority: task.priority,
-              recurrence: rec,
-              parentId: task.parentId,
-              done: 0,
-              doneAt: null,
-              nextId: null,
-              order: nextOrder(rows, task.parentId),
-              createdAt: now,
-              updatedAt: now,
-              deleted: 0,
-              dirty: 1,
-            };
-            saved = { ...saved, nextId: spawned.id };
-            await db.tasks.put(spawned);
-          }
-          await db.tasks.put(saved);
-          return { task: saved, spawned };
+        const children = await childrenOf(id);
+        if (!task.done && children.some((c) => !c.done)) throw new Error('Completa primero todas las subtareas.');
+        if (task.done) {
+          for (const child of children) await changeDone(child, 0, now);
         }
-
-        // Reabrir: deshace la ocurrencia generada si nadie la ha tocado.
-        if (task.nextId) {
-          const next = await db.tasks.get(task.nextId);
-          if (next && next.deleted === 0 && next.done === 0 && next.updatedAt === next.createdAt) {
-            await db.tasks.put({ ...next, deleted: 1, dirty: 1, updatedAt: now });
-          }
-        }
-        const reopened: Task = { ...task, done: 0, doneAt: null, nextId: null, updatedAt: now, dirty: 1 };
-        await db.tasks.put(reopened);
-        return { task: reopened, spawned: null };
+        const result = await changeDone(task, task.done ? 0 : 1, now);
+        const parent = await reconcileParent(task.parentId, now);
+        return { ...result, spawned: result.spawned ?? parent?.spawned ?? null };
       });
       notify();
       return result;
@@ -326,6 +353,7 @@ export function createRepo(dbName = 'lista'): Repo {
         const kids = live(await db.tasks.where('parentId').equals(id).toArray());
         const toDelete = [task, ...kids].map((t) => ({ ...t, deleted: 1 as const, dirty: 1 as const, updatedAt: now }));
         await db.tasks.bulkPut(toDelete);
+        await reconcileParent(task.parentId, now);
         return true;
       });
       if (changed) notify();
@@ -341,6 +369,8 @@ export function createRepo(dbName = 'lista'): Repo {
         );
         const toRestore = [task, ...kids].map((t) => ({ ...t, deleted: 0 as const, dirty: 1 as const, updatedAt: now }));
         await db.tasks.bulkPut(toRestore);
+        await reconcileParent(task.parentId, now);
+        await reconcileParent(task.id, now);
         return true;
       });
       if (changed) notify();
@@ -504,6 +534,7 @@ export function createRepo(dbName = 'lista'): Repo {
           for (const t of b.people) await mergeOne(db.people, t, (r) => r.key);
           for (const f of b.filters) await mergeOne(db.filters, f, (r) => r.id);
         }
+        await reconcileFamilies();
       });
       notify();
     },
@@ -559,6 +590,7 @@ export function createRepo(dbName = 'lista'): Repo {
           const w = await applyByKind(it.kind, it);
           any = any || w;
         }
+        if (any && items.some((it) => it.kind === 'task')) await reconcileFamilies();
         return any;
       });
       if (wrote) notify();

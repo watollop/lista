@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { Fragment } from 'preact';
 import type { Entity, ID, ISODate, ParsedLine, Task } from '../types';
 import { formatLine, inlineTags, normalizeKey, parseLine } from '../parser';
 import { TaskChips, type ChipTap } from './Chips';
@@ -7,6 +8,7 @@ import { addToAppleCalendar, addToCalendar, addToGoogleCalendar, prefersApple } 
 import { addDays } from '../lib/date';
 import { useDrag, dragging } from './drag';
 import type { DropTarget } from '../lib/reschedule';
+import { SubtaskInputs } from './SubtaskInputs';
 
 export interface Group { task: Task; children: Task[] }
 
@@ -26,6 +28,7 @@ interface Props {
   pastMode: boolean; // vista de pendientes: las completadas antes de hoy van a "Pasadas", arriba
   anchorKey: string; // al cambiar (filtro), se vuelve a colocar la vista en el presente
   onMove: (id: ID, target: DropTarget) => void; // tarea arrastrada a otro bloque
+  onAddSubtasks: (id: ID, lines: ParsedLine[]) => Promise<void>;
 }
 
 type SectionKey = 'past' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'next' | 'nodate' | 'done';
@@ -51,6 +54,23 @@ function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>, pastMode: boolea
 export function TaskList(props: Props) {
   const { groups, today } = props;
   const [dragId, setDragId] = useState<ID | null>(null);
+  const [expanded, setExpanded] = useState<Set<ID>>(new Set());
+  const [adding, setAdding] = useState<ID | null>(null);
+  const expand = (id: ID) => setExpanded((old) => {
+    const next = new Set(old);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+  const addSubtask = (id: ID) => {
+    props.onEdit(null);
+    setExpanded((old) => new Set([...old, id]));
+    setAdding(id);
+  };
+  useEffect(() => {
+    const parent = groups.find((g) => g.children.some((c) => c.id === props.selected || c.id === props.editing));
+    if (parent) setExpanded((old) => old.has(parent.task.id) ? old : new Set([...old, parent.task.id]));
+  }, [props.selected, props.editing, groups]);
   const byKey = new Map<SectionKey, Group[]>();
   for (const g of groups) {
     const key = sectionOf(g.task, today, props.doneToday, props.pastMode);
@@ -89,10 +109,29 @@ export function TaskList(props: Props) {
         <span>{s.items.length}</span>
       </h2>
       <ul class="list">
-        {s.items.map((g) => [
-          <Row key={g.task.id} task={g.task} section={s.key} {...rowProps} />,
-          ...g.children.map((c) => <Row key={c.id} task={c} sub section={s.key} {...rowProps} />),
-        ])}
+        {s.items.map((g) => {
+          const open = expanded.has(g.task.id) || adding === g.task.id;
+          return (
+            <Fragment key={g.task.id}>
+              <Row task={g.task} section={s.key} {...rowProps} childrenCount={g.children.length}
+                completedCount={g.children.filter((c) => c.done).length} expanded={open}
+                onExpand={() => expand(g.task.id)} onAddSubtask={() => addSubtask(g.task.id)} />
+              {open && (
+                <li class="subtask-group">
+                  <ul id={`subtasks-${g.task.id}`} aria-label={`Subtareas de ${g.task.title}`}>
+                    {g.children.map((c) => <Row key={c.id} task={c} sub section={s.key} {...rowProps} />)}
+                    <li class="subtask-composer">
+                      {adding === g.task.id ? (
+                        <SubtaskInputs label="Añadir subtareas" onCancel={() => setAdding(null)}
+                          onSubmit={async (lines) => { await props.onAddSubtasks(g.task.id, lines); setAdding(null); }} />
+                      ) : <button class="link add-subtask" onClick={() => addSubtask(g.task.id)}>+ subtarea</button>}
+                    </li>
+                  </ul>
+                </li>
+              )}
+            </Fragment>
+          );
+        })}
         {!s.items.length && <li class="drop-empty">Suelta aquí</li>}
       </ul>
     </section>
@@ -113,11 +152,13 @@ export function TaskList(props: Props) {
   );
 }
 
-function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd }:
-  Props & { task: Task; sub?: boolean; section: SectionKey; onDragStart: (id: ID) => void; onDragEnd: () => void }) {
+function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd,
+  childrenCount = 0, completedCount = 0, expanded = false, onExpand, onAddSubtask }:
+  Props & { task: Task; sub?: boolean; section: SectionKey; onDragStart: (id: ID) => void; onDragEnd: () => void;
+    childrenCount?: number; completedCount?: number; expanded?: boolean; onExpand?: () => void; onAddSubtask?: () => void }) {
   const isEditing = editing === task.id;
   const ref = useRef<HTMLLIElement>(null);
-  const swipe = useSwipe(() => onToggle(task.id), () => onDelete(task.id), !isEditing);
+  const swipe = useSwipe(() => { if (!childrenCount) onToggle(task.id); }, () => onDelete(task.id), !isEditing);
   const drag = useDrag(task.id, isEditing && !task.done, () => onDragStart(task.id), (target) => {
     onDragEnd();
     onEdit(null);
@@ -140,18 +181,47 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       {...swipe.handlers}
       onClickCapture={clickCapture}
     >
-      <button class="check" aria-label={task.done ? 'Marcar pendiente' : 'Completar'} onClick={() => onToggle(task.id)}>
+      <button class="check" disabled={childrenCount > 0}
+        aria-label={childrenCount ? `${completedCount} de ${childrenCount} subtareas completadas` : task.done ? 'Marcar pendiente' : 'Completar'}
+        title={childrenCount ? 'Se completa al terminar todas las subtareas' : undefined} onClick={() => onToggle(task.id)}>
         <i />
       </button>
       <div class="body">
         {isEditing ? (
           <Editor task={task} names={names} onSave={(l) => onSave(task.id, l)} onCancel={() => onEdit(null)}
-            onDelete={() => onDelete(task.id)} onDragStart={task.done ? undefined : drag.start} />
+            onDelete={() => onDelete(task.id)} onDragStart={task.done ? undefined : drag.start}
+            onAddSubtask={sub ? undefined : onAddSubtask} />
         ) : (
           <>
-            <button class={`title ${task.priority === 1 ? 'p1' : ''}`} onClick={() => { onSelect(task.id); onEdit(task.id); }}>
-              <TitleText text={task.title} onChip={onChip} />
-            </button>
+            <div class="title-line">
+              <button class={`title ${task.priority === 1 ? 'p1' : ''}`}
+                aria-expanded={childrenCount ? expanded : undefined}
+                aria-controls={childrenCount && expanded ? `subtasks-${task.id}` : undefined}
+                onClick={() => { onSelect(task.id); if (childrenCount) onExpand?.(); else onEdit(task.id); }}>
+                <TitleText text={task.title} onChip={onChip} />
+              </button>
+              {childrenCount > 0 && (
+                <>
+                  <button class="subtask-toggle" aria-expanded={expanded}
+                    aria-controls={expanded ? `subtasks-${task.id}` : undefined}
+                    aria-label={`${expanded ? 'Ocultar' : 'Mostrar'} subtareas: ${completedCount} de ${childrenCount} completadas`}
+                    onClick={onExpand}>
+                    <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor"
+                      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 3v11h3M4 7h3M10 7h6M10 14h6" />
+                      <path d={expanded ? 'm13 3 2-2 2 2' : 'm13 1 2 2 2-2'} />
+                    </svg>
+                  </button>
+                  <button class="edit-task" aria-label="Editar tarea" title="Editar tarea"
+                    onClick={() => { onSelect(task.id); onEdit(task.id); }}>
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
+                      stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3" />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
             <div class="meta">
               <TaskChips due={task.due} period={task.period} done={!!task.done} priority={task.priority} recurrence={task.recurrence}
                 topics={task.topics} people={task.people} names={names} today={today} onTap={onChip} title={task.title}
@@ -249,10 +319,11 @@ export function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
 
 /** Edición en línea con la misma sintaxis que la captura. Las fechas se muestran como vence:AAAA-MM-DD
  *  para que una relativa ("mañana") no se recalcule al guardar. */
-function Editor({ task, names, onSave, onCancel, onDelete, onDragStart }: {
+function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSubtask }: {
   task: Task; names: Map<string, Entity>;
   onSave: (l: ParsedLine) => void; onCancel: () => void; onDelete: () => void;
   onDragStart?: (e: PointerEvent) => void; // asa «Mover»: arrastrar la tarea a otro día
+  onAddSubtask?: () => void;
 }) {
   const initial = formatLine({
     title: task.title,
@@ -290,6 +361,10 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart }: {
       />
       <div class="edit-actions">
         <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
+        {onAddSubtask && (
+          <button class="link add-subtask" onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { save(); onAddSubtask(); }}>+ subtarea</button>
+        )}
         {onDragStart && (
           <button class="link move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
             onMouseDown={(e) => e.preventDefault()} onTouchStart={(e) => e.preventDefault()} onPointerDown={onDragStart}>

@@ -23,12 +23,18 @@ Lista entiende lo que escribes y lo ordena sola:
 
 También puedes dictarla con el micrófono, una tarea tras otra.
 
+La guía de sintaxis permanece visible mientras escribes, con el mismo tamaño de letra y menor opacidad.
+
+**Subtareas**: pulsa **+ subtarea** al escribir una tarea. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda la tarea con todas sus subtareas. También puedes usar **Guardar tarea**. Para añadirlas a una tarea existente, abre su editor y pulsa **+ subtarea**.
+
 ## 2 · Completa y filtra
 
 - Desliza a la **derecha** para completarla y a la **izquierda** para borrarla.
 - Toca `#trabajo`, `@ana` o una fecha para ver solo eso.
 - Las tareas se agrupan solas: Vencidas · Hoy · Mañana · Esta semana · Próximas.
 - Para cambiarla de día, tócala y arrastra **Mover**.
+- Las tareas con subtareas muestran un icono rosa: toca el icono o el título para desplegarlas. El lápiz permite editar la tarea principal.
+- Una tarea con subtareas se completa al terminar todas; reabrir una subtarea reabre la principal.
 
 ## 3 · Tus datos, contigo
 
@@ -40,6 +46,7 @@ También puedes dictarla con el micrófono, una tarea tras otra.
 
 - Claro, oscuro o el del sistema.
 - Dos estilos: **Clásico** (blanco y negro) o **Industrial** (gris cálido, letra de puntos y naranja).
+- Color del icono de subtareas personalizable en **Ajustes → Apariencia**, con rosa por defecto.
 - Se instala como una app más: *Compartir → Añadir a pantalla de inicio* (iPhone) o *Instalar app* (Android y ordenador).
 
 ---

@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from 'preact/hooks';
+import { useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Entity, ISODate, ParsedLine } from '../types';
 import { activeToken, normalizeKey, parseBlock, parseLine } from '../parser';
 import { TaskChips } from './Chips';
 import { Dictation, canDictate } from './Dictation';
+import { SubtaskInputs } from './SubtaskInputs';
 
 interface Props {
   topics: Entity[];
@@ -21,8 +22,26 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const composing = useRef(false);
   const [dictating, setDictating] = useState(false);
   const [mic] = useState(canDictate);
-  // Con el micrófono al lado, en móvil el ejemplo completo no cabe.
-  const compact = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 480px)').matches;
+  const [subtasks, setSubtasks] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const saving = useRef(false);
+  const refocus = useRef(false);
+  const container = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const measure = () => document.documentElement.style.setProperty('--capture-height', `${container.current?.offsetHeight ?? 0}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (container.current) observer.observe(container.current);
+    return () => { observer.disconnect(); document.documentElement.style.removeProperty('--capture-height'); };
+  }, []);
+  useLayoutEffect(() => {
+    if (!busy && refocus.current) {
+      inputRef.current?.focus();
+      refocus.current = false;
+    }
+  }, [busy, subtasks]);
 
   const parsed = useMemo(() => (value.trim() ? parseLine(value) : null), [value, today]);
   const active = useMemo(() => activeToken(value, caret), [value, caret]);
@@ -50,15 +69,23 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     requestAnimationFrame(() => inputRef.current?.setSelectionRange(pos, pos));
   };
 
-  const submit = async () => {
-    if (!parsed || !parsed.title) return;
-    setValue('');
-    setCaret(0);
-    await onAdd([parsed]);
+  const submit = async (children: ParsedLine[] = []) => {
+    if (!parsed?.title) throw new Error('Escribe un título para la tarea.');
+    if (saving.current) return;
+    saving.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      await onAdd([{ ...parsed, isSubtask: false }, ...children]);
+      setValue('');
+      setCaret(0);
+      refocus.current = true;
+      setSubtasks(false);
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
   };
-
-  // En pantallas muy estrechas (SE 1ª gen.) el ejemplo completo se corta: se muestra una versión corta.
-  const narrow = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 359px)').matches;
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (composing.current || e.isComposing) return;
@@ -67,9 +94,14 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
       if (e.key === 'ArrowUp') { e.preventDefault(); setSel((sel - 1 + suggestions.length) % suggestions.length); return; }
       if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); accept(suggestions[sel]); return; }
     }
-    if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (subtasks) container.current?.querySelector<HTMLInputElement>('.subtask-field input')?.focus();
+      else if (value.trim()) void submit().catch((e: Error) => setError(e.message));
+    }
     if (e.key === 'Escape') {
-      if (value) setValue('');
+      if (subtasks) return;
+      if (value) { setValue(''); setError(''); }
       else (e.target as HTMLInputElement).blur();
     }
   };
@@ -78,12 +110,19 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     const text = e.clipboardData?.getData('text') ?? '';
     if (!text.includes('\n')) return;
     e.preventDefault();
+    if (subtasks || busy) {
+      setError('Guarda primero la tarea con sus subtareas antes de pegar varias líneas.');
+      return;
+    }
     const lines = parseBlock(text).filter((l) => l.title);
-    if (lines.length) await onAdd(lines);
+    if (lines.length) {
+      try { await onAdd(lines); }
+      catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron añadir las tareas.'); }
+    }
   };
 
   return (
-    <div class={`capture ${kbOpen ? 'kb' : ''}`}>
+    <div ref={container} class={`capture ${kbOpen ? 'kb' : ''}`}>
       <div class="capture-inner">
         {suggestions.length > 0 && (
           <ul class="suggest" role="listbox">
@@ -101,8 +140,10 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
         <input
           ref={inputRef}
           value={value}
-          placeholder={narrow ? 'Nueva tarea… #tema @persona' : mic && compact ? 'Nueva tarea… #tema @persona mañana' : 'Nueva tarea… #tema @persona mañana !alta'}
+          disabled={busy}
+          placeholder="Nueva tarea…"
           aria-label="Nueva tarea"
+          aria-describedby="capture-guide"
           autocomplete="off"
           enterkeyhint="enter" // la tecla azul dice "intro": no se confunde con el ✓ de iOS, que solo cierra el teclado
           onInput={(e) => sync(e.currentTarget)}
@@ -114,7 +155,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           onCompositionEnd={() => (composing.current = false)}
         />
         {mic && (
-          <button class="mic" aria-label="Dictar tareas" title="Dictar tareas" onClick={() => setDictating(true)}>
+          <button class="mic" disabled={busy || subtasks} aria-label="Dictar tareas" title="Dictar tareas" onClick={() => setDictating(true)}>
             <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
               stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5" /><path d="M3 7.5a5 5 0 0 0 10 0M8 12.5v2" />
@@ -122,8 +163,16 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           </button>
         )}
         </div>
+        <div id="capture-guide" class="capture-guide">
+          <span>#tema</span><span>@persona</span><span>mañana</span><span>!alta</span><span>cada lunes</span>
+        </div>
+        {parsed?.title && !subtasks && (
+          <button class="link add-subtask" disabled={busy} onClick={() => setSubtasks(true)}>+ subtarea</button>
+        )}
+        {subtasks && <SubtaskInputs onSubmit={submit} onCancel={() => { setSubtasks(false); inputRef.current?.focus(); }} />}
+        {error && <p class="err" role="alert">{error}</p>}
         <div class="preview">
-          {parsed && parsed.tokens.length > 0 && (
+          {!subtasks && parsed && parsed.tokens.length > 0 && (
             <TaskChips
               due={parsed.due}
               period={parsed.period}

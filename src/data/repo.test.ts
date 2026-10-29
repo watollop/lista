@@ -171,6 +171,169 @@ describe('toggleDone', () => {
   });
 });
 
+describe('ciclo de vida de subtareas', () => {
+  it('solo completa el padre al terminar todas y lo reabre al reabrir una', async () => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([line('P'), line('a', { isSubtask: true }), line('b', { isSubtask: true })]);
+    await expect(r.toggleDone(p.id)).rejects.toThrow('Completa primero');
+    await r.toggleDone(a.id);
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
+    await r.toggleDone(b.id);
+    let parent = (await r.listTasks()).find((t) => t.id === p.id)!;
+    expect(parent.done).toBe(1);
+    expect(parent.doneAt).toBe(parent.updatedAt);
+    expect(parent.dirty).toBe(1);
+    await r.toggleDone(a.id);
+    parent = (await r.listTasks()).find((t) => t.id === p.id)!;
+    expect(parent.done).toBe(0);
+    expect(parent.doneAt).toBeNull();
+  });
+
+  it('añadir una subtarea reabre una tarea ya completada', async () => {
+    const r = newRepo();
+    const [p] = await r.addParsed([line('P')]);
+    await r.toggleDone(p.id);
+    const [child] = await r.addParsed([line('Nueva', { isSubtask: true })], p.id);
+    expect(child.parentId).toBe(p.id);
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
+  });
+
+  it('rechaza padres inexistentes o borrados sin guardar tareas ni entidades', async () => {
+    const r = newRepo();
+    const [p] = await r.addParsed([line('P')]);
+    await r.deleteTask(p.id);
+    for (const id of [p.id, 'no-existe']) {
+      await expect(r.addParsed([line('Nueva', { isSubtask: true, topics: ['Casa'] })], id)).rejects.toThrow('ya no existe');
+    }
+    expect(await r.listTasks()).toEqual([]);
+    expect(await r.listTopics()).toEqual([]);
+  });
+
+  it('borrar y restaurar la última pendiente actualiza el padre', async () => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([line('P'), line('a', { isSubtask: true }), line('b', { isSubtask: true })]);
+    await r.toggleDone(a.id);
+    await r.deleteTask(b.id);
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(1);
+    await r.restoreTask(b.id);
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
+    await r.deleteTask(p.id);
+    await r.restoreTask(p.id);
+    expect((await r.listTasks()).filter((t) => t.parentId === p.id)).toHaveLength(2);
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
+  });
+
+  it('reabrir el padre por API reabre coherentemente todas sus subtareas', async () => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([line('P'), line('a', { isSubtask: true }), line('b', { isSubtask: true })]);
+    await r.toggleDone(a.id);
+    await r.toggleDone(b.id);
+    await r.toggleDone(p.id);
+    expect((await r.listTasks()).every((t) => !t.done && t.doneAt === null)).toBe(true);
+  });
+
+  it('una recurrente genera otra familia con subtareas pendientes y fechas desplazadas', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 27, 10));
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([
+      line('P', { due: '2026-10-27', recurrence: { unit: 'week', every: 1 } }),
+      line('a', { isSubtask: true, due: '2026-10-28', topics: ['Casa'] }),
+      line('b', { isSubtask: true }),
+    ]);
+    await r.toggleDone(a.id);
+    const { spawned } = await r.toggleDone(b.id);
+    expect(spawned?.due).toBe('2026-11-03');
+    const children = (await r.listTasks()).filter((t) => t.parentId === spawned?.id).sort((a, b) => a.order - b.order);
+    expect(children).toHaveLength(2);
+    expect(children.map((t) => t.title)).toEqual(['a', 'b']);
+    expect(children.map((t) => t.due)).toEqual(['2026-11-04', null]);
+    expect(children[0].topics).toEqual(['casa']);
+    expect(children.every((t) => !t.done && !t.doneAt && !t.nextId && t.dirty)).toBe(true);
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.nextId).toBe(spawned?.id);
+    await r.toggleDone(b.id);
+    expect((await r.listTasks()).map((t) => t.id).sort()).toEqual([p.id, a.id, b.id].sort());
+    expect((await r.pendingChanges()).filter((t) => t.deleted)).toHaveLength(3);
+  });
+
+  it.each(['editada', 'añadida', 'borrada'])('deshacer conserva toda la siguiente familia si tiene una subtarea %s', async (change) => {
+    const r = newRepo();
+    const [p, child] = await r.addParsed([
+      line('P', { recurrence: { unit: 'day', every: 1 } }), line('Paso', { isSubtask: true }),
+    ]);
+    const { spawned } = await r.toggleDone(child.id);
+    const nextChild = (await r.listTasks()).find((t) => t.parentId === spawned!.id)!;
+    if (change === 'editada') await r.replaceParsed(nextChild.id, line('Editada'));
+    if (change === 'añadida') await r.addParsed([line('Extra', { isSubtask: true })], spawned!.id);
+    if (change === 'borrada') await r.deleteTask(nextChild.id);
+    await r.toggleDone(child.id);
+    const tasks = await r.listTasks();
+    expect(tasks.find((t) => t.id === p.id)?.done).toBe(0);
+    expect(tasks.find((t) => t.id === spawned!.id)).toBeDefined();
+    if (change !== 'borrada') expect(tasks.find((t) => t.id === nextChild.id)).toBeDefined();
+  });
+
+  it('agregar una subtarea a una recurrente completada deshace su siguiente familia intacta', async () => {
+    const r = newRepo();
+    const [p, child] = await r.addParsed([
+      line('P', { recurrence: { unit: 'day', every: 1 } }), line('Paso', { isSubtask: true }),
+    ]);
+    const { spawned } = await r.toggleDone(child.id);
+    await r.addParsed([line('Extra', { isSubtask: true })], p.id);
+    const tasks = await r.listTasks();
+    expect(tasks).toHaveLength(3);
+    expect(tasks.find((t) => t.id === spawned?.id)).toBeUndefined();
+    expect(tasks.find((t) => t.id === p.id)?.done).toBe(0);
+  });
+
+  it('reconcilia un lote remoto y marca el padre corregido pendiente de subir', async () => {
+    const r = newRepo();
+    const [p, a, b] = await r.addParsed([line('P'), line('a', { isSubtask: true }), line('b', { isSubtask: true })]);
+    await r.markPushed(await r.pendingChanges());
+    const now = Math.max(a.updatedAt, b.updatedAt) + 10_000;
+    await r.applyRemote([a, b].map((t) => ({
+      kind: 'task' as const, id: t.id, data: { ...t, done: 1 as const, doneAt: now },
+      deleted: false, updated_at: now,
+    })));
+    let parent = (await r.listTasks()).find((t) => t.id === p.id)!;
+    expect(parent.done).toBe(1);
+    expect(parent.updatedAt).toBeGreaterThan(now);
+    expect(parent.dirty).toBe(1);
+    await r.applyRemote([{
+      kind: 'task', id: a.id, data: { ...a, done: 0, doneAt: null },
+      deleted: false, updated_at: parent.updatedAt + 1,
+    }]);
+    parent = (await r.listTasks()).find((t) => t.id === p.id)!;
+    expect(parent.done).toBe(0);
+  });
+
+  it('importar una familia recurrente completa no duplica la siguiente ocurrencia', async () => {
+    const src = newRepo();
+    const [p, child] = await src.addParsed([
+      line('P', { recurrence: { unit: 'day', every: 1 } }), line('Paso', { isSubtask: true }),
+    ]);
+    const { spawned } = await src.toggleDone(child.id);
+    const backup = await src.exportBackup();
+    const dst = newRepo();
+    await dst.importBackup(backup, 'replace');
+    expect((await dst.listTasks()).map((t) => t.id).sort()).toEqual(backup.tasks.map((t) => t.id).sort());
+    expect((await dst.listTasks()).find((t) => t.id === p.id)?.nextId).toBe(spawned?.id);
+  });
+
+  it('importar una copia incoherente restaura el estado derivado del padre', async () => {
+    const r = newRepo();
+    const [p] = await r.addParsed([line('P'), line('Paso', { isSubtask: true })]);
+    const backup = await r.exportBackup();
+    await r.importBackup({ ...backup, tasks: backup.tasks.map((t) => ({ ...t, done: 1, doneAt: t.updatedAt })) }, 'replace');
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(1);
+    const completed = await r.exportBackup();
+    await r.importBackup({
+      ...completed, tasks: completed.tasks.map((t) => t.parentId ? { ...t, done: 0, doneAt: null } : t),
+    }, 'replace');
+    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
+  });
+});
+
 describe('deleteTask / restoreTask', () => {
   it('borra y restaura tarea con sus subtareas', async () => {
     const r = newRepo();
