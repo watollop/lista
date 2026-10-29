@@ -1,0 +1,33 @@
+README.md
+  s_8ca88c36d97e6a::t_62f95c96d600ef 26,28
+src/ui/Capture.tsx
+  s_8ca88c36d97e6a::t_f490e969442e0e 33-38,40-44,46-50,55,179,181
+src/ui/Settings.tsx
+  s_8ca88c36d97e6a::t_1e3b8b9b7ccf16 138-147
+src/ui/SubtaskInputs.tsx
+  s_8ca88c36d97e6a::t_a8b30b1bc66e37 19,21-22
+src/ui/TaskList.tsx
+  s_8ca88c36d97e6a::t_5c4fa5e58165de 127,366
+src/ui/look.css
+  s_8ca88c36d97e6a::t_13fe3b56946988 105-106,129
+src/ui/styles.css
+  s_8ca88c36d97e6a::t_26cd2a84ed38fe 343,346-354,388-391,496-497
+src/ui/subtasks.test.ts
+  s_8ca88c36d97e6a::t_d8724397510740 81,83,107,121,134,140-166,174,221,238-268,278,283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2a3489db5daa4ef6e91d5de608a965afad4d0fdd",
+  "prompts": {},
+  "sessions": {
+    "s_8ca88c36d97e6a": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "e1179aa3-835c-40da-84d8-bfae53148d0e",
+        "model": "unknown"
+      },
+      "human_author": "Elena Sanchez Gonzalez <elenasg@inditex.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+README.md
+  s_8ca88c36d97e6a::t_1462e9f710e7c9 36
+src/ui/styles.css
+  s_8ca88c36d97e6a::t_9f61237553aad9 375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f4bafe71e7d9b30289b3b90244808cbeb1d53f97",
+  "prompts": {},
+  "sessions": {
+    "s_8ca88c36d97e6a": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "e1179aa3-835c-40da-84d8-bfae53148d0e",
+        "model": "unknown"
+      },
+      "human_author": "Elena Sanchez Gonzalez <elenasg@inditex.com>"
+    }
+  }
+}
