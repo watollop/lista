@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Entity, ISODate, ParsedLine } from '../types';
-import { activeToken, normalizeKey, parseBlock, parseLine } from '../parser';
+import { activeToken, normalizeKey, parseBlock } from '../parser';
 import { TaskChips } from './Chips';
 import { Dictation, canDictate } from './Dictation';
 import { SubtaskInputs } from './SubtaskInputs';
@@ -56,7 +56,8 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     }
   }, [busy, subtasks]);
 
-  const parsed = useMemo(() => (value.trim() ? parseLine(value) : null), [value, today]);
+  const lines = useMemo(() => (value.trim() ? parseBlock(value) : []), [value, today]);
+  const parsed = lines[lines.length - 1];
   const active = useMemo(() => activeToken(value, caret), [value, caret]);
   const suggestions = useMemo(() => {
     if (!active) return [];
@@ -75,7 +76,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const accept = (e: Entity) => {
     if (!active) return;
     const sym = active.type === 'topic' ? '#' : '@';
-    const next = value.slice(0, active.start) + sym + e.name + ' ' + value.slice(active.end).replace(/^\S*\s?/, '');
+    const next = value.slice(0, active.start) + sym + e.name + ' ' + value.slice(active.end).replace(/^[^\s<]*\s?/, '');
     const pos = active.start + sym.length + e.name.length + 1;
     setValue(next);
     setCaret(pos);
@@ -83,13 +84,14 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   };
 
   const submit = async (children: ParsedLine[] = []) => {
-    if (!parsed?.title) throw new Error('Escribe un título para la tarea.');
+    if (!lines[0]?.title) throw new Error('Escribe un título para la tarea.');
+    if (lines.some((line) => !line.title)) throw new Error('Escribe un título para cada subtarea, además de sus etiquetas.');
     if (saving.current) return;
     saving.current = true;
     setBusy(true);
     setError('');
     try {
-      await onAdd([{ ...parsed, isSubtask: false }, ...children]);
+      await onAdd([{ ...lines[0], isSubtask: false }, ...lines.slice(1), ...children]);
       setValue('');
       setCaret(0);
       refocus.current = true;
@@ -127,9 +129,13 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
       setError('Guarda primero la tarea con sus subtareas antes de pegar varias líneas.');
       return;
     }
-    const lines = parseBlock(text).filter((l) => l.title);
-    if (lines.length) {
-      try { await onAdd(lines); }
+    const pasted = parseBlock(text);
+    if (pasted.length) {
+      if (pasted.some((line) => !line.title)) {
+        setError('Escribe un título para cada tarea y subtarea, además de sus etiquetas.');
+        return;
+      }
+      try { await onAdd(pasted); }
       catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron añadir las tareas.'); }
     }
   };
@@ -154,7 +160,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           ref={inputRef}
           value={value}
           disabled={busy}
-          placeholder="Nueva tarea…"
+          placeholder="Nueva tarea… #tema @persona mañana !alta <subtarea"
           aria-label="Nueva tarea"
           aria-describedby="capture-guide"
           autocomplete="off"
@@ -176,8 +182,8 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           </button>
         )}
         </div>
-        <div id="capture-guide" class="capture-guide">#tema @persona !prioridad fecha</div>
-        {parsed?.title && !subtasks && (
+        <div id="capture-guide" class="capture-guide">#tema @persona !prioridad fecha &lt;subtarea</div>
+        {lines[0]?.title && !subtasks && (
           <button class="link add-subtask" disabled={busy} onClick={() => setSubtasks(true)}>Subtarea</button>
         )}
         {subtasks && <SubtaskInputs onSubmit={submit} onCancel={() => { setSubtasks(false); inputRef.current?.focus(); }} />}

@@ -125,14 +125,16 @@ function titleOf(line: string, tokens: ParsedToken[]): string {
   return t.replace(/\s+/g, ' ').trim();
 }
 
-/** Un bloque de texto: una tarea por línea no vacía. Las líneas indentadas (salvo la primera) son subtareas. */
+/** Una tarea por línea; '<' separa subtareas hermanas. También admite '>' e indentación. */
 export function parseBlock(text: string, now: Date = new Date()): ParsedLine[] {
   const out: ParsedLine[] = [];
   for (const raw of text.split('\n')) {
     if (raw.trim() === '') continue;
-    const p = parseLine(raw, now);
-    if (/^[ \t]/.test(raw) && out.length > 0) p.isSubtask = true;
-    out.push(p);
+    for (const [index, part] of raw.split('<').entries()) {
+      const p = parseLine(part, now);
+      if (index > 0 || (/^[ \t]/.test(raw) && out.length > 0)) p.isSubtask = true;
+      out.push(p);
+    }
   }
   return out;
 }
@@ -144,7 +146,7 @@ export function activeToken(text: string, caret: number): ActiveToken | null {
   while (i > 0 && isWordChar(text[i - 1])) i--;
   const sym = text[i - 1];
   if (sym !== '#' && sym !== '@') return null;
-  if (i >= 2 && !/\s/.test(text[i - 2])) return null;
+  if (i >= 2 && !/[\s<]/.test(text[i - 2])) return null;
   return { type: sym === '#' ? 'topic' : 'person', prefix: text.slice(i, end), start: i - 1, end };
 }
 

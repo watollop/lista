@@ -23,9 +23,11 @@ Lista entiende lo que escribes y lo ordena sola:
 
 También puedes dictarla con el micrófono, una tarea tras otra.
 
-La guía `#tema @persona !prioridad fecha` permanece visible mientras escribes, con letra más pequeña y menor opacidad.
+El campo vacío muestra el ejemplo `Nueva tarea… #tema @persona mañana !alta <subtarea`. Al escribir desaparece el ejemplo, pero la guía `#tema @persona !prioridad fecha <subtarea` permanece visible, con letra más pequeña y menor opacidad.
 
-**Subtareas**: pulsa **Subtarea** al escribir una tarea. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda la tarea con todas sus subtareas. También puedes usar **Guardar tarea**. Para añadirlas a una tarea existente, abre su editor y pulsa **Subtarea**.
+**Subtareas**: separa las subtareas con `<` en la misma línea, por ejemplo `Tarea A <Subtarea B <Subtarea C !alta mañana #tema`. Enter guarda la tarea con dos subtareas hermanas; cada una tiene sus propios metadatos (en el ejemplo, solo C recibe prioridad, fecha y tema).
+
+También puedes pulsar **Subtarea**, ahora sin recuadro. Enter en una subtarea con texto abre la siguiente; Enter en una vacía guarda la tarea con todas sus subtareas. También puedes usar **Guardar tarea**. Para añadirlas a una tarea existente, abre su editor y pulsa **Subtarea** o usa el **+** del grupo desplegado.
 
 ## 2 · Completa y filtra
 

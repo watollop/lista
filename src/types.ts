@@ -84,7 +84,7 @@ export interface ParsedLine {
   period: Period | null;
   priority: Priority | null;
   recurrence: Recurrence | null;
-  isSubtask: boolean; // empieza por '>' o va indentada
+  isSubtask: boolean; // empieza por '>', va indentada o es un segmento tras '<'
   tokens: ParsedToken[]; // ordenados por start
 }
 

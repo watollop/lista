@@ -347,12 +347,11 @@ button.chip { min-height: 22px; }
 }
 .link.add-subtask {
   display: inline-flex; align-items: center; justify-content: center;
-  min-height: 36px; padding: 0 12px;
-  border: 1px solid currentColor; border-radius: 8px;
+  min-height: 36px;
   color: var(--subtask-color); text-transform: none; letter-spacing: 0;
 }
 .capture .add-subtask { margin-bottom: 10px; }
-@media (hover: hover) { .link.add-subtask:hover { color: var(--subtask-color); background: color-mix(in srgb, currentColor 10%, transparent); } }
+@media (hover: hover) { .link.add-subtask:hover { color: var(--subtask-color); } }
 @media (pointer: coarse) { .link.add-subtask { min-height: 44px; } }
 .subtask-inputs { min-width: 0; width: 100%; }
 .subtask-fields {

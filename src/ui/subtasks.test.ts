@@ -10,7 +10,7 @@ import { App } from './App';
 import { Capture } from './Capture';
 import { INTRO_KEY } from './Onboarding';
 import { DEFAULT_SUBTASK_COLOR, applyTheme, getSubtaskColor, setSubtaskColor } from './theme';
-import type { ParsedLine, Repo } from '../types';
+import type { Entity, ParsedLine, Repo } from '../types';
 
 let root: HTMLDivElement;
 
@@ -61,9 +61,9 @@ function button(text: string): HTMLButtonElement {
   return el!;
 }
 
-function capture(onAdd = vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockResolvedValue(undefined)) {
+function capture(onAdd = vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockResolvedValue(undefined), topics: Entity[] = []) {
   act(() => render(h(Capture, {
-    topics: [], people: [], names: new Map(), today: '2026-10-29', kbOpen: false,
+    topics, people: [], names: new Map(), today: '2026-10-29', kbOpen: false,
     inputRef: { current: null }, onAdd,
   }), root));
   return onAdd;
@@ -77,8 +77,9 @@ async function app(repo: Repo) {
 describe('captura con subtareas', () => {
   it('mantiene la guía al escribir y guarda el conjunto al dar Enter en vacío', async () => {
     const add = capture();
+    expect(input('Nueva tarea').placeholder).toBe('Nueva tarea… #tema @persona mañana !alta <subtarea');
     type(input('Nueva tarea'), 'Preparar viaje #casa');
-    expect(root.querySelector('.capture-guide')?.textContent).toBe('#tema @persona !prioridad fecha');
+    expect(root.querySelector('.capture-guide')?.textContent).toBe('#tema @persona !prioridad fecha <subtarea');
     expect(input('Nueva tarea').getAttribute('aria-describedby')).toBe('capture-guide');
     click(button('Subtarea'));
     expect(document.activeElement).toBe(input('Subtarea 1'));
@@ -99,6 +100,58 @@ describe('captura con subtareas', () => {
     expect(lines[1].people).toEqual(['ana']);
     expect(root.querySelector('.subtask-inputs')).toBeNull();
     expect(document.activeElement).toBe(input('Nueva tarea'));
+  });
+
+  it('guarda tarea y subtareas inline con metadatos separados y devuelve los ejemplos al vaciarse', async () => {
+    const add = capture();
+    type(input('Nueva tarea'), 'Tarea A <Subtarea B <Subtarea C !alta mañana #tema @ana');
+    expect(root.querySelector('.capture-guide')?.textContent).toContain('<subtarea');
+    enter(input('Nueva tarea'));
+    await vi.waitFor(() => expect(add).toHaveBeenCalledOnce());
+    const [parent, b, c] = add.mock.calls[0][0];
+    expect(parent).toMatchObject({ title: 'Tarea A', isSubtask: false, due: null, priority: null });
+    expect(b).toMatchObject({ title: 'Subtarea B', isSubtask: true, topics: [] });
+    expect(c).toMatchObject({ title: 'Subtarea C #tema @ana', isSubtask: true, priority: 1, topics: ['tema'], people: ['ana'] });
+    expect(c.due).not.toBeNull();
+    await vi.waitFor(() => expect(input('Nueva tarea').value).toBe(''));
+    expect(input('Nueva tarea').placeholder).toContain('mañana !alta <subtarea');
+  });
+
+  it.each(['Proyecto <', 'Proyecto <<Paso', 'Proyecto <!alta', '<Paso'])('informa de segmentos sin título sin perder el borrador: %s', async (value) => {
+    const add = capture();
+    type(input('Nueva tarea'), value);
+    enter(input('Nueva tarea'));
+    await vi.waitFor(() => expect(root.querySelector('[role="alert"]')?.textContent).toContain('título'));
+    expect(add).not.toHaveBeenCalled();
+    expect(input('Nueva tarea').value).toBe(value);
+  });
+
+  it('un fallo al guardar la sintaxis inline conserva la línea completa', async () => {
+    const add = capture(vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockRejectedValue(new Error('Sin espacio')));
+    const value = 'Proyecto <Paso uno <Paso dos';
+    type(input('Nueva tarea'), value);
+    enter(input('Nueva tarea'));
+    await vi.waitFor(() => expect(root.querySelector('[role="alert"]')?.textContent).toBe('Sin espacio'));
+    expect(add).toHaveBeenCalledOnce();
+    expect(input('Nueva tarea').value).toBe(value);
+  });
+
+  it('autocompletar antes de otra subtarea conserva el separador y su texto', async () => {
+    const add = capture(undefined, [{ key: 'casa', name: 'Casa', updatedAt: 0, deleted: 0, dirty: 0 }]);
+    const value = 'Proyecto <#ca<Otra subtarea';
+    const el = input('Nueva tarea');
+    type(el, value);
+    act(() => {
+      el.setSelectionRange(value.indexOf('<Otra'), value.indexOf('<Otra'));
+      el.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', bubbles: true }));
+    });
+    expect(root.querySelector('.suggest')).not.toBeNull();
+    enter(el);
+    expect(el.value).toBe('Proyecto <#Casa <Otra subtarea');
+    expect(add).not.toHaveBeenCalled();
+    enter(el);
+    await vi.waitFor(() => expect(add).toHaveBeenCalledOnce());
+    expect(add.mock.calls[0][0].map((line) => line.title)).toEqual(['Proyecto', '#Casa', 'Otra subtarea']);
   });
 
   it('no pierde texto ante un fallo ni duplica guardados pendientes', async () => {
@@ -167,6 +220,25 @@ describe('captura con subtareas', () => {
 });
 
 describe('lista de subtareas', () => {
+  it('pegar varias familias con < guarda cada subtarea bajo su propia tarea', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await app(repo);
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', {
+      value: { getData: () => 'Proyecto A <Paso B <Paso C !alta mañana #tema\nProyecto D <Paso E @ana' },
+    });
+    act(() => { input('Nueva tarea').dispatchEvent(event); });
+    await vi.waitFor(async () => expect(await repo.listTasks()).toHaveLength(5));
+    const tasks = await repo.listTasks();
+    const a = tasks.find((task) => task.title === 'Proyecto A')!;
+    const d = tasks.find((task) => task.title === 'Proyecto D')!;
+    expect(tasks.filter((task) => task.parentId === null)).toHaveLength(2);
+    expect(tasks.filter((task) => task.parentId === a.id).sort((a, b) => a.order - b.order).map((task) => task.title))
+      .toEqual(['Paso B', 'Paso C #tema']);
+    expect(tasks.find((task) => task.title === 'Paso C #tema')).toMatchObject({ priority: 1, topics: ['tema'] });
+    expect(tasks.find((task) => task.title === 'Paso E @ana')).toMatchObject({ parentId: d.id, people: ['ana'] });
+  });
+
   it('guarda desde la captura y conserva las subtareas al volver a abrir la app', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
@@ -249,11 +321,13 @@ describe('lista de subtareas', () => {
     expect(add?.querySelector('svg')).not.toBeNull();
     expect(root.querySelector('.subtask-composer .add-subtask')).toBeNull();
     click(add);
-    type(input('Subtarea 1'), 'Otro paso desde el más');
+    type(input('Subtarea 1'), 'Otro paso desde el más <Paso inline !alta');
     enter(input('Subtarea 1'));
     enter(input('Subtarea 2'));
-    await vi.waitFor(() => expect(root.querySelectorAll('.row.sub')).toHaveLength(2));
-    expect((await repo.listTasks()).filter((t) => t.parentId === parent.id)).toHaveLength(2);
+    await vi.waitFor(() => expect(root.querySelectorAll('.row.sub')).toHaveLength(3));
+    const updated = (await repo.listTasks()).filter((t) => t.parentId === parent.id);
+    expect(updated).toHaveLength(3);
+    expect(updated.find((t) => t.title === 'Paso inline')?.priority).toBe(1);
     expect(root.querySelector('.subtask-composer [aria-label="Añadir subtarea"]')).not.toBeNull();
   });
 
