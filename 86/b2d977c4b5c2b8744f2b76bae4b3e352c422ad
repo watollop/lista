@@ -1,0 +1,21 @@
+src/ui/hooks.ts
+  s_c7d15b540bf786::t_ed174f565431e2 70-74,80-82,85,88-94,102
+src/ui/styles.css
+  s_c7d15b540bf786::t_c5e10323ea3ed9 340-343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "86b2d977c4b5c2b8744f2b76bae4b3e352c422ad",
+  "prompts": {},
+  "sessions": {
+    "s_c7d15b540bf786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "407821e8-55aa-4e8a-a245-4803a60061b3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
