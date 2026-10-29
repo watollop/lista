@@ -3,14 +3,14 @@ import { useEffect, useState } from 'preact/hooks';
 export const CRITTER_DELAY = 60_000; // aparece al minuto de tener la app abierta
 export const CRITTER_DURATION = 5_000; // entra, pirueta y se va
 
-// Bicho de píxeles (guiño al icono de Claude Code): '#' cuerpo, 'e' ojo.
+// Cangrejo de píxeles, en el naranja de la app: '#' cuerpo, 'e' ojo.
 const SPRITE = [
-  '..#######..',
-  '..#e###e#..',
-  '###########',
-  '###########',
-  '..#######..',
-  '..#.#.#.#..',
+  '#.#.......#.#',
+  '###.#####.###',
+  '.#.##e#e##.#.',
+  '..#########..',
+  '...#######...',
+  '.#..#...#..#.',
 ];
 const PX = 5;
 
