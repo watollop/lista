@@ -36,6 +36,7 @@ La guía `#tema @persona !prioridad fecha` permanece visible mientras escribes, 
 - Solo la fila seleccionada muestra una línea a la izquierda: rosa si es una tarea con subtareas o una subtarea. Toca el título de la tarea principal para desplegar sus subtareas y el lápiz para editarla.
 - Dentro del grupo desplegado, toca el **+** del color elegido, alineado con las casillas, para añadir más subtareas.
 - Una tarea con subtareas se completa al terminar todas; reabrir una subtarea reabre la principal.
+- Las subtareas completadas usan el color elegido en la casilla y en la línea de tachado.
 
 ## 3 · Tus datos, contigo
 

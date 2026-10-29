@@ -140,7 +140,7 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
       <p class="look-hint" id="subtask-color-label">Color de subtareas</p>
-      <div class="row-btns look-btns" role="group" aria-labelledby="subtask-color-label">
+      <div class="row-btns look-btns subtask-colors" role="group" aria-labelledby="subtask-color-label">
         {SUBTASK_COLORS.map(([value, name]) => (
           <button key={value} class="color-option" aria-label={name} title={name}
             aria-pressed={color.toLowerCase() === value} onClick={() => changeColor(value)}>
