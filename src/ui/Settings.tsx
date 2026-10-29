@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
 import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
-import { DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
+import { COLOR_CHANGE_EVENT, DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { EntityEditor } from './EntityEditor';
@@ -31,7 +31,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <button class="link on" onClick={onClose}>Cerrar</button>
         </div>
         <Account sync={sync} state={state} />
-        <Appearance toast={toast} />
+        <Appearance repo={repo} toast={toast} />
         <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
         {editing && editEnt && (
           <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
@@ -114,14 +114,21 @@ const SUBTASK_COLORS: Array<[string, string]> = [
   [DEFAULT_SUBTASK_COLOR, 'Rosa'], ['#3689cc', 'Azul'], ['#58a676', 'Verde'], ['#e68b45', 'Naranja'],
 ];
 
-function Appearance({ toast }: { toast: (msg: string) => void }) {
+function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void }) {
   const [theme, set] = useState(getTheme);
   const [look, setL] = useState(getLook);
   const [color, setColor] = useState(getSubtaskColor);
+  useLayoutEffect(() => {
+    const update = () => setColor(getSubtaskColor());
+    window.addEventListener(COLOR_CHANGE_EVENT, update);
+    update();
+    return () => window.removeEventListener(COLOR_CHANGE_EVENT, update);
+  }, []);
   const customColor = !SUBTASK_COLORS.some(([value]) => value === color.toLowerCase());
   const changeColor = (next: string) => {
-    try { setSubtaskColor(next); setColor(next); }
-    catch (e) { toast(e instanceof Error ? e.message : 'No se pudo guardar el color.'); }
+    void repo.setSecondaryColor(next).catch((e) => {
+      toast(e instanceof Error ? e.message : 'No se pudo guardar el color.');
+    });
   };
   return (
     <section>
@@ -139,20 +146,23 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
-      <p class="look-hint" id="subtask-color-label">Color secundario</p>
-      <div class="row-btns look-btns subtask-colors" role="group" aria-labelledby="subtask-color-label">
-        {SUBTASK_COLORS.map(([value, name]) => (
-          <button key={value} class="color-option" aria-label={name} title={name}
-            aria-pressed={color.toLowerCase() === value} onClick={() => changeColor(value)}>
-            <span class="color-swatch" style={{ backgroundColor: value }} aria-hidden="true" />
-          </button>
-        ))}
-        <label class={`color-option color-picker ${customColor ? 'selected' : ''}`} title="Color secundario personalizado">
-          <span class="color-swatch multicolor" aria-hidden="true" />
-          <input id="subtask-color" type="color" aria-label="Color secundario personalizado"
-            value={color} onInput={(e) => changeColor(e.currentTarget.value)} />
-        </label>
-      </div>
+      {look === 'classic' && <>
+        <p class="look-hint" id="subtask-color-label">Color secundario</p>
+        <div class="row-btns look-btns subtask-colors" role="group" aria-labelledby="subtask-color-label">
+          {SUBTASK_COLORS.map(([value, name]) => (
+            <button key={value} class="color-option" aria-label={name} title={name}
+              aria-pressed={color.toLowerCase() === value} onClick={() => changeColor(value)}>
+              <span class="color-swatch" style={{ backgroundColor: value }} aria-hidden="true" />
+            </button>
+          ))}
+          <label class={`color-option color-picker ${customColor ? 'selected' : ''}`} title="Color secundario personalizado">
+            <span class="color-swatch multicolor" aria-hidden="true" />
+            <input id="subtask-color" type="color" aria-label="Color secundario personalizado"
+              value={color} onInput={(e) => changeColor(e.currentTarget.value)}
+              onChange={(e) => changeColor(e.currentTarget.value)} />
+          </label>
+        </div>
+      </>}
     </section>
   );
 }

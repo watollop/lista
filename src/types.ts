@@ -18,6 +18,11 @@ export interface SyncRec {
   dirty: 0 | 1; // 1 = pendiente de subir al servidor
 }
 
+export interface ColorPreference extends SyncRec {
+  id: 'secondaryColor';
+  value: string;
+}
+
 export interface Task extends SyncRec {
   id: ID;
   title: string; // texto sin tokens
@@ -106,17 +111,18 @@ export interface Backup {
   topics: Entity[];
   people: Entity[];
   filters: SavedFilter[];
+  preferences?: ColorPreference[]; // opcional para aceptar copias anteriores
 }
 
 // ---------- sync ----------
 
-export type SyncKind = 'task' | 'topic' | 'person' | 'filter';
+export type SyncKind = 'task' | 'topic' | 'person' | 'filter' | 'preference';
 
 /** Registro tal y como viaja al/desde el servidor. */
 export interface RemoteItem {
   kind: SyncKind;
   id: string; // Task.id, Entity.key o SavedFilter.id
-  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'>;
+  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'> | Omit<ColorPreference, 'dirty'>;
   updated_at: number;
   deleted: boolean;
 }
@@ -133,6 +139,10 @@ export interface Repo {
   listTopics(): Promise<Entity[]>; // no borradas, orden alfabético
   listPeople(): Promise<Entity[]>;
   listFilters(): Promise<SavedFilter[]>; // no borrados, por order
+  getSecondaryColor(): Promise<ColorPreference | undefined>;
+  setSecondaryColor(color: string): Promise<ColorPreference>;
+  /** Migra solo si no existe un registro, con prioridad inferior a una elección sincronizada. */
+  initializeSecondaryColor(color: string): Promise<void>;
 
   /** Crea tareas desde líneas parseadas. Una línea isSubtask cuelga de la última no-subtarea del lote
    *  o, si no hay, de defaultParentId (si es null se crea como tarea normal). Crea Topic/Person si no existen. */

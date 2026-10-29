@@ -15,6 +15,7 @@ import { EntityEditor } from './EntityEditor';
 import { Settings } from './Settings';
 import { Critter } from './Critter';
 import { INTRO_KEY, Onboarding } from './Onboarding';
+import { bindSecondaryColor } from './theme';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 
@@ -61,6 +62,10 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     setToast(typeof t === 'string' ? { msg: t } : t);
     toastTimer.current = setTimeout(() => setToast(null), 4000);
   };
+
+  useEffect(() => bindSecondaryColor(repo, (error) => {
+    showToast(error instanceof Error ? error.message : 'No se pudo cargar el color secundario.');
+  }), [repo]);
 
   const names = useMemo(() => {
     const m = new Map<string, Entity>();

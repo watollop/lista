@@ -521,10 +521,84 @@ describe('lista de subtareas', () => {
 });
 
 describe('color secundario', () => {
+  it('muestra errores al cargar la preferencia en lugar de fallar en silencio', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    vi.spyOn(repo, 'getSecondaryColor').mockRejectedValue(new Error('No se pudo leer el color'));
+    await app(repo);
+    await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('No se pudo leer el color'));
+  });
+
+  it.each(['input', 'change'])('guarda el selector nativo al recibir %s y conserva la última selección rápida', async (eventName) => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
+    const picker = input('Color secundario personalizado');
+    act(() => {
+      for (const value of ['#123456', '#654321', '#7849ce']) {
+        picker.value = value;
+        picker.dispatchEvent(new Event(eventName, { bubbles: true }));
+      }
+    });
+    await vi.waitFor(() => expect(getSubtaskColor()).toBe('#7849ce'));
+    expect(await repo.getSecondaryColor()).toMatchObject({ value: '#7849ce', dirty: 1 });
+    expect(picker.closest('label')?.classList.contains('selected')).toBe(true);
+    expect(picker.value).toBe('#7849ce');
+  });
+
+  it('solo muestra la paleta en Clásico y conserva el color al pasar por Industrial', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await repo.setSecondaryColor('#7849ce');
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    expect(root.querySelector('.subtask-colors')).toBeNull();
+    expect(root.querySelector('#subtask-color-label')).toBeNull();
+    click(button('Clásico'));
+    await vi.waitFor(() => expect(input('Color secundario personalizado').value).toBe('#7849ce'));
+    click(button('Industrial'));
+    expect(root.querySelector('.subtask-colors')).toBeNull();
+    expect(getSubtaskColor()).toBe('#7849ce');
+    click(button('Clásico'));
+    expect(input('Color secundario personalizado').value).toBe('#7849ce');
+  });
+
+  it('refleja colores remotos con Ajustes abierto sin cambiar el estilo ni el tema local', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
+    click(button('Oscuro'));
+    await repo.applyRemote([{
+      kind: 'preference', id: 'secondaryColor',
+      data: { id: 'secondaryColor', value: '#3689cc', updatedAt: Date.now() + 1000, deleted: 0 },
+      updated_at: Date.now() + 1000, deleted: false,
+    }]);
+    await vi.waitFor(() => expect(input('Color secundario personalizado').value).toBe('#3689cc'));
+    expect(root.querySelector('[aria-label="Azul"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe('#3689cc');
+    expect(document.documentElement.dataset.look).toBeUndefined();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    click(button('Industrial'));
+    expect(root.querySelector('.subtask-colors')).toBeNull();
+  });
+
+  it('avisa cuando no puede guardar sin señalar un color que no se guardó', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    vi.spyOn(repo, 'setSecondaryColor').mockRejectedValue(new Error('Sin espacio'));
+    await app(repo);
+    click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
+    click(root.querySelector('[aria-label="Azul"]'));
+    await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('Sin espacio'));
+    expect(root.querySelector('[aria-label="Rosa"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR);
+  });
+
   it('ofrece cuatro círculos de colores y uno personalizado sin texto y conserva la elección', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
     click(root.querySelector('[aria-label="Ajustes"]'));
+    click(button('Clásico'));
     let color = root.querySelector<HTMLInputElement>('#subtask-color')!;
     expect(root.querySelector('#subtask-color-label')?.textContent).toBe('Color secundario');
     expect(color.getAttribute('aria-label')).toBe('Color secundario personalizado');
@@ -537,7 +611,7 @@ describe('color secundario', () => {
     expect(palette.querySelector('[aria-label="Rosa"]')?.getAttribute('aria-pressed')).toBe('true');
     for (const [name, value] of [['Azul', '#3689cc'], ['Verde', '#58a676'], ['Naranja', '#e68b45'], ['Rosa', DEFAULT_SUBTASK_COLOR]]) {
       click(palette.querySelector(`[aria-label="${name}"]`));
-      expect(getSubtaskColor()).toBe(value);
+      await vi.waitFor(() => expect(getSubtaskColor()).toBe(value));
       expect(color.value).toBe(value);
       expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe(value);
       expect(palette.querySelectorAll('[aria-pressed="true"]')).toHaveLength(1);
@@ -545,7 +619,7 @@ describe('color secundario', () => {
       expect(color.closest('label')?.classList.contains('selected')).toBe(false);
     }
     type(color, '#7849ce');
-    expect(localStorage.getItem('lista.subtaskColor')).toBe('#7849ce');
+    await vi.waitFor(() => expect(localStorage.getItem('lista.subtaskColor')).toBe('#7849ce'));
     expect(palette.querySelector('[aria-pressed="true"]')).toBeNull();
     expect(color.closest('label')?.classList.contains('selected')).toBe(true);
     applyTheme('dark', 'industrial');
@@ -556,7 +630,7 @@ describe('color secundario', () => {
     expect(color.value).toBe('#7849ce');
     expect(color.closest('label')?.classList.contains('selected')).toBe(true);
     click(root.querySelector('[aria-label="Rosa"]'));
-    expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR);
+    await vi.waitFor(() => expect(getSubtaskColor()).toBe(DEFAULT_SUBTASK_COLOR));
   });
 
   it('rechaza valores no válidos y tolera preferencias corruptas', () => {

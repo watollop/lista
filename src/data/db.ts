@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Entity, SavedFilter, Task } from '../types';
+import type { ColorPreference, Entity, SavedFilter, Task } from '../types';
 
 export interface MetaRow {
   key: string;
@@ -13,6 +13,7 @@ export class ListaDB extends Dexie {
   declare people: Table<Entity, string>;
   declare filters: Table<SavedFilter, string>;
   declare meta: Table<MetaRow, string>;
+  declare preferences: Table<ColorPreference, string>;
 
   constructor(name = 'lista') {
     super(name);
@@ -22,6 +23,10 @@ export class ListaDB extends Dexie {
       people: 'key, dirty',
       filters: 'id, dirty',
       meta: 'key',
+    });
+    this.version(2).stores({ preferences: 'id, dirty' }).upgrade(async (tx) => {
+      // Una versión anterior pudo avanzar el cursor ignorando preferencias aún desconocidas.
+      await tx.table('meta').delete('sync.cursor');
     });
   }
 }

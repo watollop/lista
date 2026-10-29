@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createRepo } from './repo';
 import type { Backup, ParsedLine, RemoteItem, Task } from '../types';
@@ -19,6 +20,184 @@ function line(title: string, extra: Partial<ParsedLine> = {}): ParsedLine {
 }
 
 const newRepo = () => createRepo('test-' + crypto.randomUUID());
+
+describe('preferencia de color secundario', () => {
+  it('conserva el color al reabrir IndexedDB y no duplica escrituras input/change', async () => {
+    const name = 'color-' + crypto.randomUUID();
+    const r = createRepo(name);
+    const changed = vi.fn();
+    r.subscribe(changed);
+    const first = await r.setSecondaryColor('#7849CE');
+    const repeated = await r.setSecondaryColor('#7849ce');
+    expect(repeated).toEqual(first);
+    expect(first).toMatchObject({ id: 'secondaryColor', value: '#7849ce', dirty: 1, deleted: 0 });
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(await createRepo(name).getSecondaryColor()).toEqual(first);
+    expect(await r.pendingChanges()).toEqual([{
+      kind: 'preference', id: 'secondaryColor',
+      data: { id: first.id, value: first.value, updatedAt: first.updatedAt, deleted: 0 },
+      updated_at: first.updatedAt, deleted: false,
+    }]);
+  });
+
+  it('migra colores antiguos una sola vez sin ganar a una selección reciente', async () => {
+    const r = newRepo();
+    await r.initializeSecondaryColor('#7849CE');
+    await r.initializeSecondaryColor('#3689cc');
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#7849ce', updatedAt: 0, dirty: 1 });
+    await r.setSecondaryColor('#58a676');
+    await r.initializeSecondaryColor('#db729f');
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#58a676' });
+  });
+
+  it('no borra cambios pendientes cuando llega la confirmación de una elección anterior', async () => {
+    const r = newRepo();
+    await r.setSecondaryColor('#3689cc');
+    const sent = await r.pendingChanges();
+    await r.setSecondaryColor('#58a676');
+    await r.markPushed(sent);
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#58a676', dirty: 1 });
+    await r.markPushed(await r.pendingChanges());
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#58a676', dirty: 0 });
+  });
+
+  it('aplica LWW y permite cambiar un color remoto con reloj adelantado', async () => {
+    const r = newRepo();
+    await r.setSecondaryColor('#3689cc');
+    const future = Date.now() + 864e5;
+    const remote: RemoteItem = {
+      kind: 'preference', id: 'secondaryColor',
+      data: { id: 'secondaryColor', value: '#58a676', updatedAt: future, deleted: 0 },
+      updated_at: future, deleted: false,
+    };
+    await r.applyRemote([remote]);
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#58a676', dirty: 0 });
+    await r.applyRemote([{
+      ...remote, updated_at: future - 1,
+      data: { id: 'secondaryColor', value: '#e68b45', updatedAt: future - 1, deleted: 0 },
+    }]);
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#58a676', dirty: 0 });
+    const local = await r.setSecondaryColor('#7849ce');
+    expect(local.updatedAt).toBeGreaterThan(future);
+    expect(local.dirty).toBe(1);
+  });
+
+  it.each(['red', '#123', '#12345678', 'var(--accent)', 'url(https://example.test)', ''])('rechaza colores no válidos: %s', async (value) => {
+    const r = newRepo();
+    await expect(r.setSecondaryColor(value)).rejects.toThrow('color válido');
+    await expect(r.initializeSecondaryColor(value)).rejects.toThrow('color válido');
+    expect(await r.getSecondaryColor()).toBeUndefined();
+    expect(await r.pendingChanges()).toEqual([]);
+  });
+
+  it('rechaza preferencias remotas inválidas y revierte el lote completo', async () => {
+    const r = newRepo();
+    const valid: RemoteItem = {
+      kind: 'preference', id: 'secondaryColor',
+      data: { id: 'secondaryColor', value: '#58a676', updatedAt: 1, deleted: 0 },
+      updated_at: 1, deleted: false,
+    };
+    const invalid: RemoteItem[] = [
+      { ...valid, id: 'unknownPreference' },
+      { ...valid, updated_at: Number.NaN },
+      { ...valid, updated_at: -1 },
+      { ...valid, data: { id: 'secondaryColor', value: 'var(--accent)', updatedAt: 2, deleted: 0 } },
+      { ...valid, data: { id: 'secondaryColor', value: '#58a676', updatedAt: Number.POSITIVE_INFINITY, deleted: 0 } },
+    ];
+    for (const item of invalid) {
+      await expect(r.applyRemote([valid, item])).rejects.toThrow('no válida');
+      expect(await r.getSecondaryColor()).toBeUndefined();
+    }
+  });
+
+  it('no resucita un color eliminado al volver a migrar la caché antigua', async () => {
+    const r = newRepo();
+    await r.setSecondaryColor('#7849ce');
+    const previous = (await r.getSecondaryColor())!;
+    const now = previous.updatedAt + 1;
+    await r.applyRemote([{
+      kind: 'preference', id: previous.id, data: { ...previous, deleted: 1, updatedAt: now },
+      updated_at: now, deleted: true,
+    }]);
+    expect(await r.getSecondaryColor()).toBeUndefined();
+    await r.initializeSecondaryColor('#3689cc');
+    expect(await r.getSecondaryColor()).toBeUndefined();
+    await r.setSecondaryColor('#58a676');
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#58a676', dirty: 1 });
+  });
+
+  it.each(['merge', 'replace'] as const)('exporta e importa el color sin perder compatibilidad con copias antiguas: %s', async (mode) => {
+    const source = newRepo();
+    await source.setSecondaryColor('#7849ce');
+    const backup = await source.exportBackup();
+    expect(backup.preferences).toHaveLength(1);
+    const target = newRepo();
+    await target.importBackup(backup, mode);
+    expect(await target.getSecondaryColor()).toMatchObject({ value: '#7849ce', dirty: 1 });
+    const { preferences: _preferences, ...oldBackup } = backup;
+    await target.importBackup(oldBackup, mode);
+    expect(await target.getSecondaryColor()).toMatchObject({ value: '#7849ce' });
+  });
+
+  it('valida las preferencias de una copia antes de modificar las tareas', async () => {
+    const r = newRepo();
+    await r.addParsed([line('Conservar')]);
+    const backup = await r.exportBackup();
+    await expect(r.importBackup({
+      ...backup, tasks: [],
+      preferences: [{ id: 'secondaryColor', value: 'invalid', updatedAt: 1, dirty: 1, deleted: 0 }],
+    }, 'replace')).rejects.toThrow('no válida');
+    expect((await r.listTasks()).map((t) => t.title)).toEqual(['Conservar']);
+  });
+
+  it.each(['wipe', 'clearAll'] as const)('elimina la preferencia al borrar todos los datos: %s', async (method) => {
+    const r = newRepo();
+    await r.setSecondaryColor('#7849ce');
+    await r[method]();
+    expect(await r.getSecondaryColor()).toBeUndefined();
+    expect(await r.pendingChanges()).toEqual([]);
+  });
+
+  it('actualiza una base v1 conservando tareas y forzando un pull completo de las preferencias antes ignoradas', async () => {
+    const seed = newRepo();
+    const [task] = await seed.addParsed([line('Antes de actualizar')]);
+    const name = 'v1-' + crypto.randomUUID();
+    const old = new Dexie(name);
+    old.version(1).stores({
+      tasks: 'id, parentId, dirty, updatedAt', topics: 'key, dirty', people: 'key, dirty',
+      filters: 'id, dirty', meta: 'key',
+    });
+    await old.table('tasks').put(task);
+    await old.table('meta').put({ key: 'sync.cursor', value: 'cursor anterior' });
+    await old.table('meta').put({ key: 'sync.lastSync', value: 123 });
+    old.close();
+    const current = createRepo(name);
+    expect(await current.listTasks()).toEqual([task]);
+    expect(await current.getMeta('sync.cursor')).toBeUndefined();
+    expect(await current.getMeta('sync.lastSync')).toBe(123);
+    await current.setSecondaryColor('#7849ce');
+    expect(await current.getSecondaryColor()).toMatchObject({ value: '#7849ce' });
+  });
+
+  it('resuelve empates con el ganador remoto solo tras confirmar el envío local', async () => {
+    const r = newRepo();
+    await r.initializeSecondaryColor('#3689cc');
+    const remote: RemoteItem = {
+      kind: 'preference', id: 'secondaryColor',
+      data: { id: 'secondaryColor', value: '#58a676', updatedAt: 0, deleted: 0 },
+      updated_at: 0, deleted: false,
+    };
+    await r.applyRemote([remote]);
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#3689cc', dirty: 1 });
+    await r.markPushed(await r.pendingChanges());
+    await r.applyRemote([remote]);
+    expect(await r.getSecondaryColor()).toMatchObject({ value: '#58a676', dirty: 0 });
+    const changed = vi.fn();
+    r.subscribe(changed);
+    await r.applyRemote([remote]);
+    expect(changed).not.toHaveBeenCalled();
+  });
+});
 
 afterEach(() => {
   vi.useRealTimers();
