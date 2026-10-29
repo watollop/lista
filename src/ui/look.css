@@ -71,8 +71,8 @@
 
 /* Lista dentro de un módulo */
 :where([data-look="industrial"]) .list { background: var(--panel); border-radius: var(--r); margin: 0; padding: 0 16px; }
-:where([data-look="industrial"]) .row { border-bottom: 0; background: radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 100% / 5px 2px repeat-x; }
-:where([data-look="industrial"]) .row:last-child { background: none; }
+:where([data-look="industrial"]) .row { border-bottom: 0; background: radial-gradient(circle, var(--row-dot, var(--dot)) .8px, transparent 1px) 0 100% / 5px 2px repeat-x; }
+:where([data-look="industrial"]) .row:last-child:not(.sub) { background: none; }
 :where([data-look="industrial"]) .row::before, :where([data-look="industrial"]) .row::after { margin: 0 -16px; padding: 0 16px; border-radius: var(--r); font-family: var(--mono); }
 :where([data-look="industrial"]) .row.sel { box-shadow: inset 2px 0 0 var(--accent); }
 

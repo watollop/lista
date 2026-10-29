@@ -6,6 +6,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "icons": "node scripts/icons.mjs",
     "deploy": "npm run build && set -a && . ./.env.cloudflare && set +a && npx --yes wrangler pages deploy dist --project-name lista --branch main --commit-dirty=true"
   },
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
     "@resvg/resvg-js": "^2.6.2",
+    "@vitest/coverage-v8": "5.0.5",
     "fake-indexeddb": "^6.2.6",
     "jsdom": "^29.1.1",
     "typescript": "^7.0.2",

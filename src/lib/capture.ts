@@ -1,3 +1,11 @@
+import type { ParsedLine } from '../types';
+
+export function validateCapture(lines: ParsedLine[]): ParsedLine[] {
+  if (!lines[0]?.title) throw new Error('Escribe un título para la tarea.');
+  if (lines.some((line) => !line.title)) throw new Error('Escribe un título para cada tarea y subtarea, además de sus etiquetas.');
+  return [{ ...lines[0], isSubtask: false }, ...lines.slice(1)];
+}
+
 /**
  * Texto de una tarea que llega desde fuera de la app:
  * - `?nueva=…` (enlace directo; p. ej. un Atajo de iOS con Siri)

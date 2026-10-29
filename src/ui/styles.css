@@ -224,7 +224,12 @@ button.chip { min-height: 22px; }
   animation: fade .2s ease;
   transition: opacity .25s;
 }
-.row.sub { padding-left: 34px; }
+.row.sub {
+  padding-left: 48px;
+  --row-line: var(--subtask-color);
+  --row-dot: var(--row-line);
+  border-bottom-color: var(--row-line);
+}
 /* Deslizar a la derecha para completar: el contenido se desplaza y descubre la etiqueta. */
 .row { position: relative; touch-action: pan-y; isolation: isolate; }
 .row > .check, .row > .body { transform: translateX(var(--dx, 0px)); transition: transform .2s ease; }
@@ -265,7 +270,7 @@ button.chip { min-height: 22px; }
   .trash:hover { color: var(--warn); }
 }
 .row.sel { box-shadow: inset 2px 0 0 var(--fg); padding-left: 10px; margin-left: -10px; }
-.row.sub.sel { padding-left: 44px; }
+.row.sub.sel { padding-left: 58px; }
 .row.done .title { color: var(--faint); text-decoration: line-through; text-decoration-thickness: 1px; }
 .row.done .meta { opacity: .5; }
 .check {
@@ -345,14 +350,6 @@ button.chip { min-height: 22px; }
   font-size: 12px;
   opacity: .45;
 }
-.link.add-subtask {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-height: 36px;
-  color: var(--subtask-color); text-transform: none; letter-spacing: 0;
-}
-.capture .add-subtask { margin-bottom: 10px; }
-@media (hover: hover) { .link.add-subtask:hover { color: var(--subtask-color); } }
-@media (pointer: coarse) { .link.add-subtask { min-height: 44px; } }
 .subtask-inputs { min-width: 0; width: 100%; }
 .subtask-fields {
   max-height: clamp(48px, calc(100dvh - var(--kb) - 280px), 168px);
@@ -366,30 +363,25 @@ button.chip { min-height: 22px; }
 .subtask-help { font-size: 12px; color: var(--muted); margin-top: 8px; }
 .subtask-actions { display: flex; flex-wrap: wrap; gap: 16px; }
 .subtask-actions button:disabled { opacity: .5; cursor: wait; }
-.capture .subtask-help, .capture .subtask-actions { color: inherit; }
-.capture .subtask-help { opacity: .6; }
-.capture .subtask-field input { height: 44px; }
-.capture .subtask-fields { max-height: clamp(45px, calc(100dvh - var(--kb) - 240px), 168px); }
-.capture .subtask-actions .link { color: inherit; }
-.capture .subtask-field { border-bottom-color: currentColor; }
 .capture .err { padding-bottom: 10px; }
 .row.has-subtasks.sel, .row.sub.sel {
   box-shadow: inset 2px 0 0 var(--subtask-color);
 }
 .subtask-group > ul { list-style: none; }
-.subtask-composer { padding-left: 34px; }
-.add-subtask-icon {
+.subtask-composer { padding-left: 48px; }
+.add-subtask-action {
+  flex: none;
   display: grid; place-items: center;
-  width: 44px; height: 44px; margin-left: -13px;
+  width: 44px; height: 44px;
   color: var(--subtask-color);
 }
+.add-subtask-icon { position: absolute; left: -13px; top: 1px; }
+.row.sub.sel .add-subtask-icon { left: -3px; }
 .subtask-composer .subtask-inputs { padding: 10px 0; }
 .title-line { display: flex; flex: 1; align-items: flex-start; min-width: 0; }
 .title-line .title { flex: 1; min-width: 0; }
 .title[aria-expanded] { cursor: pointer; }
 .edit-task { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -12px -8px; color: var(--muted); }
-.check:disabled { cursor: default; }
-.row:has(.check:disabled)::before { content: 'Completa sus subtareas'; }
 .row-btns.subtask-colors { gap: 0; }
 .color-option { display: grid; place-items: center; width: 44px; height: 44px; }
 .color-picker { position: relative; cursor: pointer; }
@@ -597,6 +589,7 @@ kbd {
 .app.wide .edit-actions { flex: 1 1 auto; }
 /* Solo vertical: el padding-left lo usa .row.sel para compensar la barra de selección. */
 .app.wide .row { padding-top: 12px; padding-bottom: 12px; }
+.app.wide .add-subtask-icon { top: 0; }
 .app.wide .section { padding-top: 22px; }
 .app.wide .capture-inner { max-width: none; }
 

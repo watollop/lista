@@ -3,7 +3,7 @@ import type { DateFilter, Entity, EntityKind, Filter, ID, ParsedLine, Priority, 
 import { applyFilter, counts, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
 import { formatDue, parseBlock } from '../parser';
 import { toISODate } from '../lib/date';
-import { externalCapture } from '../lib/capture';
+import { externalCapture, validateCapture } from '../lib/capture';
 import { DROP_LABEL, scheduleFor, type DropTarget } from '../lib/reschedule';
 import { useData, useKeyboardInset, useSyncState, useToday, useWide } from './hooks';
 import { Capture } from './Capture';
@@ -138,28 +138,26 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   useEffect(() => {
     const text = externalCapture(location.search);
     if (!text) return;
-    history.replaceState(null, '', location.pathname + location.hash);
     (async () => {
-      const created = await repo.addParsed(parseBlock(text).map((l) => ({ ...l, isSubtask: false })), null);
+      const created = await repo.addParsed(validateCapture(parseBlock(text)), null);
+      history.replaceState(null, '', location.pathname + location.hash);
       if (!created.length) return;
       showToast({
         msg: created.length > 1 ? `${created.length} tareas apuntadas` : `Apuntada: ${created[0].title}`,
         action: { label: 'Deshacer', run: () => { for (const t of created) void repo.deleteTask(t.id); } },
       });
-    })();
+    })().catch((e) => showToast(e instanceof Error ? e.message : 'No se pudieron añadir las tareas.'));
   }, []);
 
   const toggle = async (id: ID) => {
-    if (data.tasks.some((t) => t.parentId === id)) {
-      showToast('Completa o reabre sus subtareas para cambiar el estado de esta tarea.');
-      return;
-    }
     try {
-      const { task, spawned } = await repo.toggleDone(id);
-      if (task.done) {
+      const { task, spawned, undo } = await repo.toggleDone(id);
+      if (task.done && undo) {
         showToast({
           msg: spawned?.due ? `Hecha · siguiente ${formatDue(spawned.due, today)}` : 'Hecha',
-          action: { label: 'Deshacer', run: () => repo.toggleDone(id) },
+          action: { label: 'Deshacer', run: () => {
+            void undo().catch((e) => showToast(e instanceof Error ? e.message : 'No se pudo deshacer la tarea.'));
+          } },
         });
       }
     } catch (e) {
@@ -262,6 +260,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         return;
       }
       if (typing || settings || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.key === 'Enter' || e.key === ' ') && el.closest?.('button, a')) return;
       const i = flat.findIndex((t) => t.id === selected);
       const go = (n: number) => {
         if (!flat.length) return;

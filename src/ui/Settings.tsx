@@ -139,7 +139,7 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
         ))}
       </div>
       <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
-      <p class="look-hint" id="subtask-color-label">Color de subtareas</p>
+      <p class="look-hint" id="subtask-color-label">Color secundario</p>
       <div class="row-btns look-btns subtask-colors" role="group" aria-labelledby="subtask-color-label">
         {SUBTASK_COLORS.map(([value, name]) => (
           <button key={value} class="color-option" aria-label={name} title={name}
@@ -147,9 +147,9 @@ function Appearance({ toast }: { toast: (msg: string) => void }) {
             <span class="color-swatch" style={{ backgroundColor: value }} aria-hidden="true" />
           </button>
         ))}
-        <label class={`color-option color-picker ${customColor ? 'selected' : ''}`} title="Color personalizado">
+        <label class={`color-option color-picker ${customColor ? 'selected' : ''}`} title="Color secundario personalizado">
           <span class="color-swatch multicolor" aria-hidden="true" />
-          <input id="subtask-color" type="color" aria-label="Color personalizado de subtareas"
+          <input id="subtask-color" type="color" aria-label="Color secundario personalizado"
             value={color} onInput={(e) => changeColor(e.currentTarget.value)} />
         </label>
       </div>

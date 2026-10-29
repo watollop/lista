@@ -8,6 +8,7 @@ import { createSync } from '../sync';
 import { parseLine } from '../parser';
 import { App } from './App';
 import { Capture } from './Capture';
+import { SubtaskInputs } from './SubtaskInputs';
 import { INTRO_KEY } from './Onboarding';
 import { DEFAULT_SUBTASK_COLOR, applyTheme, getSubtaskColor, setSubtaskColor } from './theme';
 import type { Entity, ParsedLine, Repo } from '../types';
@@ -15,10 +16,12 @@ import type { Entity, ParsedLine, Repo } from '../types';
 let root: HTMLDivElement;
 
 beforeEach(() => {
+  history.replaceState(null, '', '/');
   localStorage.clear();
   localStorage.setItem(INTRO_KEY, '1');
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener() {}, removeEventListener() {} })));
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  vi.stubGlobal('scrollTo', vi.fn());
   HTMLElement.prototype.scrollIntoView = vi.fn();
   root = document.createElement('div');
   document.body.append(root);
@@ -55,6 +58,13 @@ function click(el: Element | null) {
   act(() => { el!.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 }
 
+function paste(el: HTMLInputElement, text: string) {
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
+  act(() => { el.dispatchEvent(event); });
+  return event;
+}
+
 function button(text: string): HTMLButtonElement {
   const el = [...root.querySelectorAll('button')].find((b) => b.textContent === text);
   expect(el, text).toBeDefined();
@@ -75,23 +85,51 @@ async function app(repo: Repo) {
 }
 
 describe('captura con subtareas', () => {
-  it('mantiene la guía al escribir y guarda el conjunto al dar Enter en vacío', async () => {
+  it('la captura externa conserva varias familias inline y limpia la URL solo al guardarlas', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    history.replaceState(null, '', '/?nueva=' + encodeURIComponent('Viaje <Billetes\nCompra <Pan !alta'));
+    await app(repo);
+    await vi.waitFor(async () => expect(await repo.listTasks()).toHaveLength(4));
+    const tasks = await repo.listTasks();
+    const trip = tasks.find((t) => t.title === 'Viaje')!;
+    const shop = tasks.find((t) => t.title === 'Compra')!;
+    expect(trip.parentId).toBeNull();
+    expect(shop.parentId).toBeNull();
+    expect(tasks.find((t) => t.title === 'Billetes')?.parentId).toBe(trip.id);
+    expect(tasks.find((t) => t.title === 'Pan')).toMatchObject({ parentId: shop.id, priority: 1 });
+    expect(location.search).toBe('');
+  });
+
+  it.each(['Proyecto <', '<Paso', 'Proyecto <<Paso'])('la captura externa informa de títulos vacíos sin crear tareas ni perder la URL: %s', async (text) => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    const query = '?nueva=' + encodeURIComponent(text);
+    history.replaceState(null, '', '/' + query);
+    await app(repo);
+    await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('título'));
+    expect(await repo.listTasks()).toEqual([]);
+    expect(location.search).toBe(query);
+  });
+
+  it('un fallo de captura externa se muestra y permite reintentar desde la misma URL', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    vi.spyOn(repo, 'addParsed').mockRejectedValue(new Error('Sin espacio'));
+    history.replaceState(null, '', '/?nueva=Viaje%20%3CBilletes');
+    await app(repo);
+    await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('Sin espacio'));
+    expect(location.search).toBe('?nueva=Viaje%20%3CBilletes');
+    expect(await repo.listTasks()).toEqual([]);
+  });
+  it('mantiene la guía sin botones de subtarea y guarda el conjunto inline con Enter', async () => {
     const add = capture();
-    expect(input('Nueva tarea').placeholder).toBe('Nueva tarea… #tema @persona mañana !alta <subtarea');
-    type(input('Nueva tarea'), 'Preparar viaje #casa');
+    expect(input('Nueva tarea').placeholder).toBe('Viaje <Billetes mañana !alta #ocio @ana');
+    type(input('Nueva tarea'), 'Preparar viaje #casa <Comprar billetes @ana <Reservar hotel');
     expect(root.querySelector('.capture-guide')?.textContent).toBe('#tema @persona !prioridad fecha <subtarea');
     expect(input('Nueva tarea').getAttribute('aria-describedby')).toBe('capture-guide');
-    click(button('Subtarea'));
-    expect(document.activeElement).toBe(input('Subtarea 1'));
-    type(input('Subtarea 1'), 'Comprar billetes @ana');
-    enter(input('Subtarea 1'), true);
-    expect(root.querySelectorAll('.subtask-field input')).toHaveLength(1);
-    enter(input('Subtarea 1'));
-    expect(document.activeElement).toBe(input('Subtarea 2'));
+    expect(root.querySelector('.capture .add-subtask-action, .capture .add-subtask, .capture .subtask-inputs')).toBeNull();
+    expect([...root.querySelectorAll('.capture button')].some((button) => button.textContent?.includes('Subtarea'))).toBe(false);
+    enter(input('Nueva tarea'), true);
     expect(add).not.toHaveBeenCalled();
-    type(input('Subtarea 2'), 'Reservar hotel');
-    enter(input('Subtarea 2'));
-    enter(input('Subtarea 3'));
+    enter(input('Nueva tarea'));
     await vi.waitFor(() => expect(input('Nueva tarea').value).toBe(''));
     expect(add).toHaveBeenCalledTimes(1);
     const lines = add.mock.calls[0][0];
@@ -114,7 +152,7 @@ describe('captura con subtareas', () => {
     expect(c).toMatchObject({ title: 'Subtarea C #tema @ana', isSubtask: true, priority: 1, topics: ['tema'], people: ['ana'] });
     expect(c.due).not.toBeNull();
     await vi.waitFor(() => expect(input('Nueva tarea').value).toBe(''));
-    expect(input('Nueva tarea').placeholder).toContain('mañana !alta <subtarea');
+    expect(input('Nueva tarea').placeholder).toBe('Viaje <Billetes mañana !alta #ocio @ana');
   });
 
   it.each(['Proyecto <', 'Proyecto <<Paso', 'Proyecto <!alta', '<Paso'])('informa de segmentos sin título sin perder el borrador: %s', async (value) => {
@@ -134,6 +172,52 @@ describe('captura con subtareas', () => {
     await vi.waitFor(() => expect(root.querySelector('[role="alert"]')?.textContent).toBe('Sin espacio'));
     expect(add).toHaveBeenCalledOnce();
     expect(input('Nueva tarea').value).toBe(value);
+  });
+
+  it.each(['Proyecto <\nOtra tarea', 'Proyecto\nPaso <!alta'])('rechaza pegados con subtareas vacías sin modificar el borrador: %s', (value) => {
+    const add = capture();
+    type(input('Nueva tarea'), 'Borrador original');
+    const event = paste(input('Nueva tarea'), value);
+    expect(event.defaultPrevented).toBe(true);
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('título');
+    expect(input('Nueva tarea').value).toBe('Borrador original');
+    expect(add).not.toHaveBeenCalled();
+  });
+
+  it('no duplica un guardado con un pegado mientras espera la escritura', async () => {
+    let finish!: () => void;
+    const add = capture(vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockImplementation(
+      () => new Promise<void>((resolve) => { finish = resolve; }),
+    ));
+    type(input('Nueva tarea'), 'Proyecto <Paso');
+    enter(input('Nueva tarea'));
+    expect(input('Nueva tarea').disabled).toBe(true);
+    paste(input('Nueva tarea'), 'Otra tarea\nOtro paso');
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('Guarda primero');
+    expect(add).toHaveBeenCalledOnce();
+    await act(async () => { finish(); });
+    expect(input('Nueva tarea').value).toBe('');
+  });
+
+  it('conserva el borrador e informa si falla un pegado de varias tareas', async () => {
+    const add = capture(vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockRejectedValue(new Error('Sin espacio')));
+    type(input('Nueva tarea'), 'Borrador original');
+    paste(input('Nueva tarea'), 'Proyecto <Paso\nOtra tarea');
+    await vi.waitFor(() => expect(root.querySelector('[role="alert"]')?.textContent).toBe('Sin espacio'));
+    expect(input('Nueva tarea').value).toBe('Borrador original');
+    expect(add).toHaveBeenCalledOnce();
+  });
+
+  it('conserva el acceso al dictado sin mostrar controles de subtareas en la captura', async () => {
+    const abort = vi.fn();
+    vi.stubGlobal('SpeechRecognition', class { start() {} stop() {} abort = abort; });
+    capture();
+    click(root.querySelector('[aria-label="Dictar tareas"]'));
+    await vi.waitFor(() => expect(root.querySelector('.dict-list')).not.toBeNull());
+    expect(root.querySelector('.capture .add-subtask-action')).toBeNull();
+    click(button('Cancelar'));
+    await vi.waitFor(() => expect(root.querySelector('.dict-list')).toBeNull());
+    expect(abort).toHaveBeenCalled();
   });
 
   it('autocompletar antes de otra subtarea conserva el separador y su texto', async () => {
@@ -156,22 +240,17 @@ describe('captura con subtareas', () => {
 
   it('no pierde texto ante un fallo ni duplica guardados pendientes', async () => {
     const add = capture(vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockRejectedValue(new Error('Sin espacio')));
-    type(input('Nueva tarea'), 'Mi proyecto');
-    click(button('Subtarea'));
-    type(input('Subtarea 1'), 'Primer paso');
-    enter(input('Subtarea 1'));
-    enter(input('Subtarea 2'));
-    enter(input('Subtarea 2'));
+    type(input('Nueva tarea'), 'Mi proyecto <Primer paso');
+    enter(input('Nueva tarea'));
+    enter(input('Nueva tarea'));
     await vi.waitFor(() => expect(root.querySelector('[role="alert"]')?.textContent).toBe('Sin espacio'));
     expect(add).toHaveBeenCalledTimes(1);
-    expect(input('Nueva tarea').value).toBe('Mi proyecto');
-    expect(input('Subtarea 1').value).toBe('Primer paso');
+    expect(input('Nueva tarea').value).toBe('Mi proyecto <Primer paso');
   });
 
   it('ofrece guardado táctil y evita guardar metadatos sin título', async () => {
-    const add = capture();
-    type(input('Nueva tarea'), 'Proyecto');
-    click(button('Subtarea'));
+    const add = vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockResolvedValue(undefined);
+    act(() => render(h(SubtaskInputs, { onSubmit: add, onCancel: vi.fn() }), root));
     type(input('Subtarea 1'), '!alta');
     click(button('Guardar tarea'));
     expect(root.querySelector('[role="alert"]')?.textContent).toContain('título');
@@ -181,14 +260,14 @@ describe('captura con subtareas', () => {
     await vi.waitFor(() => expect(add).toHaveBeenCalledTimes(1));
   });
 
-  it('cancelar las subtareas conserva la tarea principal', () => {
-    capture();
-    type(input('Nueva tarea'), 'Proyecto');
-    click(button('Subtarea'));
+  it('cancelar las entradas de subtareas no envía sus borradores', () => {
+    const add = vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockResolvedValue(undefined);
+    const cancel = vi.fn();
+    act(() => render(h(SubtaskInputs, { onSubmit: add, onCancel: cancel }), root));
     type(input('Subtarea 1'), 'Paso');
     click(button('Cancelar'));
-    expect(input('Nueva tarea').value).toBe('Proyecto');
-    expect(root.querySelector('.subtask-inputs')).toBeNull();
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(add).not.toHaveBeenCalled();
   });
 
   it('aplaza las escrituras de layout del observador y no repite alturas idénticas', () => {
@@ -223,11 +302,7 @@ describe('lista de subtareas', () => {
   it('pegar varias familias con < guarda cada subtarea bajo su propia tarea', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
-    const event = new Event('paste', { bubbles: true, cancelable: true });
-    Object.defineProperty(event, 'clipboardData', {
-      value: { getData: () => 'Proyecto A <Paso B <Paso C !alta mañana #tema\nProyecto D <Paso E @ana' },
-    });
-    act(() => { input('Nueva tarea').dispatchEvent(event); });
+    paste(input('Nueva tarea'), 'Proyecto A <Paso B <Paso C !alta mañana #tema\nProyecto D <Paso E @ana');
     await vi.waitFor(async () => expect(await repo.listTasks()).toHaveLength(5));
     const tasks = await repo.listTasks();
     const a = tasks.find((task) => task.title === 'Proyecto A')!;
@@ -242,11 +317,8 @@ describe('lista de subtareas', () => {
   it('guarda desde la captura y conserva las subtareas al volver a abrir la app', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
-    type(input('Nueva tarea'), 'Viaje #casa');
-    click(button('Subtarea'));
-    type(input('Subtarea 1'), 'Comprar billetes');
-    enter(input('Subtarea 1'));
-    enter(input('Subtarea 2'));
+    type(input('Nueva tarea'), 'Viaje #casa <Comprar billetes');
+    enter(input('Nueva tarea'));
     await vi.waitFor(() => expect(root.querySelector('.row.has-subtasks')).not.toBeNull());
     const tasks = await repo.listTasks();
     const parent = tasks.find((t) => t.parentId === null)!;
@@ -279,7 +351,7 @@ describe('lista de subtareas', () => {
     expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
     expect(root.querySelector('.subtask-group')).not.toBeNull();
     expect(root.querySelector('.row.has-subtasks .title')?.getAttribute('aria-label')).toContain('0 de 2 subtareas');
-    expect(root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .check`)?.disabled).toBe(true);
+    expect(root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .check`)?.disabled).toBe(false);
     click(root.querySelector(`[data-id="${a.id}"] .check`));
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${a.id}"]`)?.classList.contains('done')).toBe(true));
     expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('done')).toBe(false);
@@ -304,22 +376,94 @@ describe('lista de subtareas', () => {
     expect(input('Editar tarea')).not.toBeNull();
   });
 
+  it.each([false, true])('cerrar el padre por casilla o teclado cierra todas las subtareas y permite deshacer; ancho=%s', async (wide) => {
+    vi.stubGlobal('matchMedia', vi.fn((q: string) => ({
+      matches: wide && q === '(min-width: 1200px)', addEventListener() {}, removeEventListener() {},
+    })));
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    const [parent] = await repo.addParsed([parseLine('Proyecto'), { ...parseLine('Paso'), isSubtask: true }]);
+    await app(repo);
+    click(root.querySelector(`[data-id="${parent.id}"] .check`));
+    await vi.waitFor(async () => expect((await repo.listTasks()).every((t) => t.done)).toBe(true));
+    expect(root.querySelector(`[data-id="${parent.id}"] .check`)?.getAttribute('aria-pressed')).toBe('true');
+    click(root.querySelector('.toast .link'));
+    await vi.waitFor(async () => expect((await repo.listTasks()).every((t) => !t.done)).toBe(true));
+    click(root.querySelector(`[data-id="${parent.id}"] .title`));
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true })); });
+    await vi.waitFor(async () => expect((await repo.listTasks()).every((t) => t.done)).toBe(true));
+    const check = root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .check`)!;
+    act(() => {
+      check.focus();
+      check.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    expect(root.querySelector('input[aria-label="Editar tarea"]')).toBeNull();
+    expect((await repo.listTasks()).every((t) => t.done)).toBe(true);
+    click(check);
+    await vi.waitFor(async () => expect((await repo.listTasks()).every((t) => !t.done)).toBe(true));
+  });
+
+  it('el Deshacer real del padre conserva el estado y la fecha de subtareas hechas anteriormente', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    const [parent, a, b] = await repo.addParsed([
+      parseLine('Proyecto'), { ...parseLine('Hecha antes'), isSubtask: true }, { ...parseLine('Pendiente'), isSubtask: true },
+    ]);
+    await repo.toggleDone(a.id);
+    const previous = (await repo.listTasks()).find((t) => t.id === a.id)!;
+    await app(repo);
+    click(root.querySelector(`[data-id="${parent.id}"] .check`));
+    await vi.waitFor(() => expect(root.querySelector('.toast .link')).not.toBeNull());
+    click(root.querySelector('.toast .link'));
+    await vi.waitFor(async () => expect((await repo.listTasks()).find((t) => t.id === b.id)?.done).toBe(0));
+    const tasks = await repo.listTasks();
+    expect(tasks.find((t) => t.id === a.id)).toEqual(previous);
+    expect(tasks.find((t) => t.id === parent.id)?.done).toBe(0);
+  });
+
+  it('el Deshacer muestra conflictos sin descartar cambios posteriores', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    const [parent] = await repo.addParsed([parseLine('Proyecto'), { ...parseLine('Paso'), isSubtask: true }]);
+    await app(repo);
+    click(root.querySelector(`[data-id="${parent.id}"] .check`));
+    await vi.waitFor(() => expect(root.querySelector('.toast .link')).not.toBeNull());
+    await repo.updateTask(parent.id, { doneAt: 123 });
+    click(root.querySelector('.toast .link'));
+    await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('ha cambiado'));
+    expect((await repo.listTasks()).every((t) => t.done)).toBe(true);
+  });
+
   it('añade subtareas a una tarea existente desde su editor', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     const [parent] = await repo.addParsed([parseLine('Proyecto')]);
     await app(repo);
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
-    click(button('Subtarea'));
+    type(input('Editar tarea'), 'Proyecto editado');
+    const action = root.querySelector('.edit-actions [aria-label="Añadir subtarea"]');
+    expect(action?.textContent?.trim()).toBe('');
+    expect(action?.querySelector('svg')).not.toBeNull();
+    const editorMouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    act(() => { action!.dispatchEvent(editorMouseDown); });
+    expect(editorMouseDown.defaultPrevented).toBe(true);
+    click(action);
+    type(input('Subtarea 1'), 'Borrador cancelado');
+    click(button('Cancelar'));
+    expect(root.querySelector('.subtask-inputs')).toBeNull();
+    await vi.waitFor(async () => expect((await repo.listTasks())[0].title).toBe('Proyecto editado'));
+    click(root.querySelector(`[data-id="${parent.id}"] .title`));
+    click(root.querySelector('.edit-actions [aria-label="Añadir subtarea"]'));
     type(input('Subtarea 1'), 'Paso añadido');
     enter(input('Subtarea 1'));
     enter(input('Subtarea 2'));
     await vi.waitFor(() => expect(root.querySelector('.row.sub .title')?.textContent).toBe('Paso añadido'));
     const children = (await repo.listTasks()).filter((t) => t.parentId === parent.id);
     expect(children).toHaveLength(1);
-    const add = root.querySelector('.subtask-composer [aria-label="Añadir subtarea"]');
+    const add = root.querySelector('.row.sub:last-child [aria-label="Añadir subtarea"]');
     expect(add?.textContent?.trim()).toBe('');
     expect(add?.querySelector('svg')).not.toBeNull();
-    expect(root.querySelector('.subtask-composer .add-subtask')).toBeNull();
+    expect(root.querySelector('.subtask-composer')).toBeNull();
+    expect(root.querySelectorAll('.add-subtask-icon')).toHaveLength(1);
+    const rowMouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    act(() => { add!.dispatchEvent(rowMouseDown); });
+    expect(rowMouseDown.defaultPrevented).toBe(false);
     click(add);
     type(input('Subtarea 1'), 'Otro paso desde el más <Paso inline !alta');
     enter(input('Subtarea 1'));
@@ -328,7 +472,7 @@ describe('lista de subtareas', () => {
     const updated = (await repo.listTasks()).filter((t) => t.parentId === parent.id);
     expect(updated).toHaveLength(3);
     expect(updated.find((t) => t.title === 'Paso inline')?.priority).toBe(1);
-    expect(root.querySelector('.subtask-composer [aria-label="Añadir subtarea"]')).not.toBeNull();
+    expect(root.querySelector('.row.sub:last-child [aria-label="Añadir subtarea"]')).not.toBeNull();
   });
 
   it('mantiene el indicador y toda la familia al filtrar solo el título del padre', async () => {
@@ -348,12 +492,15 @@ describe('lista de subtareas', () => {
       parentId = parent.id;
     }
     await app(repo);
-    if (parentId) click(root.querySelector(`[data-id="${parentId}"] .title`));
-    else type(input('Nueva tarea'), 'Proyecto');
-    click(button('Subtarea'));
-    type(input('Subtarea 1'), 'Borrador conservado');
+    if (parentId) {
+      click(root.querySelector(`[data-id="${parentId}"] .title`));
+      click(root.querySelector('.edit-actions [aria-label="Añadir subtarea"]'));
+    }
+    const field = parentId ? 'Subtarea 1' : 'Nueva tarea';
+    const draft = parentId ? 'Borrador conservado' : 'Proyecto <Borrador conservado';
+    type(input(field), draft);
     click(root.querySelector('[aria-label="Ajustes"]'));
-    const focus = vi.spyOn(input('Subtarea 1'), 'focus');
+    const focus = vi.spyOn(input(field), 'focus');
     for (const name of ['Oscuro', 'Clásico', 'Claro', 'Industrial', 'Sistema']) {
       const control = button(name);
       act(() => control.focus());
@@ -362,8 +509,9 @@ describe('lista de subtareas', () => {
     }
     expect(focus).not.toHaveBeenCalled();
     click(button('Cerrar'));
-    expect(input('Subtarea 1').value).toBe('Borrador conservado');
-    click(button(parentId ? 'Añadir subtareas' : 'Guardar tarea'));
+    expect(input(field).value).toBe(draft);
+    if (parentId) click(button('Añadir subtareas'));
+    else enter(input('Nueva tarea'));
     if (!parentId) {
       await vi.waitFor(() => expect(root.querySelector('.row.has-subtasks')).not.toBeNull());
       click(root.querySelector('.row.has-subtasks .title'));
@@ -372,12 +520,14 @@ describe('lista de subtareas', () => {
   });
 });
 
-describe('color de subtareas', () => {
+describe('color secundario', () => {
   it('ofrece cuatro círculos de colores y uno personalizado sin texto y conserva la elección', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
     click(root.querySelector('[aria-label="Ajustes"]'));
     let color = root.querySelector<HTMLInputElement>('#subtask-color')!;
+    expect(root.querySelector('#subtask-color-label')?.textContent).toBe('Color secundario');
+    expect(color.getAttribute('aria-label')).toBe('Color secundario personalizado');
     const palette = color.closest('[role="group"]')!;
     expect(palette.textContent?.trim()).toBe('');
     expect(palette.querySelectorAll('.color-option')).toHaveLength(5);
