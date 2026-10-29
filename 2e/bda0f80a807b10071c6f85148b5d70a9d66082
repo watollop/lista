@@ -1,0 +1,53 @@
+docs/plan-cifrado.md
+  s_93769b79d4ca29::t_62772590d9198a 1-225
+src/sync/api.test.ts
+  s_93769b79d4ca29::t_c81779ceea393a 1-428
+src/sync/api.ts
+  s_93769b79d4ca29::t_d05e96b2f903ec 2,56,144-345
+src/sync/crypto.test.ts
+  s_93769b79d4ca29::t_7c3eb3f0db5dfc 1-182
+src/sync/crypto.ts
+  s_93769b79d4ca29::t_a30ea172bf6fc8 1-216
+src/sync/encryption.test.ts
+  s_93769b79d4ca29::t_56030be51da317 1-503
+src/sync/index.ts
+  s_93769b79d4ca29::t_74b01ce7d96850 1-13,16-54,74-88,139-145,159-166,215-347,351-362,388,402,404,408,411-416,435-436,438-439,461-586,591,593,654,656,675,677,683-877,927,941-943,970-979
+src/sync/link.test.ts
+  s_93769b79d4ca29::t_07deaefd9ee259 1-519
+src/sync/pairing.test.ts
+  s_93769b79d4ca29::t_c042cec5eb3bd6 1-249
+src/sync/pairing.ts
+  s_93769b79d4ca29::t_c68a7c9fc89117 1-273
+src/sync/sync.test.ts
+  s_93769b79d4ca29::t_084551479a948e 234-235
+src/types.ts
+  s_93769b79d4ca29::t_14aaa56503ee44 134-176,229-233,236,249,267-290,292-299
+src/ui/App.tsx
+  s_93769b79d4ca29::t_361f8bbfa9ea44 15,300,360-361
+src/ui/styles.css
+  s_93769b79d4ca29::t_46507f7d93d646 1044-1064
+supabase/schema.sql
+  s_93769b79d4ca29::t_cf5d0ff3ee5b0f 19-21,24,67-94,102
+src/data/repo.ts
+  s_93769b79d4ca29::t_b9f1f06d789e0d 626-660
+src/ui/Settings.tsx
+  s_93769b79d4ca29::t_039bebdc8c3615 2,35,98,114-325
+supabase/migrations/20261029_cifrado.sql
+  s_93769b79d4ca29::t_f6d5eb725fa44a 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2ebda0f80a807b10071c6f85148b5d70a9d66082",
+  "prompts": {},
+  "sessions": {
+    "s_93769b79d4ca29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bb52c32d-203b-49c0-8507-835315564afa",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
