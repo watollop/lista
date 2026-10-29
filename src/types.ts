@@ -140,7 +140,8 @@ export interface Repo {
   /** Sustituye título/tokens de una tarea existente con una línea parseada (edición). */
   replaceParsed(id: ID, line: ParsedLine): Promise<Task>;
   updateTask(id: ID, patch: Partial<Omit<Task, 'id'>>): Promise<Task>;
-  /** Alterna done. Si se completa una tarea recurrente, crea la siguiente ocurrencia (no recurrente la vieja). */
+  /** Alterna done y deriva el estado del padre de sus subtareas. No permite completar padres con pendientes.
+   *  Al completar una recurrente crea la siguiente ocurrencia con copias pendientes de sus subtareas. */
   toggleDone(id: ID): Promise<{ task: Task; spawned: Task | null }>;
   deleteTask(id: ID): Promise<void>; // tombstone de la tarea y sus subtareas
   restoreTask(id: ID): Promise<void>; // deshacer borrado (tarea y subtareas borradas en la misma operación)

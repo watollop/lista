@@ -114,15 +114,19 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       .filter((t) => !doneToday.has(t.id) && (t.doneAt ?? 0) >= since)
       .sort((a, b) => (a.doneAt ?? 0) - (b.doneAt ?? 0));
   }, [data.tasks, filter, today, doneToday]);
-  const groups = useMemo(() => [...groupTasks(past), ...groupTasks(visible)], [past, visible]);
+  const groups = useMemo(() => {
+    const matched = [...new Map([...past, ...visible].map((t) => [t.id, t])).values()];
+    const families = groupTasks(data.tasks);
+    const children = new Map(families.map((g) => [g.task.id, g.children]));
+    return groupTasks(matched).map((g) => ({ ...g, children: children.get(g.task.id) ?? g.children }));
+  }, [past, visible, data.tasks]);
   const flat = useMemo(() => groups.flatMap((g) => [g.task, ...g.children]), [groups]);
   const tally = useMemo(() => counts(data.tasks, today), [data.tasks, today]);
 
 
   // ---------- acciones ----------
   const add = async (lines: ParsedLine[]) => {
-    // Subtareas desactivadas por ahora: toda línea es una tarea normal ('>' o indentación no anidan).
-    const created = await repo.addParsed(lines.map((l) => ({ ...l, isSubtask: false })), null);
+    const created = await repo.addParsed(lines, null);
     if (created.length > 1) showToast(`${created.length} tareas añadidas`);
     else if (created[0] && !applyFilter([...data.tasks, created[0]], filter, today).some((t) => t.id === created[0].id)) {
       showToast({ msg: 'Añadida (oculta por el filtro)', action: { label: 'Ver todo', run: () => setFilter(emptyFilter()) } });
@@ -146,13 +150,25 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   }, []);
 
   const toggle = async (id: ID) => {
-    const { task, spawned } = await repo.toggleDone(id);
-    if (task.done) {
-      showToast({
-        msg: spawned?.due ? `Hecha · siguiente ${formatDue(spawned.due, today)}` : 'Hecha',
-        action: { label: 'Deshacer', run: () => repo.toggleDone(id) },
-      });
+    if (data.tasks.some((t) => t.parentId === id)) {
+      showToast('Completa o reabre sus subtareas para cambiar el estado de esta tarea.');
+      return;
     }
+    try {
+      const { task, spawned } = await repo.toggleDone(id);
+      if (task.done) {
+        showToast({
+          msg: spawned?.due ? `Hecha · siguiente ${formatDue(spawned.due, today)}` : 'Hecha',
+          action: { label: 'Deshacer', run: () => repo.toggleDone(id) },
+        });
+      }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo cambiar la tarea.');
+    }
+  };
+
+  const addSubtasks = async (id: ID, lines: ParsedLine[]) => {
+    await repo.addParsed(lines.map((l) => ({ ...l, isSubtask: true })), id);
   };
 
   const remove = async (id: ID) => {
@@ -330,6 +346,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
             groups={groups} names={names} today={today} selected={selected} editing={editing}
             onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onDelete={remove} onChip={chipTap}
             doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)} onMove={move}
+            onAddSubtasks={addSubtasks}
           />
         )}
       </main>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
-import { getLook, getTheme, setLook, setTheme, type Look, type Theme } from './theme';
+import { DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { EntityEditor } from './EntityEditor';
@@ -31,7 +31,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <button class="link on" onClick={onClose}>Cerrar</button>
         </div>
         <Account sync={sync} state={state} />
-        <Appearance />
+        <Appearance toast={toast} />
         <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
         {editing && editEnt && (
           <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
@@ -111,9 +111,14 @@ function Account({ sync, state }: { sync: Sync; state: SyncState }) {
 const THEMES: Array<[Theme, string]> = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Oscuro']];
 const LOOKS: Array<[Look, string]> = [['classic', 'Clásico'], ['industrial', 'Industrial']];
 
-function Appearance() {
+function Appearance({ toast }: { toast: (msg: string) => void }) {
   const [theme, set] = useState(getTheme);
   const [look, setL] = useState(getLook);
+  const [color, setColor] = useState(getSubtaskColor);
+  const changeColor = (next: string) => {
+    try { setSubtaskColor(next); setColor(next); }
+    catch (e) { toast(e instanceof Error ? e.message : 'No se pudo guardar el color.'); }
+  };
   return (
     <section>
       <span class="label">Apariencia</span>
@@ -129,7 +134,12 @@ function Appearance() {
             onClick={() => { setLook(k); setL(k); }}>{l}</button>
         ))}
       </div>
-      <p class="look-hint">Industrial: gris cálido, tipografía de puntos y un solo color de acento, naranja.</p>
+      <p class="look-hint">Industrial: gris cálido, tipografía de puntos y acento naranja.</p>
+      <div class="subtask-color">
+        <label for="subtask-color">Color del icono de subtareas</label>
+        <input id="subtask-color" type="color" value={color} onInput={(e) => changeColor(e.currentTarget.value)} />
+        <button class="link" onClick={() => changeColor(DEFAULT_SUBTASK_COLOR)}>Restablecer rosa</button>
+      </div>
     </section>
   );
 }
