@@ -1,0 +1,33 @@
+src/parser/index.ts
+  s_c0c1af889a85ab::t_2e6ae16ffe0a9c 174
+src/parser/parser.test.ts
+  s_c0c1af889a85ab::t_1545d2484179dd 344
+src/ui/Chips.tsx
+  s_c0c1af889a85ab::t_40073a52f933eb 21,25,34
+src/ui/FilterBar.tsx
+  s_c0c1af889a85ab::t_7dc3290a1fc83c 27
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_aacb6e08298cfd 230,238-243,251
+src/ui/Sidebar.tsx
+  s_c0c1af889a85ab::t_632bc2ed7c0410 28
+src/ui/TaskList.tsx
+  s_c0c1af889a85ab::t_4bb2afad29b92d 89-90,112-113,158-159,181-183,296
+src/ui/styles.css
+  s_c0c1af889a85ab::t_0caed65cf30428 924-925
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "09a9f04838d08e65d3dd186ba6b8b7d38f1847e2",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

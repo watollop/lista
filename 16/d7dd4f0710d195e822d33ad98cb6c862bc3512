@@ -1,0 +1,53 @@
+README.md
+  s_c0c1af889a85ab::t_3b41704e885e8e 29
+src/data/repo.test.ts
+  s_c0c1af889a85ab::t_f6774f12f3db1e 12
+src/data/repo.ts
+  s_c0c1af889a85ab::t_d4c95fb72758d2 59
+src/filters/filters.test.ts
+  s_c0c1af889a85ab::t_b448adbec8789a 254-263,275
+src/filters/index.ts
+  s_c0c1af889a85ab::t_58b618310d27b8 1,3,28-33,51-53,120,125-127
+src/lib/period.test.ts
+  s_c0c1af889a85ab::t_35f7af0a7aa9b3 1-49
+src/parser/dates.ts
+  s_c0c1af889a85ab::t_4d1828b4cefe0e 2,4,21,46,49-59,81-84,86-93,149
+src/parser/index.ts
+  s_c0c1af889a85ab::t_336da19679afb4 2,7,76,78-82,85,102,109,164,176
+src/parser/parser.test.ts
+  s_c0c1af889a85ab::t_69293987007394 80-81,161-195
+src/types.ts
+  s_c0c1af889a85ab::t_116717f3babe0d 27,44-47,82
+src/ui/App.tsx
+  s_c0c1af889a85ab::t_65e439684e1e8c 11,121
+src/ui/Capture.tsx
+  s_c0c1af889a85ab::t_1e12b1a2eb9ad9 111
+src/ui/Chips.tsx
+  s_c0c1af889a85ab::t_70ce5d8a6b8427 1,4,10,23,32
+src/ui/FilterBar.tsx
+  s_c0c1af889a85ab::t_8af17ee01c4832 13,24-25
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_d5a6b4c2ce434c 37
+src/ui/Sidebar.tsx
+  s_c0c1af889a85ab::t_dfb183dd53d028 14,21-22
+src/ui/TaskList.tsx
+  s_c0c1af889a85ab::t_09bb4a7abe13af 5,24,26-28,30,36-37,43,46,48,102,183
+src/lib/period.ts
+  s_c0c1af889a85ab::t_bd1bf074dd52fe 1-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "16d7dd4f0710d195e822d33ad98cb6c862bc3512",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_7fc8f645eab847 57-64
+src/ui/styles.css
+  s_c0c1af889a85ab::t_8e84242b581749 606-617
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "147c2788b2fac021f12e9bd99152ed90b22bbd0a",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

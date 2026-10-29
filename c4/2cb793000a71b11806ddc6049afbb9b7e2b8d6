@@ -1,0 +1,29 @@
+src/ui/styles.css
+  s_c0c1af889a85ab::t_e9be4a3d61283a 539,545,552-558,565,569-571,573-597,605-613,619,623-627,638-639,641,647,672,674,676,678-685,710-713,715-722
+src/ui/Onboarding.tsx
+  s_a04aae31dc0408::t_6e1a65535aacc7 1-2,17-18,21-22,25,30-41,46,49-50,52-58,62-72,74-75,86,93-95,98,101-112,114-120,123-124,132-155,174,197-214,220,235-236,244-250,252,255-261,263-266,271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c42cb793000a71b11806ddc6049afbb9b7e2b8d6",
+  "prompts": {},
+  "sessions": {
+    "s_a04aae31dc0408": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa0a375f25247cd53",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

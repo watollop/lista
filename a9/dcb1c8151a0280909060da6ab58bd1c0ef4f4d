@@ -1,0 +1,27 @@
+src/ui/App.tsx
+  s_c0c1af889a85ab::t_f69eb6f3548874 12,33-39,137,241-246
+src/ui/Onboarding.tsx
+  s_c0c1af889a85ab::t_c948fa16edcc9e 1-141
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_78b01a914fcc9b 11,14,27-30
+src/ui/styles.css
+  s_c0c1af889a85ab::t_320f8fbb51e3c7 470-587
+README.md
+  s_c0c1af889a85ab::t_0c95e337e81b3a 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a9dcb1c8151a0280909060da6ab58bd1c0ef4f4d",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

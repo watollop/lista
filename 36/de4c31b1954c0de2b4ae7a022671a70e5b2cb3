@@ -1,0 +1,23 @@
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_0da4000c00d944 4-54,84-92,94,96-103
+src/ui/TaskList.tsx
+  s_c0c1af889a85ab::t_b24a1f5f267904 186
+src/ui/styles.css
+  s_c0c1af889a85ab::t_991ec42212ee9e 371-396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "36de4c31b1954c0de2b4ae7a022671a70e5b2cb3",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

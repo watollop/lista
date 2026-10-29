@@ -1,0 +1,29 @@
+README.md
+  s_c0c1af889a85ab::t_51ed6450cf10a7 29
+src/lib/period.test.ts
+  s_c0c1af889a85ab::t_9885cf1a019eb1 35,46,49-67
+src/lib/period.ts
+  s_c0c1af889a85ab::t_d5e04eb25afb26 61,69,73,80,92,102-106
+src/parser/dates.ts
+  s_c0c1af889a85ab::t_37b418b9c783ef 49,87-88
+src/parser/parser.test.ts
+  s_c0c1af889a85ab::t_89778116245392 187,191-206
+src/ui/Settings.tsx
+  s_c0c1af889a85ab::t_3b2d7f0927c8ea 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "01f2b7cbd22ce6474b1280663cac19957000c58a",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

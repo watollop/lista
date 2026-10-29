@@ -1,0 +1,23 @@
+src/ui/App.tsx
+  s_c7d15b540bf786::t_33339c3e2f5943 16,381
+src/ui/styles.css
+  s_c7d15b540bf786::t_ea9afab9a0738b 991-1007
+src/ui/Critter.tsx
+  s_c7d15b540bf786::t_11f82937bd09c6 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "b54e8d3bdc188cbeced16315a45354afa1a3e78d",
+  "prompts": {},
+  "sessions": {
+    "s_c7d15b540bf786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "407821e8-55aa-4e8a-a245-4803a60061b3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+README.md
+  s_c0c1af889a85ab::t_fafbe9b3eab1e7 40
+src/filters/filters.test.ts
+  s_c0c1af889a85ab::t_e5f8e2297e7cd4 4,263-269
+src/filters/index.ts
+  s_c0c1af889a85ab::t_3d03aee7eebdad 34-43
+src/ui/App.tsx
+  s_c0c1af889a85ab::t_380c151c96f0b5 2,125
+src/ui/Chips.tsx
+  s_c0c1af889a85ab::t_8e3806f3237a82 1,4-5,7,33-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7a153a6087a0d67a2b06042167c403c079b39b23",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+public/icons/favicon.svg
+  s_c7d15b540bf786::t_aa9f2947610bc5 4
+scripts/icon.svg
+  s_c7d15b540bf786::t_dfd6adb0894279 4
+src/ui/Critter.tsx
+  s_c7d15b540bf786::t_a76bbd1bc6448d 4,7-10,14-19,22-29,49-57
+src/ui/styles.css
+  s_c7d15b540bf786::t_a93d4e07333396 992-993,995-1000,1002,1004-1037
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1306ee2c6035b8a1fe859dd2729f70311456fdde",
+  "prompts": {},
+  "sessions": {
+    "s_c7d15b540bf786": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "407821e8-55aa-4e8a-a245-4803a60061b3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}

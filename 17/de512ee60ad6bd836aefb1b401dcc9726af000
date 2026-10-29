@@ -1,0 +1,23 @@
+README.md
+  s_c0c1af889a85ab::t_c0492a2d19c4e3 41
+src/ui/TaskList.tsx
+  s_c0c1af889a85ab::t_7d06c0cfe640b6 105,116,139-146,153-154,173,177,181-183,192-195
+src/ui/styles.css
+  s_c0c1af889a85ab::t_63c84684898886 233-253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "17de512ee60ad6bd836aefb1b401dcc9726af000",
+  "prompts": {},
+  "sessions": {
+    "s_c0c1af889a85ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb2cbf44-c064-440e-8979-8d429e984635",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
