@@ -151,3 +151,6 @@
 :where([data-look="industrial"]) .suggest small { color: rgb(241 240 234 / .45); text-transform: uppercase; font-size: 10px; letter-spacing: .06em; }
 :where([data-look="industrial"]) .suggest .on small, :where([data-look="industrial"]) .suggest button:hover small { color: rgb(255 255 255 / .75); }
 @media (min-width: 900px) { :where([data-look="industrial"]) .suggest { top: calc(100% + 8px); } }
+
+/* Bicho de píxeles: el naranja de la app y los ojos como la «pantalla» de la captura */
+:where([data-look="industrial"]) .critter { --critter: var(--accent); --critter-eye: var(--screen); }
