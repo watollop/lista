@@ -1,5 +1,8 @@
 const UPDATE_INTERVAL_MS = 30 * 60 * 1000;
 
+/** Evento en window cuando hay una versión nueva esperando a recargar (la UI ofrece «Recargar»). */
+export const UPDATE_READY_EVENT = 'lista:update-ready';
+
 let registration: ServiceWorkerRegistration | undefined;
 
 // Registra el SW (solo en producción) y gestiona las actualizaciones sin
@@ -22,7 +25,10 @@ export function registerSW(): void {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadController) return; // primera instalación: no recargar
     if (document.visibilityState === 'hidden') reloadNow();
-    else reloadPending = true;
+    else {
+      reloadPending = true;
+      window.dispatchEvent(new Event(UPDATE_READY_EVENT)); // en un ordenador la pestaña puede seguir visible horas
+    }
   });
 
   document.addEventListener('visibilitychange', () => {

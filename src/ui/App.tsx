@@ -12,7 +12,9 @@ import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
 import type { ChipTap } from './Chips';
 import { EntityEditor } from './EntityEditor';
-import { LinkPrompt, Settings } from './Settings';
+import { Settings } from './Settings';
+import { LinkDialog, LockedPanel } from './Encryption';
+import { UPDATE_READY_EVENT } from '../pwa/register';
 import { Critter } from './Critter';
 import { INTRO_KEY, Onboarding } from './Onboarding';
 import { startAppearanceSync } from './appearanceSync';
@@ -62,6 +64,22 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     setToast(typeof t === 'string' ? { msg: t } : t);
     toastTimer.current = setTimeout(() => setToast(null), 4000);
   };
+
+  // Hay una versión nueva esperando: se ofrece recargar en vez de esperar a que la pestaña pase a segundo plano.
+  const [updateReady, setUpdateReady] = useState(false);
+  useEffect(() => {
+    const on = () => setUpdateReady(true);
+    window.addEventListener(UPDATE_READY_EVENT, on);
+    return () => window.removeEventListener(UPDATE_READY_EVENT, on);
+  }, []);
+
+  // Cifrado: al pasar de bloqueado a desbloqueado (enlace o clave de recuperación) se confirma con un aviso.
+  const enc = sync.encryption?.() ?? 'off'; // el sync de algunos tests no implementa el cifrado
+  const prevEnc = useRef(enc);
+  useEffect(() => {
+    if (prevEnc.current === 'locked' && (enc === 'on' || enc === 'migrating')) showToast('Dispositivo enlazado. Tus datos ya están al día.');
+    prevEnc.current = enc;
+  }, [enc]);
 
   useEffect(() => startAppearanceSync(repo, (error) => {
     showToast(error instanceof Error ? error.message : 'No se pudo cargar la apariencia.');
@@ -339,6 +357,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       />
 
       <main>
+        {enc === 'locked' && <LockedPanel sync={sync} onRecovery={() => setSettings(true)} />}
         {data.ready && groups.length === 0 ? (
           <div class="empty">
             {isEmptyFilter(filter) ? (
@@ -357,7 +376,12 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         )}
       </main>
 
-      {link?.role === 'active' && !settings && <LinkPrompt sync={sync} link={link} floating />}
+      {updateReady && (
+        <div class="toast toast-top" role="status">
+          <span>Hay una versión nueva de Lista</span>
+          <button class="link" onClick={() => window.location.reload()}>Recargar</button>
+        </div>
+      )}
 
       {toast && (
         <div class="toast" role="status">
@@ -385,6 +409,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }} />
       )}
+      {link?.role === 'active' && <LinkDialog sync={sync} link={link} toast={showToast} />}
       <Critter enabled={wide} />
       {intro && (
         <Onboarding onClose={closeIntro} extended={intro === 'full'}

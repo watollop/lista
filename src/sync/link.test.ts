@@ -8,7 +8,8 @@ const CFG = { url: 'https://link.supabase.co', anonKey: 'anon-key' };
 const LINK_POLL_MS = 2_000;
 const LINK_CHECK_MS = 5_000;
 const PAIRING_TTL_MS = 10 * 60_000;
-const GONE_MSG = 'El enlace se canceló o caducó. Vuelve a intentarlo.';
+const REJECTED_MSG = 'El otro dispositivo rechazó el enlace o la petición caducó.';
+const EXPIRED_MSG = 'Nadie respondió a tiempo: la petición caducó. Vuelve a intentarlo con el otro dispositivo abierto.';
 
 // ---------- servidor falso (GoTrue + items + pairings con filtros) ----------
 
@@ -426,7 +427,7 @@ describe('enlace de dispositivos', () => {
     expect(server.pairingRows()).toHaveLength(0);
 
     await pollOnce();
-    expect(b.sync.link()).toEqual({ role: 'new', status: 'error', message: GONE_MSG });
+    expect(b.sync.link()).toEqual({ role: 'new', status: 'error', message: REJECTED_MSG });
     expect(b.sync.encryption()).toBe('locked');
   });
 
@@ -477,7 +478,7 @@ describe('enlace de dispositivos', () => {
     expect(row.pk_a).toBeNull();
 
     await pollOnce();
-    expect(b.sync.link()).toEqual({ role: 'new', status: 'error', message: GONE_MSG });
+    expect(b.sync.link()).toEqual({ role: 'new', status: 'error', message: EXPIRED_MSG });
   });
 
   it('8. con stop() no quedan intervalos activos', async () => {
