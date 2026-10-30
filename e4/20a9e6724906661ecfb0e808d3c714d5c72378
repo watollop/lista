@@ -1,0 +1,33 @@
+docs/plan-cifrado.md
+  s_93769b79d4ca29::t_8b25c674250051 10,20,26-28,224
+src/sync/encryption.test.ts
+  s_93769b79d4ca29::t_a3a5edfa8f2a62 279-293,298-302,314,332,351,375,392,424,449,467,486-489,491,493-495,497-504,519,539
+src/sync/index.ts
+  s_93769b79d4ca29::t_0f7d963f953eb0 62-63,360,391-405
+src/sync/link.test.ts
+  s_93769b79d4ca29::t_73ce277d322112 331
+src/ui/Encryption.tsx
+  s_93769b79d4ca29::t_5df1be2afe1297 154,160-161,178
+src/qa/edge.test.ts
+  s_93769b79d4ca29::t_9608673a0296fc 413
+src/sync/sync.test.ts
+  s_93769b79d4ca29::t_b630521cf3e8d0 225,272,381
+src/types.ts
+  s_93769b79d4ca29::t_ef58a8f5ad3c57 269-272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e420a9e6724906661ecfb0e808d3c714d5c72378",
+  "prompts": {},
+  "sessions": {
+    "s_93769b79d4ca29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bb52c32d-203b-49c0-8507-835315564afa",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
