@@ -7,6 +7,7 @@ import type {
   LinkState,
   RemoteItem,
   Repo,
+  SignOutCheck,
   Sync,
   SyncKind,
   SyncState,
@@ -65,6 +66,7 @@ export interface SyncDeps {
 
 const CURSOR_KEY = 'sync.cursor';
 const LAST_SYNC_KEY = 'sync.lastSync';
+const OWNER_KEY = 'sync.owner'; // userId de la cuenta a la que pertenecen los datos locales
 const REFRESH_MARGIN_MS = 60_000;
 const OVERLAP_MS = 5_000; // solapamiento del pull: los commits pueden llegar fuera de orden
 const DEBOUNCE_MS = 1_500;
@@ -572,6 +574,14 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   async function adopt(s: Session): Promise<void> {
     epoch++;
     dropLink();
+    // Datos locales de otra cuenta (p. ej. de una versión que no borraba al cerrar sesión): nunca se mezclan
+    // ni se suben a esta. Sin dueño (uso sin cuenta), pasan a ser de esta cuenta.
+    const owner = await repo.getMeta<string>(OWNER_KEY);
+    if (owner && owner !== s.userId) {
+      await repo.wipe();
+      lastSync = null;
+    }
+    await repo.setMeta(OWNER_KEY, s.userId);
     session = s;
     encState = 'off';
     auth.saveSession(storage, s);
@@ -629,6 +639,18 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     }
   }
 
+  async function signOutCheck(): Promise<SignOutCheck> {
+    const c = cfg;
+    const s = session;
+    if (!c || !s) return { pending: 0, recovery: true };
+    await syncNow();
+    const pending = (await repo.pendingChanges()).length;
+    // Solo un dispositivo con la DK puede perderla; si no hay clave de recuperación, quizá sea la única copia.
+    if (encState !== 'on' && encState !== 'migrating') return { pending, recovery: true };
+    const row = await readKeyRow(c, s).catch(() => undefined);
+    return { pending, recovery: row === undefined ? null : !!row?.recovery };
+  }
+
   async function signOut(): Promise<void> {
     const c = cfg;
     if (!c) return;
@@ -639,8 +661,12 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     encState = 'off';
     auth.clearSession(storage);
     setState({ status: 'signedOut' });
+    // Que ningún sync u operación en curso vuelva a escribir después del borrado.
+    if (running) await running;
+    if (op) await op.catch(noop);
+    await repo.wipe();
+    lastSync = null;
     if (old) await auth.signOut(c, old.accessToken, fetchImpl);
-    await repo.setMeta(CURSOR_KEY, null);
   }
 
   async function deleteAccount(): Promise<{ remote: 'none' | 'data' | 'account' }> {
@@ -911,7 +937,12 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     }
     interval = setInterval(onTick, TICK_MS);
     linkCheckTimer = setInterval(onLinkCheck, LINK_CHECK_MS);
-    if (session) trigger();
+    if (session) {
+      // Sesión de una versión anterior, que no guardaba el dueño: los datos locales son de esta cuenta.
+      const { userId } = session;
+      void repo.getMeta<string>(OWNER_KEY).then((o) => (o ? undefined : repo.setMeta(OWNER_KEY, userId)), noop);
+      trigger();
+    }
     void handleRedirect();
   }
 
@@ -948,6 +979,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     signInWithGoogle,
     signIn,
     signUp,
+    signOutCheck,
     signOut,
     deleteAccount,
     syncNow,

@@ -250,6 +250,14 @@ export type SyncState =
   | { status: 'error'; message: string; email: string };
 
 /** API del módulo sync (src/sync/index.ts). */
+/** Lo que se perdería al cerrar sesión en este dispositivo. */
+export interface SignOutCheck {
+  pending: number; // cambios locales que no se han podido subir
+  /** ¿Existe clave de recuperación? true también si este dispositivo no tiene la clave de cifrado (no hay nada que perder);
+   *  null si no se pudo comprobar (sin conexión). Sin ella, si este es el único dispositivo, los datos serían ilegibles. */
+  recovery: boolean | null;
+}
+
 export interface Sync {
   getState(): SyncState;
   subscribe(cb: (s: SyncState) => void): () => void;
@@ -257,6 +265,9 @@ export interface Sync {
   signInWithGoogle(): void; // redirige a Google; al volver, start() recoge la sesión del hash
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string): Promise<void>;
+  /** Sincroniza y cuenta lo que se perdería al cerrar sesión (que borra este dispositivo). */
+  signOutCheck(): Promise<SignOutCheck>;
+  /** Cierra la sesión y borra este dispositivo (tareas, preferencias y clave). Los datos siguen en la cuenta. */
   signOut(): Promise<void>;
   /** Borra los datos de la nube y la cuenta (si la función existe en Supabase) y cierra la sesión.
    *  remote: 'none' sin sesión; 'data' solo se borraron las tareas; 'account' tareas y cuenta. */

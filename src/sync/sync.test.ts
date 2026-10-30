@@ -179,6 +179,11 @@ function makeRepo() {
     setMeta: async (k: string, v: unknown) => {
       meta.set(k, v);
     },
+    wipe: async () => {
+      items.clear();
+      meta.clear();
+      notify();
+    },
     subscribe: (cb: () => void) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
@@ -446,7 +451,7 @@ describe('sync: sesión', () => {
     expect(d.sync.getState()).toEqual({ status: 'signedOut' });
   });
 
-  it('signOut conserva los datos locales y reinicia el cursor', async () => {
+  it('signOut borra los datos locales y el cursor', async () => {
     const server = new FakeServer();
     server.addUser('ana@test.io', 'secreto');
     const d = device(server, makeClock());
@@ -459,8 +464,8 @@ describe('sync: sesión', () => {
 
     expect(d.sync.getState()).toEqual({ status: 'signedOut' });
     expect(d.storage.getItem('lista.session')).toBeNull();
-    expect(d.title('task', 't1')).toBe('Comprar pan');
-    expect(await d.repo.getMeta('sync.cursor')).toBeNull();
+    expect(d.title('task', 't1')).toBeUndefined();
+    expect(await d.repo.getMeta('sync.cursor')).toBeUndefined();
   });
 });
 

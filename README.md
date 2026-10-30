@@ -87,7 +87,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 
 Todo se guarda primero **en tu dispositivo**. Puedes usar Lista sin cuenta y sin conexión;
 si quieres llevar tus tareas del móvil al ordenador, entra con **Google**.
-Desde Ajustes puedes exportarlo todo o borrarlo todo.
+Desde Ajustes puedes exportarlo todo o borrarlo todo. Cerrar sesión borra las tareas del dispositivo (siguen en tu cuenta), así que antes te pide una clave de recuperación si aún no la tienes y avisa si quedan cambios sin subir.
 
 Para tenerla siempre a mano, instálala como una app:
 

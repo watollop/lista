@@ -160,14 +160,7 @@ export function EncryptionSection({ sync, state, toast }: { sync: Sync; state: S
         <p aria-live="polite">Tus datos se guardan cifrados: nadie más puede leerlos, ni siquiera el administrador del servidor.</p>
         <p class="enc-hint">Tus otros dispositivos se enlazan con un código la primera vez que los abras. Crea una clave de recuperación por si los pierdes todos.</p>
         {recoveryKey ? (
-          <div class="recovery">
-            <code class="recovery-key" aria-live="polite">{recoveryKey}</code>
-            <div class="row-btns">
-              <button class="btn" onClick={() => copyText(recoveryKey, toast)}>Copiar</button>
-              <button class="btn" onClick={() => downloadKey(recoveryKey)}>Descargar</button>
-              <button class="btn" onClick={() => setRecoveryKey(null)}>Ya la he guardado</button>
-            </div>
-          </div>
+          <RecoveryKeyBox value={recoveryKey} toast={toast} onDone={() => setRecoveryKey(null)} />
         ) : !confirmKey ? (
           <div class="row-btns"><button class="btn" onClick={() => setConfirmKey(true)}>Crear clave de recuperación</button></div>
         ) : (
@@ -231,6 +224,20 @@ export function EncryptionSection({ sync, state, toast }: { sync: Sync; state: S
       {body}
       {err && <p class="err" role="alert">{err}</p>}
     </section>
+  );
+}
+
+/** Clave de recuperación recién creada: se muestra una sola vez, para copiarla o descargarla. */
+export function RecoveryKeyBox({ value, toast, onDone }: { value: string; toast: Toast; onDone: () => void }) {
+  return (
+    <div class="recovery">
+      <code class="recovery-key" aria-live="polite">{value}</code>
+      <div class="row-btns">
+        <button class="btn" onClick={() => copyText(value, toast)}>Copiar</button>
+        <button class="btn" onClick={() => downloadKey(value)}>Descargar</button>
+        <button class="btn" onClick={onDone}>Ya la he guardado</button>
+      </div>
+    </div>
   );
 }
 

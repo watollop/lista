@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
-import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
+import type { Backup, Entity, EntityKind, Repo, SignOutCheck, Sync, SyncState } from '../types';
 import { saveAppearance } from './appearanceSync';
-import { EncryptionSection } from './Encryption';
+import { EncryptionSection, RecoveryKeyBox } from './Encryption';
+import { INTRO_KEY } from './Onboarding';
 import { APPEARANCE_CHANGE_EVENT, DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
@@ -32,7 +33,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <span class="label">Ajustes</span>
           <button class="link on" onClick={onClose}>Cerrar</button>
         </div>
-        <Account sync={sync} state={state} />
+        <Account repo={repo} sync={sync} state={state} toast={toast} />
         <EncryptionSection sync={sync} state={state} toast={toast} />
         <Appearance repo={repo} toast={toast} />
         <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
@@ -63,7 +64,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
   );
 }
 
-function Account({ sync, state }: { sync: Sync; state: SyncState }) {
+function Account({ repo, sync, state, toast }: { repo: Repo; sync: Sync; state: SyncState; toast: (m: string) => void }) {
   const [google, setGoogle] = useState<boolean | null>(null); // null: comprobando
   useEffect(() => { if (state.status === 'signedOut') sync.googleEnabled().then(setGoogle); }, [state.status]);
 
@@ -106,10 +107,80 @@ function Account({ sync, state }: { sync: Sync; state: SyncState }) {
       <p class={state.status === 'error' ? 'err' : ''}>{detail}</p>
       <div class="row-btns">
         <button class="btn" disabled={state.status === 'syncing'} onClick={() => sync.syncNow()}>Sincronizar ahora</button>
-        <button class="btn" onClick={() => sync.signOut()}>Cerrar sesión</button>
       </div>
+      <SignOut repo={repo} sync={sync} toast={toast} />
     </section>
   );
+}
+
+/**
+ * Cerrar sesión borra este dispositivo (así nunca se mezclan cuentas). Antes se sincroniza y se avisa de lo que se
+ * perdería: cambios sin subir o, si no hay clave de recuperación, el acceso a los datos cifrados.
+ */
+function SignOut({ repo, sync, toast }: { repo: Repo; sync: Sync; toast: (m: string) => void }) {
+  const [check, setCheck] = useState<SignOutCheck | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [key, setKey] = useState<string | null>(null);
+  const act = async (fn: () => Promise<void>, fallback: string) => {
+    setBusy(true);
+    try { await fn(); } catch (e) { toast(e instanceof Error && e.message ? e.message : fallback); } finally { setBusy(false); }
+  };
+  const start = () => act(async () => setCheck(await sync.signOutCheck()), 'No se pudo comprobar la sincronización.');
+  const createKey = () => act(async () => setKey(await sync.createRecoveryKey()), 'No se pudo crear la clave.');
+  const leave = () => act(async () => {
+    await sync.signOut();
+    clearPrefs([INTRO_KEY]);
+    location.reload();
+  }, 'No se pudo cerrar sesión.');
+  const cancel = <button class="btn" disabled={busy} onClick={() => { setCheck(null); setKey(null); }}>Cancelar</button>;
+
+  if (!check) {
+    return (
+      <div class="row-btns">
+        <button class="btn" disabled={busy} onClick={start}>{busy ? 'Comprobando…' : 'Cerrar sesión'}</button>
+      </div>
+    );
+  }
+  if (key) {
+    return <RecoveryKeyBox value={key} toast={toast} onDone={() => { setKey(null); void start(); }} />;
+  }
+  if (check.recovery === false) {
+    return (
+      <>
+        <p class="err">Antes de cerrar sesión, crea una clave de recuperación. Al cerrar sesión se borra la clave de este dispositivo y, si no tienes otro enlazado, sin ella no podrías volver a leer tus tareas.</p>
+        <div class="row-btns">
+          <button class="btn solid" disabled={busy} onClick={createKey}>{busy ? 'Creando…' : 'Crear clave de recuperación'}</button>
+          {cancel}
+        </div>
+      </>
+    );
+  }
+  const risky = check.pending > 0 || check.recovery === null;
+  return (
+    <>
+      <p>Se borrarán las tareas de este dispositivo; siguen en tu cuenta. Al volver a entrar tendrás que enlazarlo o usar tu clave de recuperación.</p>
+      {check.pending > 0 && (
+        <p class="err">{check.pending === 1 ? 'Hay 1 cambio que no se ha subido' : `Hay ${check.pending} cambios que no se han subido`}: si cierras sesión, se perderán.</p>
+      )}
+      {check.recovery === null && (
+        <p class="err">Sin conexión no se puede comprobar tu clave de recuperación. Si este es tu único dispositivo y no la tienes, perderás el acceso a tus tareas.</p>
+      )}
+      <div class="row-btns">
+        <button class={`btn solid ${risky ? 'danger-btn' : ''}`} disabled={busy} onClick={leave}>
+          {risky ? 'Cerrar sesión igualmente' : 'Cerrar sesión'}
+        </button>
+        {check.pending > 0 && <button class="btn" disabled={busy} onClick={() => act(() => exportBackup(repo), 'No se pudo exportar.')}>Exportar copia</button>}
+        {cancel}
+      </div>
+    </>
+  );
+}
+
+/** Borra las preferencias de Lista guardadas en el navegador, salvo las indicadas. */
+function clearPrefs(keep: string[] = []) {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('lista.') && !keep.includes(k)) localStorage.removeItem(k);
+  } catch { /* modo privado */ }
 }
 
 const THEMES: Array<[Theme, string]> = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Oscuro']];
@@ -238,9 +309,7 @@ function DangerSection({ repo, sync, state, toast }: { repo: Repo; sync: Sync; s
     try {
       const { remote } = await sync.deleteAccount();
       await repo.wipe();
-      try {
-        for (const k of Object.keys(localStorage)) if (k.startsWith('lista.')) localStorage.removeItem(k);
-      } catch { /* modo privado */ }
+      clearPrefs();
       if (remote === 'data') alert('Se han borrado tus datos de la nube, pero no la cuenta: falta la función delete_account en Supabase (ver supabase/schema.sql).');
       location.reload();
     } catch (e) {
@@ -299,16 +368,19 @@ function CaptureFold({ toast }: { toast: (m: string) => void }) {
   );
 }
 
+/** Descarga todas las tareas en un archivo JSON. */
+async function exportBackup(repo: Repo) {
+  const b = await repo.exportBackup();
+  const blob = new Blob([JSON.stringify(b)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `lista-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 function BackupSection({ repo, toast }: { repo: Repo; toast: (m: string) => void }) {
-  const exportJSON = async () => {
-    const b = await repo.exportBackup();
-    const blob = new Blob([JSON.stringify(b)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `lista-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
+  const exportJSON = () => exportBackup(repo);
   const importJSON = (mode: 'merge' | 'replace') => {
     const input = document.createElement('input');
     input.type = 'file';

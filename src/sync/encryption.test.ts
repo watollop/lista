@@ -54,6 +54,7 @@ class FakeServer {
   accessTokens = new Map<string, string>(); // token -> userId
   refreshTokens = new Map<string, { userId: string; email: string }>();
   rows = new Map<string, Row>(); // `${userId}|${kind}|${id}`
+  offline = false;
   private tokenSeq = 0;
   private seq = 0;
 
@@ -98,6 +99,7 @@ class FakeServer {
   }
 
   fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    if (this.offline) throw new TypeError('Failed to fetch');
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
     const method = (init?.method ?? 'GET').toUpperCase();
     const body = init?.body ? JSON.parse(init.body as string) : undefined;
@@ -565,5 +567,85 @@ describe('cifrado: datos locales', () => {
 
     expect(await a.repo.getSetting('theme')).toBeUndefined();
     expect(await a.repo.getMeta('dk:user-1')).toBeUndefined();
+  });
+});
+
+describe('cerrar sesión y cambiar de cuenta', () => {
+  it('14. signOut borra las tareas y la clave del dispositivo; siguen en la cuenta', async () => {
+    const { a } = twoDevices();
+    await login(a);
+    await addTask(a.repo, 'Comprar pan');
+    await a.sync.syncNow();
+    const key = await a.sync.createRecoveryKey();
+    const userId = sessionOf(a).userId;
+
+    await a.sync.signOut();
+
+    expect(await titles(a.repo)).toEqual([]);
+    expect(await a.repo.getMeta(`dk:${userId}`)).toBeUndefined();
+    expect(a.storage.getItem('lista.session')).toBeNull();
+
+    // Al volver a entrar el dispositivo está bloqueado; con la clave de recuperación recupera las tareas.
+    await login(a);
+    expect(a.sync.encryption()).toBe('locked');
+    await a.sync.unlockWithRecovery(key);
+    expect(await titles(a.repo)).toEqual(['Comprar pan']);
+  });
+
+  it('15. otra cuenta en el mismo dispositivo no recibe ni sube los datos que dejó la anterior', async () => {
+    const { server, a } = twoDevices();
+    server.addUser('bea@test.io', 'secreto');
+    await login(a);
+    await addTask(a.repo, 'Secreto de Ana');
+    await a.sync.syncNow();
+    // Una versión anterior cerraba sesión sin borrar: los datos de Ana siguen en el dispositivo.
+    a.storage.removeItem('lista.session');
+    const nueva = createSync(a.repo, CFG, { fetch: server.fetch as unknown as typeof fetch, storage: a.storage, now: makeClock().now });
+
+    await nueva.signIn('bea@test.io', 'secreto');
+
+    expect(await titles(a.repo)).toEqual([]);
+    const bea = [...server.rows.values()].filter((r) => r.user_id === 'user-2');
+    expect(bea.filter((r) => r.kind === 'enc')).toHaveLength(0);
+    expect(server.dump()).not.toContain('Secreto de Ana');
+  });
+
+  it('16. lo apuntado sin cuenta pasa a la primera cuenta que entra', async () => {
+    const { server, a } = twoDevices();
+    await addTask(a.repo, 'Antes de entrar');
+
+    await login(a);
+
+    expect(await titles(a.repo)).toEqual(['Antes de entrar']);
+    expect(server.rowsOf('enc')).toHaveLength(1);
+  });
+
+  it('17. signOutCheck pide clave de recuperación si este dispositivo tiene la única clave', async () => {
+    const { a } = twoDevices();
+    await login(a);
+    await addTask(a.repo, 'Tarea');
+
+    expect(await a.sync.signOutCheck()).toEqual({ pending: 0, recovery: false });
+    await a.sync.createRecoveryKey();
+    expect(await a.sync.signOutCheck()).toEqual({ pending: 0, recovery: true });
+  });
+
+  it('18. sin conexión, signOutCheck cuenta los cambios sin subir y no puede comprobar la clave', async () => {
+    const { server, a } = twoDevices();
+    await login(a);
+    server.offline = true;
+    await addTask(a.repo, 'Sin subir');
+
+    expect(await a.sync.signOutCheck()).toEqual({ pending: 1, recovery: null });
+  });
+
+  it('19. un dispositivo bloqueado no pierde ninguna clave, pero sí avisa de sus cambios sin subir', async () => {
+    const { a, b } = twoDevices();
+    await login(a);
+    await a.sync.syncNow();
+    await login(b);
+    await addTask(b.repo, 'Hecha en B');
+
+    expect(await b.sync.signOutCheck()).toEqual({ pending: 1, recovery: true });
   });
 });
