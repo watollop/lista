@@ -1042,16 +1042,29 @@ section.droppable.drop-on .section { color: var(--fg); }
   64.01%, 100% { visibility: visible; }
 }
 /* ---------- cifrado: sección y enlace entre dispositivos ---------- */
-.link-box { margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.link-box p { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
-.link-box .row-btns { margin-top: 4px; }
-.link-title { display: block; font-size: 15px; color: var(--fg); margin-bottom: 10px; }
+.enc-title { display: block; font-size: 17px; color: var(--fg); margin-bottom: 8px; }
+.enc-hint { font-size: 13px; color: var(--faint); }
+.enc-warn { font-size: 14px; color: var(--warn); }
+.enc-next { margin: 4px 0 18px; padding: 14px 16px; background: var(--surface); border-radius: var(--radius); }
+.enc-next p { margin-bottom: 8px; }
 .link-code { font: 2em ui-monospace, Menlo, monospace; letter-spacing: .12em; margin: 4px 0 14px; user-select: all; }
-.link-float {
-  position: fixed; z-index: 21; left: var(--gutter); right: var(--gutter);
-  bottom: calc(84px + var(--sab) + var(--kb)); max-width: 480px; margin: 0 auto;
-  background: var(--bg); box-shadow: 0 10px 30px rgb(0 0 0 / .18);
+/* Dispositivo bloqueado: en la lista, encima de las tareas, y en Ajustes. */
+.lock-panel { margin: 0 0 24px; padding: 18px 20px; border: 1px solid var(--fg); border-radius: var(--radius); background: var(--surface); }
+.lock-panel p { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
+.lock-panel .row-btns { margin-top: 4px; align-items: center; }
+.sheet .lock-panel { margin-bottom: 8px; }
+/* Dispositivo activado: confirmación de un enlace, por encima de todo (también de Ajustes). */
+.dialog-backdrop {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgb(0 0 0 / .4); animation: fade .18s ease;
 }
+.dialog {
+  width: 100%; max-width: 420px; padding: 22px 22px 18px; background: var(--bg); color: var(--fg);
+  border-radius: var(--radius); box-shadow: 0 20px 50px rgb(0 0 0 / .3);
+}
+.dialog p { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
+.dialog .enc-warn { color: var(--warn); }
+.toast.toast-top { top: calc(16px + var(--sat)); bottom: auto; z-index: 41; }
 .recovery-key {
   display: block; padding: 12px; margin: 4px 0 14px; background: var(--surface); border-radius: var(--radius);
   font: 14px/1.6 ui-monospace, Menlo, monospace; overflow-wrap: anywhere; user-select: all;

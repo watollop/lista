@@ -749,7 +749,10 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
           return;
         }
         if (r.status === 'gone') {
-          failLink('new', 'El enlace se canceló o caducó. Vuelve a intentarlo.');
+          // Con el código ya a la vista, lo normal es que el otro dispositivo lo haya rechazado.
+          failLink('new', ctx.st.revealed
+            ? 'El otro dispositivo rechazó el enlace o la petición caducó.'
+            : 'Nadie respondió a tiempo: la petición caducó. Vuelve a intentarlo con el otro dispositivo abierto.');
           return;
         }
         // 'done': la DK ya está descifrada. adoptKey verifica el keyId y hace la bajada completa.
@@ -813,7 +816,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
 
   /** Mientras el cifrado esté activo y no haya enlace en curso, busca peticiones nuevas cada LINK_CHECK_MS. */
   function onLinkCheck(): void {
-    if (encState === 'on' && !linkCtx) void answerPendingLink();
+    if ((encState === 'on' || encState === 'migrating') && !linkCtx) void answerPendingLink();
   }
 
   /** Lado nuevo: pide el enlace a un dispositivo activado. Requiere sesión y el cifrado bloqueado. */
