@@ -1,0 +1,25 @@
+index.html
+  s_424a0171df7a01::t_1c14ea48c4284e 13-15,22-45
+public/manifest.webmanifest
+  s_424a0171df7a01::t_33265358c12985 15,21,27
+scripts/icons.mjs
+  s_424a0171df7a01::t_0bdacd6bd417a3 55-61,63-69,71-77
+src/ui/styles.css
+  s_424a0171df7a01::t_16a25ac49262d4 1083-1099
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "560c355539ccdd441d6090a763c20896b08b4b01",
+  "prompts": {},
+  "sessions": {
+    "s_424a0171df7a01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d77de634-9bcf-4a46-90fa-b2ea0e9b4840",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
