@@ -7,7 +7,7 @@
 **Principios**
 - **Sin contraseñas.** El usuario no crea, guarda ni escribe ninguna contraseña.
 - **Sin servicios de terceros** para guardar la clave (descartados Google Drive y Google Cloud KMS).
-- **Irreversible.** El cifrado se activa por persona con un toggle y, una vez activado, no se puede desactivar.
+- **Obligatorio.** No hay toggle (lo hubo al principio, para validar): la primera sincronización de una cuenta activa el cifrado, y no se puede desactivar. Nada se sube en claro.
 - **Compromiso al estilo WhatsApp:** seguridad fuerte por defecto (enlace entre dispositivos) y recuperación opcional para quien la quiera.
 
 **Fuera de alcance**
@@ -17,16 +17,15 @@
 - Apps nativas (iOS/Android) y passkeys: previstas en el diseño (§13), no en este plan.
 
 **Requisitos**
-- Con el toggle sin activar, el comportamiento es idéntico al actual.
+- Una cuenta que ya tenía datos en claro (versiones anteriores) se migra sola en su primera sincronización con la versión nueva.
 - Los dispositivos con una versión antigua de la app no deben romperse ni corromper datos.
 - El login sigue siendo Google SSO vía Supabase.
 
 ## 2. Cómo lo vive el usuario
 
-**Activar (una vez)**
-1. Ana usa la app como siempre: entra con Google y sus tareas se sincronizan.
-2. En Ajustes → Cifrado activa el toggle. Aparece un aviso: "Tus datos se cifrarán y nadie más podrá leerlos, ni el administrador. **Una vez activado no se puede desactivar.**" Confirma.
-3. Ve "Cifrando…" y después "Cifrado activo". Se le ofrece, sin obligar, "Guardar clave de recuperación".
+**Activación (automática)**
+1. Ana entra con Google. La primera sincronización genera la clave, sube todo cifrado y recifra lo que hubiera en claro en el servidor. No tiene que hacer nada.
+2. En Ajustes → Cifrado ve "Tus datos se guardan cifrados" y, sin obligar, "Crear clave de recuperación".
 
 **Otro dispositivo (como WhatsApp Web)**
 1. Abre la app en el portátil y entra con Google. Ve: "Tus datos están cifrados. Abre Lista en un dispositivo ya activado para enlazar este". Debajo, un código: `482 913`.
@@ -222,4 +221,4 @@ Como el cifrado no se puede desactivar, las pruebas reales se hacen solo con **c
 
 ## 14. Estado
 
-Fases A–E y G implementadas (la G se adelantó a la activación, ver §7). Pendientes: F (validación real con cuentas de prueba) y H (activar para personas concretas). De paso se corrigió `clearAll`, que no limpiaba la tabla `settings`.
+Fases A–E y G implementadas (la G se adelantó a la activación, ver §7). Pendiente: F (validación real con cuentas de prueba). La H se sustituyó por el cifrado obligatorio: el toggle desapareció y el primer sync de cada cuenta lo activa (`activate` en `src/sync/index.ts`). Cada dispositivo adicional de una cuenta tiene que enlazarse una vez. De paso se corrigió `clearAll`, que no limpiaba la tabla `settings`.

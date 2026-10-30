@@ -328,7 +328,7 @@ async function encryptedPair() {
   const a = device(server);
   await a.sync.signIn('ana@test.io', 'secreto');
   await addTask(a.repo, 'Tarea de A');
-  await a.sync.enableEncryption();
+  await a.sync.syncNow();
   const b = device(server);
   await b.sync.signIn('ana@test.io', 'secreto');
   expect(b.sync.encryption()).toBe('locked');

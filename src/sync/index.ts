@@ -59,6 +59,8 @@ export interface SyncDeps {
   fetch?: typeof fetch;
   storage?: SessionStorage;
   now?: () => number;
+  /** Solo para los tests del transporte (cursor, LWW, paginación): sincroniza en claro, sin activar el cifrado. */
+  unencrypted?: boolean;
 }
 
 const CURSOR_KEY = 'sync.cursor';
@@ -81,8 +83,6 @@ const migKey = (userId: string): string => `encmig:${userId}`; // true mientras 
 
 /** Kinds que viajan en claro (versiones antiguas de la app o migración pendiente). */
 const PLAIN_KINDS: readonly SyncKind[] = ['task', 'topic', 'person', 'filter', 'setting'];
-
-const ALREADY_ELSEWHERE = 'El cifrado ya se activó en otro dispositivo. Enlaza este dispositivo.';
 
 /** Protocolo de enlace en curso: B (dispositivo nuevo, 'new') o A (activado, 'active'). */
 type LinkCtx = { role: 'new'; st: BState } | { role: 'active'; st: AState };
@@ -357,8 +357,8 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     ]);
     const dk = rawDk ? await dkFrom(rawDk, row) : null;
     if (row || dk) return syncEncrypted(c, s, row, dk, stored);
+    if (!deps.unencrypted) return activate(c, s);
 
-    // Sin cifrado (cuenta sin fila key): el comportamiento de siempre.
     encState = 'off';
     const pending = all.filter((it) => it.kind !== 'setting');
     if (pending.length > 0) {
@@ -386,6 +386,21 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     }
     if (cursor !== null) await repo.setMeta(CURSOR_KEY, cursor);
     return 'ok';
+  }
+
+  /**
+   * Primera sincronización de una cuenta sin fila key: el cifrado es obligatorio y se activa aquí, sin subir
+   * nada en claro. Si otro dispositivo se adelanta al crear la fila key, este queda 'locked' y debe enlazarse.
+   * Lo que haya en claro en el servidor (versiones anteriores de la app) lo recifra y borra la migración.
+   * La DK y la migración se guardan antes de crear la fila key: si la app se cierra a medias, el siguiente
+   * sync la crea con esta misma DK (rama sin fila key de syncEncrypted).
+   */
+  async function activate(c: SyncConfig, s: Session): Promise<'ok' | 'locked'> {
+    const dk = await generateDk();
+    await repo.setMeta(dkKey(s.userId), await exportDk(dk));
+    await repo.setMeta(migKey(s.userId), true);
+    await repo.markAllDirty(); // todo lo local, incluidos tombstones y preferencias
+    return syncEncrypted(c, s, null, dk, null);
   }
 
   async function runOnce(): Promise<void> {
@@ -493,38 +508,6 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     if ((await keyIdOf(dk)) !== row.keyId) throw new Error('La clave no corresponde a esta cuenta');
     await repo.setMeta(dkKey(s.userId), await exportDk(dk));
     await repo.setMeta(CURSOR_KEY, null); // pull completo
-    await runSyncLoop();
-  }
-
-  async function enableFn(): Promise<void> {
-    const c = cfg;
-    const s = session;
-    if (!c || !s) throw new Error('Inicia sesión para activar el cifrado');
-    // Sin sync previo: un sync en modo 'off' subiría en claro lo local antes de activar.
-    if (encState === 'locked') throw new Error(ALREADY_ELSEWHERE);
-    if (encState !== 'off') throw new Error('El cifrado ya está activado en esta cuenta.');
-
-    // 1) Bajada completa en claro, para tener todo en local antes de cifrar.
-    const pulled = await pullItems(c, s, null, fetchImpl);
-    await repo.applyRemote(pulled.items.filter((it) => PLAIN_KINDS.includes(it.kind)));
-
-    // 2) Generar la DK y crear la fila key. Si ya existe otra, este dispositivo no la toca.
-    const dk = await generateDk();
-    const kid = await keyIdOf(dk);
-    const stored = await putKeyRow(c, s, { v: 1, keyId: kid, recovery: null }, fetchImpl);
-    if (stored.keyId !== kid) {
-      encState = 'locked';
-      setState({ status: 'locked', email: s.email });
-      throw new Error(ALREADY_ELSEWHERE);
-    }
-
-    // 3) Guardar la DK y la migración pendiente. 4) Todo pendiente de subir (incluidos tombstones).
-    await repo.setMeta(dkKey(s.userId), await exportDk(dk));
-    await repo.setMeta(migKey(s.userId), true);
-    await repo.markAllDirty();
-
-    // 5) Sync: sube todo cifrado y ejecuta la migración.
-    encState = 'migrating';
     await runSyncLoop();
   }
 
@@ -971,7 +954,6 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     start,
     stop,
     encryption: () => encState,
-    enableEncryption: () => exclusive(enableFn),
     createRecoveryKey,
     unlockWithRecovery: (recoveryKey) => exclusive(() => unlockFn(recoveryKey)),
     resetEncryption: () => exclusive(resetFn),

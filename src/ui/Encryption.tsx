@@ -140,8 +140,6 @@ export function LinkDialog({ sync, link, toast }: { sync: Sync; link: LinkState;
 /** Sección «Cifrado» de Ajustes. Solo con sesión iniciada. */
 export function EncryptionSection({ sync, state, toast }: { sync: Sync; state: SyncState; toast: Toast }) {
   const { busy, err, run } = useAction();
-  const [confirmOn, setConfirmOn] = useState(false);
-  const [justEnabled, setJustEnabled] = useState(false);
   const [confirmKey, setConfirmKey] = useState(false);
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
   const [showUnlock, setShowUnlock] = useState(false);
@@ -153,40 +151,14 @@ export function EncryptionSection({ sync, state, toast }: { sync: Sync; state: S
 
   let body;
   if (mode === 'off') {
-    body = (
-      <>
-        <p>Cifra tus datos para que nadie más pueda leerlos, ni siquiera el administrador del servidor.</p>
-        {!confirmOn ? (
-          <div class="row-btns"><button class="btn" onClick={() => setConfirmOn(true)}>Activar cifrado</button></div>
-        ) : (
-          <>
-            <p>Una vez activado <strong>no se puede desactivar</strong>. Tus otros dispositivos dejarán de ver los cambios hasta que los enlaces: basta con abrirlos y confirmar un código desde este.</p>
-            <div class="row-btns">
-              <button class="btn solid" disabled={busy}
-                onClick={async () => {
-                  if (await run(() => sync.enableEncryption(), 'No se pudo activar el cifrado.')) { setConfirmOn(false); setJustEnabled(true); }
-                }}>
-                {busy ? 'Cifrando…' : 'Activar'}
-              </button>
-              <button class="btn" disabled={busy} onClick={() => setConfirmOn(false)}>Cancelar</button>
-            </div>
-          </>
-        )}
-      </>
-    );
+    body = <p aria-live="polite">Tus datos se cifrarán en la primera sincronización.</p>;
   } else if (mode === 'migrating') {
     body = <p aria-live="polite">Cifrando tus datos… Mantén la app abierta hasta que termine.</p>;
   } else if (mode === 'on') {
     body = (
       <>
-        <p aria-live="polite">Cifrado activo en este dispositivo.</p>
-        {justEnabled && (
-          <div class="enc-next">
-            <span class="enc-title">Siguiente paso: tus otros dispositivos</span>
-            <p>Ábrelos con este a mano. Mostrarán un aviso para enlazarse y aquí te aparecerá un código para confirmarlo.</p>
-            <p>Te recomendamos también crear una clave de recuperación, por si pierdes todos tus dispositivos.</p>
-          </div>
-        )}
+        <p aria-live="polite">Tus datos se guardan cifrados: nadie más puede leerlos, ni siquiera el administrador del servidor.</p>
+        <p class="enc-hint">Tus otros dispositivos se enlazan con un código la primera vez que los abras. Crea una clave de recuperación por si los pierdes todos.</p>
         {recoveryKey ? (
           <div class="recovery">
             <code class="recovery-key" aria-live="polite">{recoveryKey}</code>
@@ -203,7 +175,7 @@ export function EncryptionSection({ sync, state, toast }: { sync: Sync; state: S
             <p>Sirve para recuperar tus datos si pierdes todos tus dispositivos. Guárdala en un lugar seguro: solo se muestra una vez y crear otra invalida la anterior.</p>
             <div class="row-btns">
               <button class="btn solid" disabled={busy}
-                onClick={() => run(async () => { setRecoveryKey(await sync.createRecoveryKey()); setConfirmKey(false); setJustEnabled(false); }, 'No se pudo crear la clave.')}>
+                onClick={() => run(async () => { setRecoveryKey(await sync.createRecoveryKey()); setConfirmKey(false); }, 'No se pudo crear la clave.')}>
                 {busy ? 'Creando…' : 'Crear'}
               </button>
               <button class="btn" disabled={busy} onClick={() => setConfirmKey(false)}>Cancelar</button>

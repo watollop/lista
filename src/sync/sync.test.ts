@@ -222,6 +222,7 @@ function device(server: FakeServer, clock: ReturnType<typeof makeClock>) {
     fetch: server.fetch as unknown as typeof fetch,
     storage,
     now: clock.now,
+    unencrypted: true, // estos tests miran el transporte con filas legibles; el cifrado, en encryption.test.ts
   });
   return { ...r, sync, storage };
 }
@@ -268,7 +269,7 @@ describe('sync: sin configuración', () => {
     function persistentDevice(server: FakeServer) {
       const repo = createRepo('color-sync-' + crypto.randomUUID());
       const storage = memStorage();
-      const sync = createSync(repo, CFG, { fetch: server.fetch, storage });
+      const sync = createSync(repo, CFG, { fetch: server.fetch, storage, unencrypted: true });
       return { repo, sync, storage };
     }
 
@@ -377,7 +378,7 @@ describe('sync: sin configuración', () => {
       old.close();
       const repo = createRepo(name);
       await writeColor(repo, '#db729f', true);
-      const sync = createSync(repo, CFG, { fetch: server.fetch, storage: web.storage });
+      const sync = createSync(repo, CFG, { fetch: server.fetch, storage: web.storage, unencrypted: true });
       await sync.syncNow();
       await sync.syncNow();
       expect(sync.getState().status).toBe('idle');

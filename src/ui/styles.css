@@ -1045,8 +1045,6 @@ section.droppable.drop-on .section { color: var(--fg); }
 .enc-title { display: block; font-size: 17px; color: var(--fg); margin-bottom: 8px; }
 .enc-hint { font-size: 13px; color: var(--faint); }
 .enc-warn { font-size: 14px; color: var(--warn); }
-.enc-next { margin: 4px 0 18px; padding: 14px 16px; background: var(--surface); border-radius: var(--radius); }
-.enc-next p { margin-bottom: 8px; }
 .link-code { font: 2em ui-monospace, Menlo, monospace; letter-spacing: .12em; margin: 4px 0 14px; user-select: all; }
 /* Dispositivo bloqueado: en la lista, encima de las tareas, y en Ajustes. */
 .lock-panel { margin: 0 0 24px; padding: 18px 20px; border: 1px solid var(--fg); border-radius: var(--radius); background: var(--surface); }

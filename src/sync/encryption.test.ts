@@ -9,7 +9,6 @@ import { generateDk, importDk, keyIdOf, remoteId } from './crypto';
 
 const CFG = { url: 'https://enc.supabase.co', anonKey: 'anon-key' };
 const BASE_TS = Date.parse('2026-10-27T10:00:00Z');
-const ALREADY_ELSEWHERE = 'El cifrado ya se activó en otro dispositivo. Enlaza este dispositivo.';
 
 // ---------- servidor falso (GoTrue + PostgREST con filtros) ----------
 
@@ -277,17 +276,30 @@ async function pushLegacy(server: FakeServer, d: Device, items: RemoteItem[] | E
 
 // ---------- tests ----------
 
-describe('cifrado: sin activar', () => {
-  it('1. sin cifrado, una tarea viaja de A a B en claro', async () => {
-    const { server, a, b } = twoDevices();
+describe('cifrado: obligatorio', () => {
+  it('1. el primer sync de una cuenta la cifra sin subir nada en claro, y recifra lo que ya había en claro', async () => {
+    const { server, a } = twoDevices();
+    // Cuenta con datos de una versión anterior de la app, sin fila key.
+    server.rows.set('user-1|task|vieja', {
+      user_id: 'user-1', kind: 'task', id: 'vieja',
+      data: {
+        id: 'vieja', title: 'Tarea en claro', topics: [], people: [], due: null, period: null,
+        priority: null, recurrence: null, parentId: null, done: 0, doneAt: null, nextId: null,
+        order: 1, createdAt: 100, updatedAt: 100, deleted: 0,
+      },
+      updated_at: 100, deleted: false, synced_at: new Date(BASE_TS).toISOString(),
+    });
+    expect(a.sync.encryption()).toBe('off');
+
     await login(a);
     await addTask(a.repo, 'Comprar pan');
     await a.sync.syncNow();
 
-    expect(server.dump()).toContain('Comprar pan');
-    await login(b);
-    expect(await titles(b.repo)).toEqual(['Comprar pan']);
-    expect(b.sync.encryption()).toBe('off');
+    expect(a.sync.encryption()).toBe('on');
+    expect(server.kinds()).toEqual(new Set(['enc', 'key']));
+    expect(server.dump()).not.toContain('Comprar pan');
+    expect(server.dump()).not.toContain('Tarea en claro');
+    expect((await titles(a.repo)).sort()).toEqual(['Comprar pan', 'Tarea en claro']);
   });
 });
 
@@ -299,7 +311,7 @@ describe('cifrado: activación', () => {
     const gone = await addTask(a.repo, 'Tarea borrada Zeta');
     await a.repo.deleteTask(gone.id);
 
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
 
     const dump = server.dump();
     expect(dump).not.toContain('Comprar pan secreto');
@@ -317,7 +329,7 @@ describe('cifrado: activación', () => {
     const { server, a, b } = twoDevices();
     await login(a);
     await addTask(a.repo, 'Previa de A');
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
 
     await login(b);
     expect(b.sync.getState()).toMatchObject({ status: 'locked', email: 'ana@test.io' });
@@ -336,7 +348,7 @@ describe('cifrado: activación', () => {
     const { server, a, b } = twoDevices();
     await login(a);
     await addTask(a.repo, 'Lista A');
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
     const recovery = await a.sync.createRecoveryKey();
 
@@ -360,7 +372,7 @@ describe('cifrado: activación', () => {
     const { a, b } = twoDevices();
     await login(a);
     await addTask(a.repo, 'Compartida');
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
 
     await login(b);
@@ -377,7 +389,7 @@ describe('cifrado: activación', () => {
   it('6. una fila en claro de un dispositivo antiguo se aplica, se recifra y desaparece del servidor', async () => {
     const { server, a } = twoDevices();
     await login(a);
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
 
     await pushLegacy(server, a, [
@@ -409,7 +421,7 @@ describe('cifrado: activación', () => {
     const { server, a, b } = twoDevices();
     await login(a);
     await addTask(a.repo, 'Valida');
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
 
     const corrupt: EncRow = {
@@ -434,7 +446,7 @@ describe('cifrado: activación', () => {
   it('8. si la fila key desaparece, A la recrea con su DK y no sube nada en claro', async () => {
     const { server, a } = twoDevices();
     await login(a);
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
 
     server.rows.delete('user-1|key|dk');
@@ -452,7 +464,7 @@ describe('cifrado: activación', () => {
   it('9. resetEncryption en B bloqueado: B queda on con DK nueva y A pasa a locked', async () => {
     const { server, a, b } = twoDevices();
     await login(a);
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
 
     await login(b);
@@ -471,24 +483,25 @@ describe('cifrado: activación', () => {
     expect(a.sync.encryption()).toBe('locked');
   });
 
-  it('10. activar en dos dispositivos a la vez: el que pierde recibe Error y queda locked', async () => {
-    const { a, b } = twoDevices();
-    await login(a);
-    await login(b);
-    await addTask(a.repo, 'Del que gana');
-    await addTask(b.repo, 'Del que pierde');
+  it('10. dos dispositivos con datos locales inician sesión a la vez: uno cifra, el otro queda locked sin subir nada', async () => {
+    const { server, a, b } = twoDevices();
+    await addTask(a.repo, 'Local de A');
+    await addTask(b.repo, 'Local de B');
 
-    const results = await Promise.allSettled([a.sync.enableEncryption(), b.sync.enableEncryption()]);
+    await Promise.all([login(a), login(b)]);
 
-    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
-    const fulfilled = results.filter((r) => r.status === 'fulfilled');
-    expect(rejected).toHaveLength(1);
-    expect(fulfilled).toHaveLength(1);
-    expect((rejected[0].reason as Error).message).toBe(ALREADY_ELSEWHERE);
-
-    const loser = results[0].status === 'rejected' ? a : b;
-    expect(loser.sync.encryption()).toBe('locked');
+    const states = [a.sync.encryption(), b.sync.encryption()].sort();
+    expect(states).toEqual(['locked', 'on']);
+    const [winner, loser] = a.sync.encryption() === 'on' ? [a, b] : [b, a];
     expect(loser.sync.getState().status).toBe('locked');
+    expect(server.kinds()).toEqual(new Set(['enc', 'key']));
+    expect(server.dump()).not.toContain('Local de');
+
+    // Al enlazarse, lo local del que perdió sube cifrado y llega al otro.
+    await loser.sync.adoptKey(await dkOf(winner));
+    await winner.sync.syncNow();
+    expect((await titles(winner.repo)).sort()).toEqual(['Local de A', 'Local de B']);
+    expect(server.dump()).not.toContain('Local de');
   });
 });
 
@@ -503,7 +516,7 @@ describe('cifrado: reloj atrasado', () => {
   it('12. la clave de recuperación se guarda aunque el reloj vaya por detrás de la fila key', async () => {
     const { a, b } = twoDevices();
     await login(a);
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
 
     const restore = clockSkew(-60_000);
@@ -523,7 +536,7 @@ describe('cifrado: reloj atrasado', () => {
     const { server, a, b } = twoDevices();
     await login(a);
     await addTask(a.repo, 'De A');
-    await a.sync.enableEncryption();
+    await a.sync.syncNow();
     await a.sync.syncNow();
 
     await login(b);
