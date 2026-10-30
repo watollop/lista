@@ -52,20 +52,29 @@ const maskable = svgDoc(
 );
 write('maskable-512.png', toPng(maskable, 512));
 
-// Splash iOS iPhone 16 (393x852 pt @3x = 1179x2556).
-const SPLASH_W = 1179;
-const SPLASH_H = 2556;
+// Splash iOS: una por tamaño de iPhone (ancho x alto en pt, factor de píxel). iOS solo usa
+// la que coincide exactamente con la pantalla; sin coincidencia, arranca en blanco.
+// index.html enlaza estas mismas (se genera con `npm run icons`).
+const SPLASHES = [
+  [360, 780, 3], [375, 667, 2], [375, 812, 3], [390, 844, 3], [393, 852, 3], [402, 874, 3],
+  [414, 736, 3], [414, 896, 2], [414, 896, 3], [428, 926, 3], [430, 932, 3], [440, 956, 3],
+];
 const TARGET_GLYPH_W = 200;
-const k = TARGET_GLYPH_W / GLYPH_W;
-const splash = (bg, fg) =>
-  svgDoc(
-    SPLASH_W,
-    SPLASH_H,
-    `<rect width="${SPLASH_W}" height="${SPLASH_H}" fill="${bg}"/>` +
-      `<g transform="translate(${SPLASH_W / 2} ${SPLASH_H / 2}) scale(${k.toFixed(5)}) translate(${-GLYPH_CX} ${-GLYPH_CY})">${glyph(fg)}</g>`,
+const splash = (w, h, bg, fg) => {
+  const k = (TARGET_GLYPH_W * (w / 1179)) / GLYPH_W; // el glifo ocupa la misma fracción del ancho en todos
+  return svgDoc(
+    w,
+    h,
+    `<rect width="${w}" height="${h}" fill="${bg}"/>` +
+      `<g transform="translate(${w / 2} ${h / 2}) scale(${k.toFixed(5)}) translate(${-GLYPH_CX} ${-GLYPH_CY})">${glyph(fg)}</g>`,
   );
-write('splash-1179x2556-light.png', toPng(splash('#fff', '#000')));
-write('splash-1179x2556-dark.png', toPng(splash('#000', '#fff')));
+};
+for (const [pw, ph, ratio] of SPLASHES) {
+  const w = pw * ratio;
+  const h = ph * ratio;
+  write(`splash-${w}x${h}-light.png`, toPng(splash(w, h, '#fff', '#000')));
+  write(`splash-${w}x${h}-dark.png`, toPng(splash(w, h, '#000', '#fff')));
+}
 
 // Favicon SVG: copia literal del diseño.
 copyFileSync(srcPath, path.join(outDir, 'favicon.svg'));

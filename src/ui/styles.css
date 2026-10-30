@@ -1080,3 +1080,20 @@ section.droppable.drop-on .section { color: var(--fg); }
   55.01%, 58% { visibility: visible; } 58.01%, 61% { visibility: hidden; } 61.01%, 64% { visibility: visible; }
   64.01%, 100% { visibility: hidden; }
 }
+
+/* ---------- ajustes en escritorio: dos columnas de módulos en vez de la hoja estrecha del móvil ---------- */
+@media (min-width: 900px) {
+  .sheet-inner { max-width: 1040px; columns: 2; column-gap: 24px; padding-bottom: 24px; }
+  .sheet-inner > .bar, .sheet-inner > .credit { column-span: all; }
+  .sheet .sheet-inner > section {
+    break-inside: avoid;
+    margin-bottom: 24px;
+    padding: 22px 26px 26px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel, var(--surface)) none;
+  }
+  .sheet-inner > .lock-panel { break-inside: avoid; }
+  .sheet-inner > .credit { border-top: 0; padding-top: 8px; }
+  .sheet p { max-width: 62ch; }
+}
