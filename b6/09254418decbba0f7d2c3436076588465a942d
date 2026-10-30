@@ -1,0 +1,25 @@
+src/sync/encryption.test.ts
+  s_93769b79d4ca29::t_69cd47e525bb83 171,173,176,180,182,495-543
+src/sync/link.test.ts
+  s_93769b79d4ca29::t_0ee26f019b51c4 209,211,214,218,220
+src/sync/api.test.ts
+  s_93769b79d4ca29::t_f94cd2b0602bd7 199-205,209,213,219,223-242
+src/sync/api.ts
+  s_93769b79d4ca29::t_7950bb54b7cb72 185-189,196-203,205-206,209-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "b609254418decbba0f7d2c3436076588465a942d",
+  "prompts": {},
+  "sessions": {
+    "s_93769b79d4ca29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bb52c32d-203b-49c0-8507-835315564afa",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
