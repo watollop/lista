@@ -206,14 +206,18 @@ class FakeServer {
     );
   }
 
+  /** Como el trigger LWW real: un UPDATE con updated_at menor que el guardado se descarta sin error. */
   private patch(uid: string, url: URL, body: { data?: unknown; updated_at?: number }): Response {
+    const written: Row[] = [];
     for (const r of this.userRows(uid)) {
       if (!matches(r, url)) continue;
+      if (body.updated_at !== undefined && body.updated_at < r.updated_at) continue;
       r.data = body.data ?? r.data;
       r.updated_at = body.updated_at ?? r.updated_at;
       r.synced_at = this.nextSynced();
+      written.push(r);
     }
-    return new Response(null, { status: 204 });
+    return json(written); // Prefer: return=representation
   }
 
   private remove(uid: string, url: URL): Response {

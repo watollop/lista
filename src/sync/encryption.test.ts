@@ -168,14 +168,18 @@ class FakeServer {
     );
   }
 
+  /** Como el trigger LWW real: un UPDATE con updated_at menor que el guardado se descarta sin error. */
   private patch(uid: string, url: URL, body: { data?: unknown; updated_at?: number }): Response {
+    const written: Row[] = [];
     for (const r of this.userRows(uid)) {
       if (!matches(r, url)) continue;
+      if (body.updated_at !== undefined && body.updated_at < r.updated_at) continue;
       r.data = body.data ?? r.data;
       r.updated_at = body.updated_at ?? r.updated_at;
       r.synced_at = this.nextSynced();
+      written.push(r);
     }
-    return new Response(null, { status: 204 });
+    return json(written); // Prefer: return=representation
   }
 
   private remove(uid: string, url: URL): Response {
@@ -485,6 +489,55 @@ describe('cifrado: activación', () => {
     const loser = results[0].status === 'rejected' ? a : b;
     expect(loser.sync.encryption()).toBe('locked');
     expect(loser.sync.getState().status).toBe('locked');
+  });
+});
+
+// La fila key se escribe con Date.now() del dispositivo y el trigger LWW descarta un updated_at menor.
+describe('cifrado: reloj atrasado', () => {
+  function clockSkew(ms: number): () => void {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + ms);
+    return () => vi.useRealTimers();
+  }
+
+  it('12. la clave de recuperación se guarda aunque el reloj vaya por detrás de la fila key', async () => {
+    const { a, b } = twoDevices();
+    await login(a);
+    await a.sync.enableEncryption();
+    await a.sync.syncNow();
+
+    const restore = clockSkew(-60_000);
+    let recovery: string;
+    try {
+      recovery = await a.sync.createRecoveryKey();
+    } finally {
+      restore();
+    }
+
+    await login(b);
+    await b.sync.unlockWithRecovery(recovery);
+    expect(b.sync.encryption()).toBe('on');
+  });
+
+  it('13. resetEncryption con el reloj atrasado cambia la fila key y no deja la cuenta sin datos', async () => {
+    const { server, a, b } = twoDevices();
+    await login(a);
+    await addTask(a.repo, 'De A');
+    await a.sync.enableEncryption();
+    await a.sync.syncNow();
+
+    await login(b);
+    await addTask(b.repo, 'Local de B');
+    const restore = clockSkew(-60_000);
+    try {
+      await b.sync.resetEncryption();
+    } finally {
+      restore();
+    }
+
+    expect(b.sync.encryption()).toBe('on');
+    expect((server.rows.get('user-1|key|dk')!.data as { keyId: string }).keyId).toBe(await keyIdOf(await dkOf(b)));
+    expect(server.rowsOf('enc').length).toBeGreaterThan(0);
   });
 });
 
