@@ -1,0 +1,33 @@
+src/pwa/register.ts
+  s_93769b79d4ca29::t_fc3436b3bea888 3-5,28-31
+src/sync/index.ts
+  s_93769b79d4ca29::t_d907c8c6181c25 752-755,819
+src/sync/link.test.ts
+  s_93769b79d4ca29::t_00b8fedc440d9b 11-12,430,481
+src/ui/App.tsx
+  s_93769b79d4ca29::t_e34f8a4e9d1744 15-17,68-83,360,379-384,412
+src/ui/Encryption.tsx
+  s_93769b79d4ca29::t_cc6119d7a77eed 1-279
+src/ui/Settings.tsx
+  s_93769b79d4ca29::t_a57eceaaaac1f7 2,4,36
+src/ui/encryption.test.ts
+  s_93769b79d4ca29::t_0ae1411c11170c 1-106
+src/ui/styles.css
+  s_93769b79d4ca29::t_b84bd9412bccfd 1045-1049,1051-1067
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "de8cbbd046b0b8dac875692960051c10b007c951",
+  "prompts": {},
+  "sessions": {
+    "s_93769b79d4ca29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bb52c32d-203b-49c0-8507-835315564afa",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
