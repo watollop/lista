@@ -231,7 +231,8 @@ function sessionFromStorage(storage: ReturnType<typeof memStorage>) {
   return raw ? (JSON.parse(raw) as { accessToken: string; refreshToken: string; expiresAt: number }) : null;
 }
 
-async function flushMicrotasks(n = 20) {
+// Margen holgado: cada sync encadena varias promesas (fila key, pendientes, push, pull) antes de terminar.
+async function flushMicrotasks(n = 100) {
   for (let i = 0; i < n; i++) await Promise.resolve();
 }
 

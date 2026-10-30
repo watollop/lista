@@ -12,7 +12,7 @@ import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
 import type { ChipTap } from './Chips';
 import { EntityEditor } from './EntityEditor';
-import { Settings } from './Settings';
+import { LinkPrompt, Settings } from './Settings';
 import { Critter } from './Critter';
 import { INTRO_KEY, Onboarding } from './Onboarding';
 import { startAppearanceSync } from './appearanceSync';
@@ -297,6 +297,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   });
 
   const syncDot = syncState.status === 'error' || syncState.status === 'offline' ? ' ·' : '';
+  const link = sync.link?.() ?? null; // el sync de algunos tests no implementa link()
 
   return (
     <div class={`app ${wide ? 'wide' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
@@ -355,6 +356,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           />
         )}
       </main>
+
+      {link?.role === 'active' && !settings && <LinkPrompt sync={sync} link={link} floating />}
 
       {toast && (
         <div class="toast" role="status">

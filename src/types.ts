@@ -131,6 +131,49 @@ export interface ChangeSet {
   items: RemoteItem[];
 }
 
+// ---------- cifrado (ver docs/plan-cifrado.md) ----------
+
+/** kind tal y como lo ve el servidor: los de siempre más las filas cifradas y el marcador de clave. */
+export type ServerKind = SyncKind | 'enc' | 'key';
+
+/** Contenido cifrado de una fila 'enc'. iv y ct en base64. ct = AES-GCM(DK, JSON {kind, id, data}). */
+export interface EncEnvelope {
+  v: 1;
+  iv: string;
+  ct: string;
+}
+
+/** Fila cifrada: id = HMAC(DK, kind real + ':' + id real) en hex. */
+export interface EncRow {
+  kind: 'enc';
+  id: string;
+  data: EncEnvelope;
+  updated_at: number;
+  deleted: boolean;
+}
+
+/** Contenido de la fila marcador (kind 'key', id 'dk'). No contiene la DK. */
+export interface KeyRowData {
+  v: 1;
+  keyId: string; // identifica la DK sin revelarla
+  recovery: { iv: string; wrapped: string } | null; // DK envuelta con la clave de recuperación (opcional)
+}
+
+/** Fila de la tabla pairings (enlace de un dispositivo nuevo B con uno activado A). Binarios en base64. */
+export interface PairingRow {
+  id: string;
+  pk_b: string; // clave pública ECDH P-256 de B (raw)
+  commit_b: string; // SHA-256(pk_b ‖ n_b)
+  n_b: string | null; // nonce de B, revelado tras recibir pk_a/n_a
+  pk_a: string | null;
+  n_a: string | null;
+  wrapped_dk: string | null; // iv ‖ AES-GCM(K, DK raw), K = HKDF(ECDH)
+  created_at: string;
+  expires_at: string;
+}
+
+export type EncryptionState = 'off' | 'on' | 'locked' | 'migrating';
+
 // ---------- interfaces de módulo ----------
 
 /** API del módulo data (src/data/repo.ts). Todas las escrituras locales ponen dirty=1 y updatedAt=Date.now(). */
@@ -183,8 +226,14 @@ export interface Repo {
   markPushed(items: RemoteItem[]): Promise<void>;
   /** Aplica cambios remotos con LWW: solo si no existe o remote.updated_at > local.updatedAt. Quedan dirty=0. */
   applyRemote(items: RemoteItem[]): Promise<void>;
+  /** Marca dirty=1 TODOS los registros de tareas, temas, personas, filtros y preferencias, incluidos los
+   *  borrados (tombstones). No cambia updatedAt ni notifica. Lo usa la migración a cifrado. */
+  markAllDirty(): Promise<void>;
+  /** Marca dirty=1 solo los registros indicados (los que no existan se ignoran). No cambia updatedAt ni notifica. */
+  markDirty(refs: { kind: SyncKind; id: string }[]): Promise<void>;
   getMeta<T = unknown>(key: string): Promise<T | undefined>;
   setMeta(key: string, value: unknown): Promise<void>;
+  /** Borra todos los datos locales de tareas, temas, personas, filtros, preferencias y metadatos (incl. la DK). */
   clearAll(): Promise<void>;
 
   /** Notifica cualquier escritura (local o remota). Devuelve la función para desuscribirse. */
@@ -197,6 +246,7 @@ export type SyncState =
   | { status: 'idle'; lastSync: number | null; email: string }
   | { status: 'syncing'; email: string }
   | { status: 'offline'; email: string }
+  | { status: 'locked'; email: string } // hay cifrado activo en la cuenta y este dispositivo no tiene la clave
   | { status: 'error'; message: string; email: string };
 
 /** API del módulo sync (src/sync/index.ts). */
@@ -214,4 +264,36 @@ export interface Sync {
   syncNow(): Promise<void>;
   start(): void; // engancha eventos (focus, online, visibilidad, intervalo, cambios del repo)
   stop(): void;
+
+  // ---------- cifrado (ver docs/plan-cifrado.md) ----------
+  /** Estado del cifrado según el último sync: 'off' (sin fila key), 'on', 'locked' o 'migrating'. */
+  encryption(): EncryptionState;
+  /** Activa el cifrado de la cuenta (irreversible). Sube todo cifrado y migra los datos en claro. */
+  enableEncryption(): Promise<void>;
+  /** Genera una clave de recuperación nueva (sustituye a la anterior) y la devuelve para mostrarla una vez. */
+  createRecoveryKey(): Promise<string>;
+  /** Desbloquea este dispositivo con la clave de recuperación de la cuenta. */
+  unlockWithRecovery(recoveryKey: string): Promise<void>;
+  /** Restablece el cifrado: nueva clave, se borran los datos cifrados del servidor y se resube lo local. */
+  resetEncryption(): Promise<void>;
+  /** Guarda una DK recibida por otra vía (p. ej. el enlace entre dispositivos). Lanza Error si su keyId no es el de la cuenta. */
+  adoptKey(dk: CryptoKey): Promise<void>;
+
+  // ---------- enlace de dispositivos (docs/plan-cifrado.md §4, src/sync/pairing.ts) ----------
+  /** Enlace en curso visto desde este dispositivo; null si no hay ninguno. Los cambios se notifican por subscribe. */
+  link(): LinkState | null;
+  /** Dispositivo bloqueado: pide el enlace a un dispositivo activado. Termina al crear la petición; el resto avanza solo. */
+  startLink(): Promise<void>;
+  /** Cancela el enlace en curso (en cualquiera de los dos lados) y borra la petición del servidor. */
+  cancelLink(): Promise<void>;
+  /** Dispositivo activado: el usuario ha comprobado que el código coincide; envía la clave cifrada al nuevo. */
+  confirmLink(): Promise<void>;
 }
+
+/** Enlace de dispositivos en curso. 'new' = este dispositivo pide la clave; 'active' = este dispositivo la da. */
+export type LinkState =
+  | { role: 'new'; status: 'waiting' } // esperando a que un dispositivo activado responda
+  | { role: 'new'; status: 'code'; code: string } // mostrar el código y esperar la confirmación en el otro
+  | { role: 'active'; status: 'waiting' } // ha llegado una petición; esperando el código
+  | { role: 'active'; status: 'code'; code: string } // pedir al usuario que compare y confirme
+  | { role: 'new' | 'active'; status: 'error'; message: string };

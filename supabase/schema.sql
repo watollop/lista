@@ -16,10 +16,12 @@ create table if not exists public.items (
 );
 
 -- Tipos de registro admitidos. Se declara aparte (y no inline) para que ejecutar de nuevo este archivo
--- también actualice proyectos ya creados: 'setting' = preferencias como la apariencia.
+-- también actualice proyectos ya creados: 'setting' = preferencias como la apariencia;
+-- 'enc' = registro cifrado (el tipo real va dentro del contenido); 'key' = marcador de la clave de cifrado
+-- (ver docs/plan-cifrado.md, §4).
 alter table public.items drop constraint if exists items_kind_check;
 alter table public.items add constraint items_kind_check
-  check (kind in ('task', 'topic', 'person', 'filter', 'setting'));
+  check (kind in ('task', 'topic', 'person', 'filter', 'setting', 'enc', 'key'));
 
 comment on table public.items is 'Registros sincronizados de Lista (last-write-wins por updated_at).';
 comment on column public.items.updated_at is 'Marca de tiempo (ms epoch) de la última escritura local; decide el ganador LWW.';
@@ -62,8 +64,34 @@ create trigger items_lww
   before insert or update on public.items
   for each row execute function public.items_lww();
 
--- Eliminar la cuenta desde la app (Ajustes -> Eliminar datos): borra las filas del usuario que llama y
--- su usuario de auth. security definer para poder tocar auth.users; solo actúa sobre auth.uid().
+-- Enlace de dispositivos (ver docs/plan-cifrado.md, §4). Tabla efímera: cada fila es una petición de
+-- enlace de un dispositivo nuevo (B) y dura 10 minutos. El cliente ignora las caducadas y las borra
+-- al crear una nueva. Nunca contiene la clave de datos en claro: wrapped_dk va cifrada.
+create table if not exists public.pairings (
+  id          uuid        primary key default gen_random_uuid(),
+  user_id     uuid        not null default auth.uid() references auth.users on delete cascade,
+  pk_b        text        not null,            -- clave pública ECDH P-256 de B (base64)
+  commit_b    text        not null,            -- compromiso SHA-256(pk_b ‖ n_b) de B
+  n_b         text,                            -- nonce de B, revelado tras recibir pk_a y n_a
+  pk_a        text,                            -- clave pública ECDH P-256 de A (base64)
+  n_a         text,                            -- nonce de A
+  wrapped_dk  text,                            -- DK cifrada por A con la clave derivada del ECDH
+  created_at  timestamptz not null default now(),
+  expires_at  timestamptz not null default now() + interval '10 minutes'
+);
+
+create index if not exists pairings_user_id_idx on public.pairings (user_id);
+
+alter table public.pairings enable row level security;
+
+drop policy if exists "own rows" on public.pairings;
+create policy "own rows" on public.pairings
+  for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- Eliminar la cuenta desde la app (Ajustes -> Eliminar datos): borra las filas del usuario que llama
+-- (items y pairings) y su usuario de auth. security definer para poder tocar auth.users; solo actúa sobre auth.uid().
 create or replace function public.delete_account()
 returns void
 language sql
@@ -71,6 +99,7 @@ security definer
 set search_path = public
 as $$
   delete from public.items where user_id = auth.uid();
+  delete from public.pairings where user_id = auth.uid();
   delete from auth.users where id = auth.uid();
 $$;
 
