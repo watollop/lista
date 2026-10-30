@@ -266,10 +266,11 @@ export interface Sync {
   stop(): void;
 
   // ---------- cifrado (ver docs/plan-cifrado.md) ----------
-  /** Estado del cifrado según el último sync: 'off' (sin fila key), 'on', 'locked' o 'migrating'. */
+  /**
+   * Estado del cifrado según el último sync. Es obligatorio: el primer sync de la cuenta lo activa.
+   * 'off' solo antes de ese primer sync; luego 'migrating', 'on' o 'locked'.
+   */
   encryption(): EncryptionState;
-  /** Activa el cifrado de la cuenta (irreversible). Sube todo cifrado y migra los datos en claro. */
-  enableEncryption(): Promise<void>;
   /** Genera una clave de recuperación nueva (sustituye a la anterior) y la devuelve para mostrarla una vez. */
   createRecoveryKey(): Promise<string>;
   /** Desbloquea este dispositivo con la clave de recuperación de la cuenta. */

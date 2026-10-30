@@ -182,19 +182,32 @@ export async function putKeyRow(
   return stored;
 }
 
-/** Sustituye el contenido de la fila marcador (p. ej. para añadir la clave de recuperación). */
+/**
+ * Sustituye el contenido de la fila marcador (p. ej. para añadir la clave de recuperación).
+ * El trigger LWW descarta en silencio un updated_at menor que el guardado (reloj de este dispositivo atrasado),
+ * así que se escribe por encima del actual y se comprueba que la fila cambió. Lanza Error si no existe.
+ */
 export async function updateKeyRow(
   cfg: SyncConfig,
   session: Session,
   data: KeyRowData,
   fetchImpl: typeof fetch,
 ): Promise<void> {
-  const res = await fetchImpl(`${cfg.url}/rest/v1/items?kind=eq.key&id=eq.dk`, {
+  const url = `${cfg.url}/rest/v1/items?kind=eq.key&id=eq.dk`;
+  const cur = await fetchImpl(`${url}&select=updated_at`, { method: 'GET', headers: authHeaders(cfg, session) });
+  if (!cur.ok) throw await httpErrorFrom(cur);
+  const rows = (await cur.json()) as Array<{ updated_at: number | string }>;
+  if (rows.length === 0) throw new Error('No se encontró la fila de clave de cifrado');
+  const updatedAt = Math.max(Date.now(), Number(rows[0].updated_at) + 1);
+
+  const res = await fetchImpl(url, {
     method: 'PATCH',
-    headers: { ...authHeaders(cfg, session), Prefer: 'return=minimal' },
-    body: JSON.stringify({ data, updated_at: Date.now() }),
+    headers: { ...authHeaders(cfg, session), Prefer: 'return=representation' },
+    body: JSON.stringify({ data, updated_at: updatedAt }),
   });
   if (!res.ok) throw await httpErrorFrom(res);
+  const written = (await res.json()) as unknown[];
+  if (written.length === 0) throw new Error('No se pudo guardar la fila de clave de cifrado');
 }
 
 /** Borra la fila marcador de la clave de cifrado. */

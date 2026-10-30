@@ -196,20 +196,48 @@ describe('putKeyRow', () => {
 });
 
 describe('updateKeyRow', () => {
+  /** Fila key ya guardada con `stored` como updated_at; el PATCH devuelve `written` filas. */
+  function keyRowAt(stored: number, written = 1) {
+    return fakeFetch((c) =>
+      c.method === 'GET' ? json([{ updated_at: String(stored) }]) : json(Array(written).fill({})),
+    );
+  }
+
   it('hace PATCH de la fila marcador con la nueva data y updated_at', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(Date.parse(NOW_ISO));
-    const f = fakeFetch();
+    const f = keyRowAt(Date.parse(NOW_ISO) - 5_000);
 
     await updateKeyRow(CFG, SESSION, KEY_DATA, f.fetch);
 
-    const c = f.calls[0];
+    const c = f.calls[1];
     expect(c.method).toBe('PATCH');
     expect(c.url.pathname).toBe('/rest/v1/items');
     expect(c.url.searchParams.get('kind')).toBe('eq.key');
     expect(c.url.searchParams.get('id')).toBe('eq.dk');
     expectAuth(c);
+    expect(c.headers.Prefer).toBe('return=representation');
     expect(c.body).toEqual({ data: KEY_DATA, updated_at: Date.parse(NOW_ISO) });
+  });
+
+  it('con el reloj por detrás de la fila guardada, escribe justo por encima para que LWW no la descarte', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.parse(NOW_ISO));
+    const stored = Date.parse(NOW_ISO) + 60_000;
+    const f = keyRowAt(stored);
+
+    await updateKeyRow(CFG, SESSION, KEY_DATA, f.fetch);
+
+    expect(f.calls[1].body.updated_at).toBe(stored + 1);
+  });
+
+  it('lanza Error si no hay fila key o si el servidor no la actualizó', async () => {
+    const none = fakeFetch((c) => (c.method === 'GET' ? json([]) : json([{}])));
+    await expect(updateKeyRow(CFG, SESSION, KEY_DATA, none.fetch)).rejects.toThrow('No se encontró');
+    expect(none.calls).toHaveLength(1);
+
+    const dropped = keyRowAt(1, 0);
+    await expect(updateKeyRow(CFG, SESSION, KEY_DATA, dropped.fetch)).rejects.toThrow('No se pudo guardar');
   });
 
   it('lanza HttpError si falla', async () => {

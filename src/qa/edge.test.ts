@@ -410,6 +410,7 @@ async function makeDevice(server: FakeServer) {
   const sync = syncMod.createSync(repo, SYNC_CFG, {
     fetch: server.fetch as unknown as typeof fetch,
     storage: memStorage(),
+    unencrypted: true, // LWW decide igual con o sin cifrado (updated_at viaja en claro); el cifrado, en encryption.test.ts
   });
   return { repo, sync };
 }
