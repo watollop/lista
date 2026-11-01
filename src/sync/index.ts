@@ -797,8 +797,16 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     }
   }
 
-  /** Mientras el cifrado esté activo y no haya enlace en curso, busca peticiones nuevas cada LINK_CHECK_MS. */
+  const isVisible = (): boolean =>
+    typeof document !== 'undefined' && document.visibilityState === 'visible';
+
+  /**
+   * Mientras el cifrado esté activo, no haya enlace en curso y la pestaña esté visible, busca peticiones nuevas
+   * cada LINK_CHECK_MS. Con la pestaña oculta no consulta (batería y cuota); al volver a verla, onVisibility
+   * lo comprueba al momento.
+   */
   function onLinkCheck(): void {
+    if (!isVisible()) return;
     if ((encState === 'on' || encState === 'migrating') && !linkCtx) void answerPendingLink();
   }
 
@@ -885,13 +893,11 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     }, DEBOUNCE_MS);
   };
 
-  const isVisible = (): boolean =>
-    typeof document !== 'undefined' && document.visibilityState === 'visible';
-
   const onVisibility = (): void => {
     if (!isVisible()) return;
     lastActivity = now();
     trigger();
+    onLinkCheck();
   };
 
   const onTick = (): void => {
