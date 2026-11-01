@@ -46,6 +46,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <span class="label">Ayuda</span>
           <p>Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.</p>
           <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
+          <p class="kbd-only">Pulsa <kbd>?</kbd> para ver los atajos de teclado.</p>
           <CaptureFold />
         </section>
         <BackupSection repo={repo} />
