@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRepo } from '../data/repo';
 import { createSync } from '../sync';
 import { App } from './App';
-import { INTRO_KEY } from './Onboarding';
+import { INTRO_KEY } from './intro';
 import { SHORTCUTS } from './shortcuts';
 import appSource from './App.tsx?raw';
 
@@ -68,7 +68,7 @@ describe('hoja de atajos con ?', () => {
   it('? abre la hoja y Esc la cierra', async () => {
     await app();
     press(document.body, '?');
-    expect(sheet()).not.toBeNull();
+    await vi.waitFor(() => expect(sheet()).not.toBeNull());
     press(sheet()!, 'Escape');
     expect(sheet()).toBeNull();
   });
@@ -76,6 +76,7 @@ describe('hoja de atajos con ?', () => {
   it('? vuelve a cerrar la hoja', async () => {
     await app();
     press(document.body, '?');
+    await vi.waitFor(() => expect(sheet()).not.toBeNull());
     press(document.body, '?');
     expect(sheet()).toBeNull();
   });
@@ -83,6 +84,7 @@ describe('hoja de atajos con ?', () => {
   it('un clic fuera de la hoja la cierra', async () => {
     await app();
     press(document.body, '?');
+    await vi.waitFor(() => expect(sheet()).not.toBeNull());
     act(() => { root.querySelector<HTMLElement>('.dialog-backdrop')!.click(); });
     expect(sheet()).toBeNull();
   });
@@ -98,6 +100,7 @@ describe('hoja de atajos con ?', () => {
   it('muestra cada atajo de la lista compartida', async () => {
     await app();
     press(document.body, '?');
+    await vi.waitFor(() => expect(sheet()).not.toBeNull());
     const text = sheet()!.textContent ?? '';
     for (const [, what] of SHORTCUTS) expect(text).toContain(what);
     expect(sheet()!.querySelectorAll('kbd')).toHaveLength(keys.length);

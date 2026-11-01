@@ -4,20 +4,7 @@ import { normalizeKey, parseLine } from '../parser';
 import { collapseResults, dictationItems } from '../lib/speech';
 import { micSteps, type Blocked } from '../lib/mic';
 import { TaskChips } from './Chips';
-
-// Reconocimiento de voz del navegador (Chrome/Android: Google; Safari/iOS: Apple). Sin tipos en lib.dom.
-type Recognition = {
-  lang: string; continuous: boolean; interimResults: boolean;
-  start(): void; stop(): void; abort(): void;
-  onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
-  onerror: ((e: { error: string }) => void) | null;
-  onend: (() => void) | null;
-};
-const Ctor = () => (globalThis as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition })
-  .SpeechRecognition ?? (globalThis as unknown as { webkitSpeechRecognition?: new () => Recognition }).webkitSpeechRecognition;
-
-/** ¿Hay reconocimiento de voz en este navegador? */
-export const canDictate = () => typeof window !== 'undefined' && !!Ctor();
+import { Ctor, type Recognition } from './recognition';
 
 const ERRORS: Record<string, string> = {
   'no-speech': 'No te he oído. Toca «Seguir hablando».',
