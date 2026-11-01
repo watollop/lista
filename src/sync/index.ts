@@ -143,6 +143,20 @@ function validKeyRow(row: KeyRowData | null): KeyRowData | null {
   return row && row.v === 1 && typeof row.keyId === 'string' ? row : null;
 }
 
+/**
+ * Tope por registro al subir: el servidor rechaza más de 64 KiB (supabase/migrations/20261101_limites.sql).
+ * Con margen, y como última defensa: un registro así no entra en el lote, porque el lote entero fallaría.
+ */
+const MAX_ROW_BYTES = 60 * 1024;
+
+/** True si el registro es demasiado grande para subirlo; avisa en consola y debe quedarse pendiente. */
+function tooLarge(kind: string, id: string, data: unknown): boolean {
+  const bytes = new TextEncoder().encode(JSON.stringify(data) ?? '').length;
+  if (bytes <= MAX_ROW_BYTES) return false;
+  console.warn(`Sync: registro ${kind} ${id} demasiado grande (${bytes} bytes), no se sube`);
+  return true;
+}
+
 export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = {}): Sync {
   const listeners = new Set<(s: SyncState) => void>();
   const storage: SessionStorage = deps.storage ?? defaultStorage();
@@ -244,9 +258,16 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     if (pending.length === 0) return;
     lastActivity = now();
     const rows: EncRow[] = [];
-    for (const it of pending) rows.push(await encryptItem(dk, it));
+    const sent: RemoteItem[] = []; // los que no son demasiado grandes; el resto sigue dirty
+    for (const it of pending) {
+      const row = await encryptItem(dk, it);
+      if (tooLarge(it.kind, it.id, row.data)) continue;
+      rows.push(row);
+      sent.push(it);
+    }
+    if (rows.length === 0) return;
     await pushItems(c, s, rows, fetchImpl);
-    await repo.markPushed(pending); // con los originales: markPushed compara updatedAt
+    await repo.markPushed(sent); // con los originales: markPushed compara updatedAt
   }
 
   /** Aplica una bajada: descifra las filas 'enc' y aplica las que están en claro. Devuelve estas últimas. */
@@ -360,7 +381,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     if (!deps.unencrypted) return activate(c, s);
 
     encState = 'off';
-    const pending = all.filter((it) => it.kind !== 'setting');
+    const pending = all.filter((it) => it.kind !== 'setting' && !tooLarge(it.kind, it.id, it.data));
     if (pending.length > 0) {
       lastActivity = now();
       await pushItems(c, s, pending, fetchImpl);

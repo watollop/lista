@@ -23,6 +23,12 @@ alter table public.items drop constraint if exists items_kind_check;
 alter table public.items add constraint items_kind_check
   check (kind in ('task', 'topic', 'person', 'filter', 'setting', 'enc', 'key'));
 
+-- Tamaño máximo de un registro: 64 KiB. El mayor legítimo es una tarea cifrada (kind 'enc', base64 de
+-- unos pocos KiB). NOT VALID: no falla si ya hubiera filas más grandes; solo valida escrituras nuevas.
+alter table public.items drop constraint if exists items_data_size;
+alter table public.items add constraint items_data_size
+  check (octet_length(data::text) <= 65536) not valid;
+
 comment on table public.items is 'Registros sincronizados de Lista (last-write-wins por updated_at).';
 comment on column public.items.updated_at is 'Marca de tiempo (ms epoch) de la última escritura local; decide el ganador LWW.';
 comment on column public.items.synced_at is 'Momento de aceptación en el servidor; cursor para pull incremental.';
@@ -84,11 +90,31 @@ create index if not exists pairings_user_id_idx on public.pairings (user_id);
 
 alter table public.pairings enable row level security;
 
+-- Políticas por operación, siempre con user_id = auth.uid(). El cliente no puede modificar filas caducadas
+-- (update filtra expires_at) y sí puede borrarlas (deleteExpiredPairings). El select no filtra por caducidad
+-- porque en Postgres un DELETE necesita ver la fila con la política select: filtrarla anularía el borrado.
 drop policy if exists "own rows" on public.pairings;
-create policy "own rows" on public.pairings
-  for all
-  using (user_id = auth.uid())
+drop policy if exists "pairings select" on public.pairings;
+drop policy if exists "pairings insert" on public.pairings;
+drop policy if exists "pairings update" on public.pairings;
+drop policy if exists "pairings delete" on public.pairings;
+
+create policy "pairings select" on public.pairings
+  for select
+  using (user_id = auth.uid());
+
+create policy "pairings insert" on public.pairings
+  for insert
   with check (user_id = auth.uid());
+
+create policy "pairings update" on public.pairings
+  for update
+  using (user_id = auth.uid() and expires_at > now())
+  with check (user_id = auth.uid());
+
+create policy "pairings delete" on public.pairings
+  for delete
+  using (user_id = auth.uid());
 
 -- Eliminar la cuenta desde la app (Ajustes -> Eliminar datos): borra las filas del usuario que llama
 -- (items y pairings) y su usuario de auth. security definer para poder tocar auth.users; solo actúa sobre auth.uid().
@@ -105,3 +131,31 @@ $$;
 
 revoke all on function public.delete_account() from public, anon;
 grant execute on function public.delete_account() to authenticated;
+
+-- Borra las peticiones de enlace caducadas de todos los usuarios. security definer (dueño postgres, sin RLS):
+-- solo la ejecuta pg_cron; anon y authenticated no pueden llamarla.
+create or replace function public.purge_expired_pairings()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.pairings where expires_at < now();
+$$;
+
+revoke all on function public.purge_expired_pairings() from public, anon, authenticated;
+
+-- Limpieza cada 15 minutos si el proyecto tiene pg_cron. Sin pg_cron no hace nada: el cliente sigue
+-- borrando sus caducadas con deleteExpiredPairings. Quita antes un trabajo con el mismo nombre (idempotente).
+do $$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
+    create extension if not exists pg_cron;
+    begin
+      perform cron.unschedule('lista-purge-pairings');
+    exception when others then
+      null;
+    end;
+    perform cron.schedule('lista-purge-pairings', '*/15 * * * *', 'select public.purge_expired_pairings()');
+  end if;
+end $$;

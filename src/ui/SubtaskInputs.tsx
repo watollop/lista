@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ParsedLine } from '../types';
 import { parseBlock } from '../parser';
+import { TITLE_TOO_LONG, titleTooLong } from '../lib/capture';
 
 export function SubtaskInputs({ onSubmit, onCancel, label = 'Guardar tarea' }: {
   onSubmit: (lines: ParsedLine[]) => Promise<void>;
@@ -29,6 +30,7 @@ export function SubtaskInputs({ onSubmit, onCancel, label = 'Guardar tarea' }: {
       setError('Escribe un título para cada subtarea, además de sus etiquetas.');
       return;
     }
+    if (titleTooLong(lines)) { setError(TITLE_TOO_LONG); return; }
     saving.current = true;
     setBusy(true);
     setError('');

@@ -544,6 +544,23 @@ describe('sync: push y pull', () => {
     await b.sync.syncNow();
     expect(b.count()).toBe(620);
   });
+
+  it('un registro demasiado grande no bloquea el lote: el resto se sube y él queda pendiente', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const server = new FakeServer();
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+
+    d.write('task', 'gigante', 'x'.repeat(70 * 1024), 100);
+    d.write('task', 'normal', 'Llamar', 101);
+    await d.sync.syncNow();
+
+    expect(d.sync.getState()).toMatchObject({ status: 'idle' });
+    expect([...server.rows.values()].map((r) => r.id)).toEqual(['normal']);
+    expect((await d.pendingChanges()).map((it) => it.id)).toEqual(['gigante']);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('gigante'));
+    warn.mockRestore();
+  });
 });
 
 describe('sync: tokens', () => {
