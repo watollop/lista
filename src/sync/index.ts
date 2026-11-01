@@ -580,30 +580,6 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     await syncNow();
   }
 
-  async function signIn(email: string, password: string): Promise<void> {
-    const c = cfg;
-    if (!c) throw new Error('Sincronización no configurada');
-    let s: Session;
-    try {
-      s = await auth.signIn(c, email, password, fetchImpl, now);
-    } catch (e) {
-      throw friendly(e);
-    }
-    await adopt(s);
-  }
-
-  async function signUp(email: string, password: string): Promise<void> {
-    const c = cfg;
-    if (!c) throw new Error('Sincronización no configurada');
-    let s: Session;
-    try {
-      s = await auth.signUp(c, email, password, fetchImpl, now);
-    } catch (e) {
-      throw friendly(e);
-    }
-    await adopt(s);
-  }
-
   /** Vuelve a la app tras Google: URL actual sin hash ni query. */
   const redirectTarget = (): string => `${location.origin}${location.pathname}`;
 
@@ -952,8 +928,6 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     },
     googleEnabled,
     signInWithGoogle,
-    signIn,
-    signUp,
     signOut,
     deleteAccount,
     syncNow,

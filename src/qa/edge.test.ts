@@ -277,15 +277,22 @@ function headerOf(init: RequestInit | undefined, name: string): string | undefin
 
 /** Servidor falso (GoTrue + PostgREST mínimos) con LWW por updated_at, como el trigger de Supabase. */
 class FakeServer {
-  users = new Map<string, { id: string; email: string; password: string }>();
+  users = new Map<string, { id: string; email: string }>();
   accessTokens = new Map<string, string>();
   refreshTokens = new Map<string, { userId: string; email: string }>();
   rows = new Map<string, Row>();
   private tokenSeq = 0;
   private seq = 0;
 
-  addUser(email: string, password: string): void {
-    this.users.set(email, { id: `user-${this.users.size + 1}`, email, password });
+  addUser(email: string): void {
+    this.users.set(email, { id: `user-${this.users.size + 1}`, email });
+  }
+
+  /** Tokens de una sesión ya iniciada para `email`: el dispositivo la arranca con ellos guardados. */
+  session(email: string, now = Date.now()) {
+    const u = this.users.get(email)!;
+    const body = this.issue(u.id, u.email);
+    return { accessToken: body.access_token, refreshToken: body.refresh_token, expiresAt: now + 3600_000, userId: u.id, email };
   }
 
   private issue(userId: string, email: string) {
@@ -314,13 +321,6 @@ class FakeServer {
     if (headerOf(init, 'apikey') !== SYNC_CFG.anonKey) return json({ message: 'Invalid API key' }, 401);
 
     if (url.pathname === '/auth/v1/token') {
-      if (url.searchParams.get('grant_type') === 'password') {
-        const u = this.users.get(body.email);
-        if (!u || u.password !== body.password) {
-          return json({ error: 'invalid_grant', error_description: 'Invalid login credentials' }, 400);
-        }
-        return json(this.issue(u.id, u.email));
-      }
       const stored = this.refreshTokens.get(body.refresh_token);
       if (!stored) return json({ error_description: 'Invalid Refresh Token' }, 400);
       this.refreshTokens.delete(body.refresh_token);
@@ -381,14 +381,16 @@ function memStorage() {
  * Dispositivo = repo real + sync real con su propio módulo. Se recarga el módulo para que cada
  * dispositivo tenga su propio contador monotónico (stamp) y así el reloj de cada uno sea independiente.
  */
-async function makeDevice(server: FakeServer) {
+async function makeDevice(server: FakeServer, email: string) {
   vi.resetModules();
   const repoMod = await import('../data/repo');
   const syncMod = await import('../sync');
   const repo = repoMod.createRepo(`qa-sync-${crypto.randomUUID()}`);
+  const storage = memStorage();
+  storage.setItem('lista.session', JSON.stringify(server.session(email)));
   const sync = syncMod.createSync(repo, SYNC_CFG, {
     fetch: server.fetch as unknown as typeof fetch,
-    storage: memStorage(),
+    storage,
     unencrypted: true, // LWW decide igual con o sin cifrado (updated_at viaja en claro); el cifrado, en encryption.test.ts
   });
   return { repo, sync };
@@ -396,11 +398,11 @@ async function makeDevice(server: FakeServer) {
 
 async function twoDevices() {
   const server = new FakeServer();
-  server.addUser('ana@qa.io', 'secreto');
-  const a = await makeDevice(server);
-  const b = await makeDevice(server);
-  await a.sync.signIn('ana@qa.io', 'secreto');
-  await b.sync.signIn('ana@qa.io', 'secreto');
+  server.addUser('ana@qa.io');
+  const a = await makeDevice(server, 'ana@qa.io');
+  const b = await makeDevice(server, 'ana@qa.io');
+  await a.sync.syncNow();
+  await b.sync.syncNow();
   return { server, a, b };
 }
 

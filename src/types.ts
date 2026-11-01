@@ -253,8 +253,6 @@ export interface Sync {
   subscribe(cb: (s: SyncState) => void): () => void;
   googleEnabled(): Promise<boolean>; // false si el proveedor no está activado en Supabase
   signInWithGoogle(): void; // redirige a Google; al volver, start() recoge la sesión del hash
-  signIn(email: string, password: string): Promise<void>;
-  signUp(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   /** Borra los datos de la nube y la cuenta (si la función existe en Supabase) y cierra la sesión.
    *  remote: 'none' sin sesión; 'data' solo se borraron las tareas; 'account' tareas y cuenta. */

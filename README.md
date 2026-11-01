@@ -127,7 +127,7 @@ La cobertura incluye todo `src/` y genera informes LCOV y JSON en `coverage/`, e
 
 1. Crea un proyecto en Supabase y ejecuta [`supabase/schema.sql`](supabase/schema.sql).
 2. Copia [`.env.example`](.env.example) a `.env` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-3. Activa Google en *Authentication → Providers* y añade tu URL en *Redirect URLs*.
+3. Activa Google en *Authentication → Providers* y añade tu URL en *Redirect URLs*. Desactiva el proveedor *Email*: la app solo entra con Google.
 
 **Si ya tenías una instalación:** para sincronizar la apariencia, ejecuta la [migración de ajustes](supabase/migrations/20261029_appearance_settings.sql) en el SQL editor, o vuelve a ejecutar el esquema. Utiliza el tipo `setting`, sin duplicar preferencias ni cambiar las políticas por usuario. Un servidor antiguo rechazará los envíos de apariencia hasta actualizarlo.
 

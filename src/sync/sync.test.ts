@@ -30,7 +30,7 @@ function headerOf(init: RequestInit | undefined, name: string): string | undefin
 }
 
 class FakeServer {
-  users = new Map<string, { id: string; email: string; password: string }>();
+  users = new Map<string, { id: string; email: string }>();
   accessTokens = new Map<string, string>(); // token -> userId
   refreshTokens = new Map<string, { userId: string; email: string }>();
   rows = new Map<string, Row>();
@@ -41,8 +41,15 @@ class FakeServer {
   private tokenSeq = 0;
   private seq = 0;
 
-  addUser(email: string, password: string): void {
-    this.users.set(email, { id: `user-${this.users.size + 1}`, email, password });
+  addUser(email: string): void {
+    this.users.set(email, { id: `user-${this.users.size + 1}`, email });
+  }
+
+  /** Tokens de una sesión ya iniciada para `email`: el dispositivo la arranca con ellos guardados. */
+  session(email: string, now = Date.now()) {
+    const u = this.users.get(email)!;
+    const body = this.issue(u.id, u.email);
+    return { accessToken: body.access_token, refreshToken: body.refresh_token, expiresAt: now + this.expiresIn * 1000, userId: u.id, email };
   }
 
   revokeAccess(): void {
@@ -77,13 +84,6 @@ class FakeServer {
     if (headerOf(init, 'apikey') !== CFG.anonKey) return json({ message: 'Invalid API key' }, 401);
 
     if (url.pathname === '/auth/v1/token') {
-      if (url.searchParams.get('grant_type') === 'password') {
-        const u = this.users.get(body.email);
-        if (!u || u.password !== body.password) {
-          return json({ error: 'invalid_grant', error_description: 'Invalid login credentials' }, 400);
-        }
-        return json(this.issue(u.id, u.email));
-      }
       this.refreshCalls++;
       const stored = this.refreshTokens.get(body.refresh_token);
       if (!stored) return json({ error_description: 'Invalid Refresh Token: Refresh Token Not Found' }, 400);
@@ -91,10 +91,10 @@ class FakeServer {
       return json(this.issue(stored.userId, stored.email));
     }
 
-    if (url.pathname === '/auth/v1/signup') {
-      const id = `user-${this.users.size + 1}`;
-      this.users.set(body.email, { id, email: body.email, password: body.password });
-      return json({ id, email: body.email }); // sin access_token: confirmación pendiente
+    if (url.pathname === '/auth/v1/user') {
+      const uid = this.accessTokens.get(headerOf(init, 'Authorization')?.replace('Bearer ', '') ?? '');
+      const u = [...this.users.values()].find((x) => x.id === uid);
+      return u ? json({ id: u.id, email: u.email }) : json({ message: 'invalid JWT' }, 401);
     }
 
     if (url.pathname === '/auth/v1/logout') {
@@ -215,9 +215,10 @@ function makeClock(start = BASE_TS) {
   return { now: () => t, advance: (ms: number) => void (t += ms) };
 }
 
-function device(server: FakeServer, clock: ReturnType<typeof makeClock>) {
+function device(server: FakeServer, clock: ReturnType<typeof makeClock>, email?: string) {
   const r = makeRepo();
   const storage = memStorage();
+  if (email) storage.setItem('lista.session', JSON.stringify(server.session(email, clock.now())));
   const sync = createSync(r.repo, CFG, {
     fetch: server.fetch as unknown as typeof fetch,
     storage,
@@ -244,14 +245,14 @@ afterEach(() => {
 // ---------- tests ----------
 
 describe('sync: sin configuración', () => {
-  it('cfg null => disabled, métodos no-op, signIn rechaza', async () => {
+  it('cfg null => disabled, métodos no-op', async () => {
     const r = makeRepo();
     const sync = createSync(r.repo, null, { storage: memStorage() });
     expect(sync.getState()).toEqual({ status: 'disabled' });
     await expect(sync.syncNow()).resolves.toBeUndefined();
     sync.start();
     sync.stop();
-    await expect(sync.signIn('a@b.c', 'x')).rejects.toThrow();
+    await expect(sync.signOut()).resolves.toBeUndefined();
     expect(sync.getState()).toEqual({ status: 'disabled' });
     expect(r.pendingChanges).not.toHaveBeenCalled();
   });
@@ -266,20 +267,21 @@ describe('sync: sin configuración', () => {
       return { value: setting.value.subtaskColor, updatedAt: setting.updatedAt,
         dirty: (await repo.pendingChanges()).some((item) => item.kind === 'setting' && item.id === 'appearance') ? 1 : 0 };
     };
-    function persistentDevice(server: FakeServer) {
+    function persistentDevice(server: FakeServer, email?: string) {
       const repo = createRepo('color-sync-' + crypto.randomUUID());
       const storage = memStorage();
+      if (email) storage.setItem('lista.session', JSON.stringify(server.session(email)));
       const sync = createSync(repo, CFG, { fetch: server.fetch, storage, unencrypted: true });
       return { repo, sync, storage };
     }
 
     it('sincroniza ambos sentidos y recupera la elección tras recargar', async () => {
       const server = new FakeServer();
-      server.addUser('ana@test.io', 'secreto');
-      const mobile = persistentDevice(server);
-      const web = persistentDevice(server);
-      await mobile.sync.signIn('ana@test.io', 'secreto');
-      await web.sync.signIn('ana@test.io', 'secreto');
+      server.addUser('ana@test.io');
+      const mobile = persistentDevice(server, 'ana@test.io');
+      const web = persistentDevice(server, 'ana@test.io');
+      await mobile.sync.syncNow();
+      await web.sync.syncNow();
       await writeColor(mobile.repo, '#3689cc');
       await mobile.sync.syncNow();
       await web.sync.syncNow();
@@ -288,8 +290,8 @@ describe('sync: sin configuración', () => {
       await web.sync.syncNow();
       await mobile.sync.syncNow();
       expect(await readColor(mobile.repo)).toMatchObject({ value: '#7849ce', dirty: 0 });
-      const reloaded = persistentDevice(server);
-      await reloaded.sync.signIn('ana@test.io', 'secreto');
+      const reloaded = persistentDevice(server, 'ana@test.io');
+      await reloaded.sync.syncNow();
       expect(await readColor(reloaded.repo)).toMatchObject({ value: '#7849ce', dirty: 0 });
       expect(await mobile.repo.listTasks()).toEqual([]);
       expect(await web.repo.listFilters()).toEqual([]);
@@ -297,11 +299,11 @@ describe('sync: sin configuración', () => {
 
     it('reintenta sin conexión y conserva la selección más reciente frente a un envío antiguo', async () => {
       const server = new FakeServer();
-      server.addUser('ana@test.io', 'secreto');
-      const mobile = persistentDevice(server);
-      const web = persistentDevice(server);
-      await mobile.sync.signIn('ana@test.io', 'secreto');
-      await web.sync.signIn('ana@test.io', 'secreto');
+      server.addUser('ana@test.io');
+      const mobile = persistentDevice(server, 'ana@test.io');
+      const web = persistentDevice(server, 'ana@test.io');
+      await mobile.sync.syncNow();
+      await web.sync.syncNow();
       server.offline = true;
       await writeColor(mobile.repo, '#3689cc');
       await mobile.sync.syncNow();
@@ -318,27 +320,27 @@ describe('sync: sin configuración', () => {
 
     it('la migración local antigua no sobrescribe la preferencia ya sincronizada', async () => {
       const server = new FakeServer();
-      server.addUser('ana@test.io', 'secreto');
-      const web = persistentDevice(server);
-      await web.sync.signIn('ana@test.io', 'secreto');
+      server.addUser('ana@test.io');
+      const web = persistentDevice(server, 'ana@test.io');
+      await web.sync.syncNow();
       await writeColor(web.repo, '#e68b45');
       await web.sync.syncNow();
-      const mobile = persistentDevice(server);
+      const mobile = persistentDevice(server, 'ana@test.io');
       await writeColor(mobile.repo, '#db729f', true);
-      await mobile.sync.signIn('ana@test.io', 'secreto');
+      await mobile.sync.syncNow();
       expect(await readColor(mobile.repo)).toMatchObject({ value: '#e68b45', dirty: 0 });
     });
 
     it('las preferencias quedan aisladas por cuenta igual que las tareas', async () => {
       const server = new FakeServer();
-      server.addUser('ana@test.io', 'secreto');
-      server.addUser('bea@test.io', 'secreto');
-      const a = persistentDevice(server);
-      const b = persistentDevice(server);
-      await a.sync.signIn('ana@test.io', 'secreto');
+      server.addUser('ana@test.io');
+      server.addUser('bea@test.io');
+      const a = persistentDevice(server, 'ana@test.io');
+      const b = persistentDevice(server, 'bea@test.io');
+      await a.sync.syncNow();
       await writeColor(a.repo, '#7849ce');
       await a.sync.syncNow();
-      await b.sync.signIn('bea@test.io', 'secreto');
+      await b.sync.syncNow();
       expect(await readColor(b.repo)).toBeUndefined();
       await writeColor(b.repo, '#58a676');
       await b.sync.syncNow();
@@ -348,13 +350,13 @@ describe('sync: sin configuración', () => {
 
     it('converge cuando dos dispositivos migran colores antiguos distintos con versión cero', async () => {
       const server = new FakeServer();
-      server.addUser('ana@test.io', 'secreto');
-      const a = persistentDevice(server);
-      const b = persistentDevice(server);
+      server.addUser('ana@test.io');
+      const a = persistentDevice(server, 'ana@test.io');
+      const b = persistentDevice(server, 'ana@test.io');
       await writeColor(a.repo, '#3689cc', true);
       await writeColor(b.repo, '#58a676', true);
-      await a.sync.signIn('ana@test.io', 'secreto');
-      await b.sync.signIn('ana@test.io', 'secreto');
+      await a.sync.syncNow();
+      await b.sync.syncNow();
       await a.sync.syncNow();
       await b.sync.syncNow();
       expect(await readColor(a.repo)).toMatchObject({ value: '#58a676', updatedAt: 0, dirty: 0 });
@@ -363,9 +365,9 @@ describe('sync: sin configuración', () => {
 
     it('una sesión v1 actualizada recupera el color que su cursor ya había saltado', async () => {
       const server = new FakeServer();
-      server.addUser('ana@test.io', 'secreto');
-      const web = persistentDevice(server);
-      await web.sync.signIn('ana@test.io', 'secreto');
+      server.addUser('ana@test.io');
+      const web = persistentDevice(server, 'ana@test.io');
+      await web.sync.syncNow();
       await writeColor(web.repo, '#7849ce');
       await web.sync.syncNow();
       const name = 'color-upgrade-' + crypto.randomUUID();
@@ -387,9 +389,9 @@ describe('sync: sin configuración', () => {
 
     it.each(['setting', 'unknown'])('un registro remoto no válido se muestra como error y no avanza el cursor: %s', async (kind) => {
       const server = new FakeServer();
-      server.addUser('ana@test.io', 'secreto');
-      const device = persistentDevice(server);
-      await device.sync.signIn('ana@test.io', 'secreto');
+      server.addUser('ana@test.io');
+      const device = persistentDevice(server, 'ana@test.io');
+      await device.sync.syncNow();
       const cursor = await device.repo.getMeta('sync.cursor');
       const row: Row = {
         user_id: 'user-1', kind, id: 'appearance',
@@ -411,46 +413,43 @@ describe('sync: sin configuración', () => {
 });
 
 describe('sync: sesión', () => {
-  it('signIn persiste la sesión y deja el estado en idle', async () => {
+  it('una sesión guardada arranca en idle con su email; sin ella, signedOut', () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
     const clock = makeClock();
-    const d = device(server, clock);
 
-    await d.sync.signIn('ana@test.io', 'secreto');
+    const sinSesion = device(server, clock);
+    expect(sinSesion.sync.getState()).toEqual({ status: 'signedOut' });
 
-    const state = d.sync.getState();
-    expect(state.status).toBe('idle');
-    expect(state).toMatchObject({ email: 'ana@test.io' });
+    const d = device(server, clock, 'ana@test.io');
+    expect(d.sync.getState()).toMatchObject({ status: 'idle', email: 'ana@test.io' });
     const s = sessionFromStorage(d.storage);
     expect(s?.accessToken).toMatch(/^at-/);
     expect(s?.refreshToken).toMatch(/^rt-/);
   });
 
-  it('contraseña incorrecta => mensaje en castellano y estado signedOut', async () => {
+  it('vuelta de Google (tokens en el hash) => adopta la sesión, la guarda y sincroniza', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
     const d = device(server, makeClock());
-
-    await expect(d.sync.signIn('ana@test.io', 'mal')).rejects.toThrow('Email o contraseña incorrectos');
-    expect(d.sync.getState()).toEqual({ status: 'signedOut' });
-    expect(d.storage.getItem('lista.session')).toBeNull();
-  });
-
-  it('signUp sin confirmación inmediata => mensaje para revisar el email', async () => {
-    const server = new FakeServer();
-    const d = device(server, makeClock());
-    await expect(d.sync.signUp('nuevo@test.io', 'secreto')).rejects.toThrow(
-      'Revisa tu email para confirmar la cuenta y luego inicia sesión',
-    );
-    expect(d.sync.getState()).toEqual({ status: 'signedOut' });
+    const s = server.session('ana@test.io');
+    vi.stubGlobal('location', { hash: `#access_token=${s.accessToken}&refresh_token=${s.refreshToken}&expires_in=3600`, pathname: '/' });
+    vi.stubGlobal('history', { replaceState: () => undefined });
+    try {
+      d.sync.start();
+      await vi.waitFor(() => expect(d.sync.getState()).toMatchObject({ status: 'idle', email: 'ana@test.io' }));
+      expect(sessionFromStorage(d.storage)?.accessToken).toBe(s.accessToken);
+    } finally {
+      d.sync.stop();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('signOut conserva los datos locales y reinicia el cursor', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
     d.write('task', 't1', 'Comprar pan', 100);
     await d.sync.syncNow();
     expect(typeof (await d.repo.getMeta('sync.cursor'))).toBe('string');
@@ -467,9 +466,9 @@ describe('sync: sesión', () => {
 describe('sync: push y pull', () => {
   it('syncNow sube lo pendiente y lo marca como subido', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
 
     d.write('task', 't1', 'Llamar', 100);
     d.write('topic', 'casa', 'casa', 100);
@@ -485,12 +484,12 @@ describe('sync: push y pull', () => {
 
   it('pull trae registros remotos al repo y guarda el cursor', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
     const clock = makeClock();
-    const a = device(server, clock);
-    const b = device(server, clock);
-    await a.sync.signIn('ana@test.io', 'secreto');
-    await b.sync.signIn('ana@test.io', 'secreto');
+    const a = device(server, clock, 'ana@test.io');
+    const b = device(server, clock, 'ana@test.io');
+    await a.sync.syncNow();
+    await b.sync.syncNow();
 
     a.write('person', 'juan', 'Juan', 100);
     await a.sync.syncNow();
@@ -503,12 +502,12 @@ describe('sync: push y pull', () => {
 
   it('dos dispositivos convergen y LWW conserva la escritura más reciente', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
     const clock = makeClock();
-    const a = device(server, clock);
-    const b = device(server, clock);
-    await a.sync.signIn('ana@test.io', 'secreto');
-    await b.sync.signIn('ana@test.io', 'secreto');
+    const a = device(server, clock, 'ana@test.io');
+    const b = device(server, clock, 'ana@test.io');
+    await a.sync.syncNow();
+    await b.sync.syncNow();
 
     a.write('task', 't1', 'A-1', 100);
     await a.sync.syncNow();
@@ -530,12 +529,12 @@ describe('sync: push y pull', () => {
 
   it('pagina el pull y trocea el push (más de 500 registros)', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
     const clock = makeClock();
-    const a = device(server, clock);
-    const b = device(server, clock);
-    await a.sync.signIn('ana@test.io', 'secreto');
-    await b.sync.signIn('ana@test.io', 'secreto');
+    const a = device(server, clock, 'ana@test.io');
+    const b = device(server, clock, 'ana@test.io');
+    await a.sync.syncNow();
+    await b.sync.syncNow();
 
     for (let i = 0; i < 620; i++) a.write('task', `t${i}`, `Tarea ${i}`, 100 + i);
     await a.sync.syncNow();
@@ -550,10 +549,10 @@ describe('sync: push y pull', () => {
 describe('sync: tokens', () => {
   it('refresca el token cuando está a punto de caducar', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
     const clock = makeClock();
-    const d = device(server, clock);
-    await d.sync.signIn('ana@test.io', 'secreto');
+    const d = device(server, clock, 'ana@test.io');
+    await d.sync.syncNow();
     const before = sessionFromStorage(d.storage)!;
 
     clock.advance(3600_000 - 30_000); // quedan 30 s
@@ -569,9 +568,9 @@ describe('sync: tokens', () => {
 
   it('401 => refresca una vez y reintenta', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
 
     server.revokeAccess(); // el access token ya no es válido en el servidor
     d.write('task', 't1', 'Reintento', 100);
@@ -584,9 +583,9 @@ describe('sync: tokens', () => {
 
   it('refresh rechazado (400) => signedOut y sesión borrada', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
 
     server.revokeAccess();
     server.refreshTokens.clear();
@@ -601,9 +600,9 @@ describe('sync: tokens', () => {
 describe('sync: errores de red', () => {
   it('fallo de red => offline', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
 
     server.offline = true;
     d.write('task', 't1', 'Sin red', 100);
@@ -618,9 +617,9 @@ describe('sync: errores de red', () => {
 
   it('error de servidor no relacionado => error con mensaje', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
 
     server.failWritesWith = 500;
     d.write('task', 't1', 'Error', 100);
@@ -632,9 +631,9 @@ describe('sync: errores de red', () => {
 describe('sync: concurrencia', () => {
   it('varias llamadas concurrentes ejecutan a lo sumo dos syncs', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
     const base = d.pendingChanges.mock.calls.length;
 
     await Promise.all([d.sync.syncNow(), d.sync.syncNow(), d.sync.syncNow(), d.sync.syncNow()]);
@@ -646,9 +645,9 @@ describe('sync: concurrencia', () => {
   it('debounce de cambios locales y nada tras stop (start/stop)', async () => {
     vi.useFakeTimers();
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
     let runs = 0;
     d.sync.subscribe((s: SyncState) => { if (s.status === 'syncing') runs++; });
     d.sync.start();
@@ -671,9 +670,9 @@ describe('sync: concurrencia', () => {
 
   it('una escritura local durante un sync se sube en cuanto termina', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
+    await d.sync.syncNow();
     d.sync.start();
     d.write('task', 't1', 'Primera', 100);
     const p = d.sync.syncNow();
@@ -688,11 +687,11 @@ describe('sync: concurrencia', () => {
 describe('sync: estado', () => {
   it('subscribe recibe los cambios de estado', async () => {
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
     const seen: string[] = [];
     const unsub = d.sync.subscribe((s: SyncState) => seen.push(s.status));
-    await d.sync.signIn('ana@test.io', 'secreto');
+    await d.sync.syncNow();
     unsub();
     expect(seen).toContain('idle');
     expect(seen).toContain('syncing');
