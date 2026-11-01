@@ -72,6 +72,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 - **Encuentra lo importante.** Toca un tema, una persona o una fecha para filtrar.
 - **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas.
 - **Cambia de planes.** Selecciona una tarea y arrastra **Mover** para cambiarla de día; usa el lápiz para editarla.
+- **Abre los enlaces.** Una dirección web en una tarea se muestra corta; tócala para abrirla.
 
 ## A tu manera
 

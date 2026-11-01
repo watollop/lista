@@ -373,14 +373,16 @@ describe('lista de subtareas', () => {
     expect(root.querySelector('.subtask-group')).toBeNull();
     expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(true);
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
-    const title = root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .title`)!;
+    const title = root.querySelector<HTMLElement>(`[data-id="${parent.id}"] .title`)!;
     act(() => {
       title.focus();
       title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     });
+    // Enter sobre el título lo activa como un clic: pliega (en el navegador, un botón lo hacía con su clic).
     expect(root.querySelector('input[aria-label="Editar tarea"]')).toBeNull();
-    click(title);
     expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
+    click(title);
+    expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
     click(root.querySelector(`[data-id="${parent.id}"] .edit-task`));
     expect(input('Editar tarea')).not.toBeNull();
   });
