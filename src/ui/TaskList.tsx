@@ -9,6 +9,7 @@ import { addDays } from '../lib/date';
 import { useDrag, dragging } from './drag';
 import type { DropTarget } from '../lib/reschedule';
 import { SubtaskInputs } from './SubtaskInputs';
+import { TITLE_TOO_LONG, titleTooLong } from '../lib/capture';
 
 export interface Group { task: Task; children: Task[] }
 
@@ -337,16 +338,19 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSub
     due: task.due, period: task.period, priority: task.priority, recurrence: task.recurrence,
   });
   const [v, setV] = useState(initial);
+  const [error, setError] = useState('');
   const ref = useRef<HTMLInputElement>(null);
   const done = useRef(false);
   useEffect(() => { ref.current?.focus(); }, []);
 
   const save = () => {
     if (done.current) return;
-    done.current = true;
     const line = parseLine(v);
-    if (v === initial || !line.title) onCancel();
-    else onSave(line);
+    if (v === initial || !line.title) { done.current = true; onCancel(); return; }
+    // Con error no se cierra la edición: el texto sigue ahí para recortarlo.
+    if (titleTooLong([line])) { setError(TITLE_TOO_LONG); return; }
+    done.current = true;
+    onSave(line);
   };
   return (
     <>
@@ -357,7 +361,7 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSub
         aria-label="Editar tarea"
         autocomplete="off"
         enterkeyhint="done"
-        onInput={(e) => setV(e.currentTarget.value)}
+        onInput={(e) => { setV(e.currentTarget.value); setError(''); }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); save(); }
           if (e.key === 'Escape') { e.preventDefault(); done.current = true; onCancel(); }
@@ -391,6 +395,7 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSub
           Borrar
         </button>
       </div>
+      {error && <p class="err" role="alert">{error}</p>}
     </>
   );
 }

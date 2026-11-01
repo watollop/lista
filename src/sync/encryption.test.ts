@@ -326,6 +326,22 @@ describe('cifrado: activación', () => {
     expect(await titles(a.repo)).toEqual(['Comprar pan secreto']);
   });
 
+  it('2b. una tarea cifrada demasiado grande se queda pendiente y no bloquea el lote del resto', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { server, a } = twoDevices();
+    await login(a);
+    const big = await addTask(a.repo, 'x'.repeat(70 * 1024));
+    await addTask(a.repo, 'Comprar pan');
+
+    await a.sync.syncNow();
+
+    expect(a.sync.getState()).toMatchObject({ status: 'idle' });
+    expect(server.rowsOf('enc')).toHaveLength(1);
+    expect((await a.repo.pendingChanges()).map((it) => it.id)).toEqual([big.id]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(big.id));
+    warn.mockRestore();
+  });
+
   it('3. un dispositivo sin clave pasa a locked y no sube nada en claro', async () => {
     const { server, a, b } = twoDevices();
     await login(a);

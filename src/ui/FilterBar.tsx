@@ -152,7 +152,7 @@ export function FilterBar(p: Props) {
         <div class="actions">
           {naming ? (
             <>
-              <input autoFocus placeholder="Nombre del filtro" value={name} aria-label="Nombre del filtro"
+              <input autoFocus placeholder="Nombre del filtro" value={name} aria-label="Nombre del filtro" maxLength={60}
                 onInput={(e) => setName(e.currentTarget.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setNaming(false); }} />
               <button class="link on" onClick={save}>Guardar</button>

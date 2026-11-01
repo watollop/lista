@@ -41,7 +41,7 @@ export function EntityEditor({ kind, entity, entities, pending, variant, onSave,
 
   const input = (
     <input autoFocus value={name} aria-label={kind === 'topic' ? 'Nombre del tema' : 'Nombre de la persona'}
-      autocomplete="off" autocapitalize="off" spellcheck={false}
+      autocomplete="off" autocapitalize="off" spellcheck={false} maxLength={60}
       onInput={(e) => setName(e.currentTarget.value)} onKeyDown={onEnter}
       onBlur={variant === 'inline' ? onCancel : undefined} />
   );
