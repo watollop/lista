@@ -9,6 +9,8 @@ import { App } from './App';
 import { INTRO_KEY } from './Onboarding';
 import { SHORTCUTS } from './shortcuts';
 import appSource from './App.tsx?raw';
+import { parseLine } from '../parser';
+import { addDays, todayISO } from '../lib/date';
 
 const keys = SHORTCUTS.flatMap(([ks]) => ks);
 
@@ -18,7 +20,7 @@ describe('lista compartida de atajos', () => {
   });
 
   it('contiene las teclas que App.tsx gestiona', () => {
-    for (const k of ['/', 'n', 'j', 'k', 'x', 'e', 'h', 's', 'v', 'f', '?']) {
+    for (const k of ['/', 'n', 'j', 'k', 'x', 'e', 'm', 'h', 's', 'v', 'f', '?']) {
       expect(appSource, `App.tsx gestiona '${k}'`).toContain(`'${k}'`);
       expect(keys, `la lista muestra '${k}'`).toContain(k);
     }
@@ -101,5 +103,22 @@ describe('hoja de atajos con ?', () => {
     const text = sheet()!.textContent ?? '';
     for (const [, what] of SHORTCUTS) expect(text).toContain(what);
     expect(sheet()!.querySelectorAll('kbd')).toHaveLength(keys.length);
+  });
+});
+
+describe('m: para mañana', () => {
+  it('pasa la tarea seleccionada a mañana y Deshacer devuelve su fecha anterior', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    await repo.addParsed([parseLine('Llamar a Ana')], null);
+    act(() => render(h(App, { repo, sync: createSync(repo, null) }), root));
+    await vi.waitFor(() => expect(root.querySelector('.row')).not.toBeNull());
+    press(document.body, 'j');
+    press(document.body, 'm');
+    await vi.waitFor(async () => expect((await repo.listTasks())[0].due).toBe(addDays(todayISO(), 1)));
+    expect(root.querySelector('.toast')?.textContent).toContain('Para mañana');
+    act(() => {
+      [...root.querySelectorAll<HTMLButtonElement>('.toast button')].find((b) => b.textContent === 'Deshacer')!.click();
+    });
+    await vi.waitFor(async () => expect((await repo.listTasks())[0].due).toBeNull());
   });
 });

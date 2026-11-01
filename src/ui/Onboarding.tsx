@@ -42,7 +42,7 @@ const hasKeyboard = () => typeof matchMedia !== 'undefined' && matchMedia('(hove
 const EXTRA = [
   { title: 'Fechas como las dirías', text: () => 'Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', Demo: DatesDemo },
   { title: 'Prioridad y repetición', text: () => 'Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla.', Demo: PrioRepeatDemo },
-  { title: 'Atajos de teclado', text: () => 'Sin soltar el teclado: escribe, muévete por la lista, completa y filtra.', Demo: KeysDemo, keyboard: true },
+  { title: 'Atajos de teclado', text: () => 'Sin soltar el teclado: escribe, muévete por la lista, completa, pasa a mañana y filtra.', Demo: KeysDemo, keyboard: true },
 ];
 
 type Slide = { title: string; text: () => string; Demo: () => preact.JSX.Element; google?: boolean; keyboard?: boolean };

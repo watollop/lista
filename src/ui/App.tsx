@@ -214,6 +214,29 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     showToast({ msg: `Movida a ${DROP_LABEL[target]}`, action: { label: 'Deshacer', run: () => repo.updateTask(id, before) } });
   };
 
+  // «Para mañana»: fecha de mañana sin periodo (botón del editor o «m»). Si había texto editado, se guarda con él.
+  // Deshacer restaura solo la fecha anterior.
+  const tomorrow = async (id: ID, line: ParsedLine | null = null) => {
+    setEditing(null);
+    const t = data.tasks.find((x) => x.id === id);
+    if (!t) return;
+    const next = scheduleFor('tomorrow', today);
+    const before = { due: t.due, period: t.period ?? null };
+    if (!line && next.due === t.due && next.period === before.period) return;
+    try {
+      if (line) await repo.replaceParsed(id, { ...line, ...next });
+      else await repo.updateTask(id, next);
+      showToast({
+        msg: 'Para mañana',
+        action: { label: 'Deshacer', run: () => {
+          void repo.updateTask(id, before).catch((e) => showToast(e instanceof Error ? e.message : 'No se pudo deshacer la tarea.'));
+        } },
+      });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo cambiar la tarea.');
+    }
+  };
+
   const save = async (id: ID, line: ParsedLine) => {
     setEditing(null);
     await repo.replaceParsed(id, line);
@@ -301,6 +324,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       else if (key === 'k' || key === 'ArrowUp') run(() => go(-1));
       else if ((key === 'x' || key === ' ') && selected) run(() => toggle(selected));
       else if ((key === 'e' || key === 'Enter') && selected) run(() => setEditing(selected));
+      else if (key === 'm' && selected) run(() => void tomorrow(selected));
       else if ((key === 'Backspace' || key === 'Delete') && selected) run(() => remove(selected));
       else if (key === '?') run(() => setShortcuts(true));
       else if (key === 'h') run(() => setFilter({ ...emptyFilter(), dates: ['today'] }));
@@ -373,7 +397,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         ) : (
           <TaskList
             groups={groups} names={names} today={today} selected={selected} editing={editing}
-            onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onDelete={remove} onChip={chipTap}
+            onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onTomorrow={tomorrow} onDelete={remove} onChip={chipTap}
             doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)} onMove={move}
             onAddSubtasks={addSubtasks}
           />
