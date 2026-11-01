@@ -1,0 +1,47 @@
+README.md
+  s_527598c8a129db::t_2ed155f6921b18 92
+docs/plan-cifrado.md
+  s_527598c8a129db::t_9f7a821103e6e7 28
+src/ui/Onboarding.tsx
+  s_527598c8a129db::t_b41dcb60fe301a 62
+src/ui/Settings.tsx
+  s_abce1504e0320f::t_5194998fcb60eb 35-64
+src/ui/look.css
+  s_527598c8a129db::t_8fad44d8c47012 141-154
+supabase/schema.sql
+  s_527598c8a129db::t_d1068821abe6d0 119
+src/ui/styles.css
+  s_57c8062fa90dbf::t_2d958306232b8f 453-459,1091-1092,1098,1100-1102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "75766a4ebc9a95746ea3b71bcd38efeef37d50c8",
+  "prompts": {},
+  "sessions": {
+    "s_527598c8a129db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e686eb5-6bf2-4366-9b8e-5993c0c3e5f8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_57c8062fa90dbf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2aee1f5d613daac6",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_abce1504e0320f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a002818-d0d6-4eea-a7a1-d291ffcb5dd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
