@@ -59,7 +59,7 @@ function GoogleG({ class: cls }: { class?: string }) {
 
 const FOCUSABLE = 'button:not([disabled])';
 
-/** Bienvenida completa: portada, tres pasos y referencia. Se muestra la primera vez y desde Ajustes → Cómo funciona. */
+/** Bienvenida completa: portada, tres pasos y referencia. Se muestra la primera vez y desde Ajustes → Ayuda → Cómo funciona. */
 export function Onboarding({ onClose, signIn, extended }: Props) {
   // Siempre todas: portada, los tres pasos y la referencia (fechas, prioridad y repetición; teclado solo con ratón).
   const [slides] = useState<Slide[]>(() => [...SLIDES, ...EXTRA.filter((s) => !s.keyboard || hasKeyboard())]);

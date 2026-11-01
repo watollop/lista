@@ -89,7 +89,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 
 Todo se guarda primero **en tu dispositivo**. Puedes usar Lista sin cuenta y sin conexión;
 si quieres llevar tus tareas del móvil al ordenador, entra con **Google**.
-Desde Ajustes puedes exportarlo todo o borrarlo todo.
+Desde **Ajustes → Tus datos** puedes exportarlo todo o borrarlo todo.
 
 Para tenerla siempre a mano, instálala como una app:
 

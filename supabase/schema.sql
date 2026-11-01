@@ -116,7 +116,7 @@ create policy "pairings delete" on public.pairings
   for delete
   using (user_id = auth.uid());
 
--- Eliminar la cuenta desde la app (Ajustes -> Eliminar datos): borra las filas del usuario que llama
+-- Eliminar la cuenta desde la app (Ajustes -> Tus datos -> Eliminar datos): borra las filas del usuario que llama
 -- (items y pairings) y su usuario de auth. security definer para poder tocar auth.users; solo actúa sobre auth.uid().
 create or replace function public.delete_account()
 returns void

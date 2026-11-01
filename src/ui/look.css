@@ -138,7 +138,20 @@
 :where([data-look="industrial"]) .btn.solid { background: var(--fg); border-color: var(--fg); color: var(--bg); }
 
 /* Ajustes */
-:where([data-look="industrial"]) .sheet h2 { font-family: var(--dots); font-weight: 700; font-size: 40px; text-transform: uppercase; }
+:where([data-look="industrial"]) .sheet { counter-reset: grp; }
+/* Grupos numerados como las secciones de la lista: 01 CUENTA ······· */
+:where([data-look="industrial"]) .sheet .group { counter-increment: grp; }
+:where([data-look="industrial"]) .sheet .group-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+}
+:where([data-look="industrial"]) .sheet .group-title::before { content: counter(grp, decimal-leading-zero); color: var(--faint); }
+:where([data-look="industrial"]) .sheet .group-title::after {
+  content: ''; order: 1; flex: 1; height: 2px;
+  background: radial-gradient(circle, var(--dot) 1px, transparent 1.2px) 0 50% / 6px 2px repeat-x;
+}
+:where([data-look="industrial"]) .sheet .group > section { border-top: 0; }
+:where([data-look="industrial"]) .sheet .group > section:first-of-type { background: none; }
 :where([data-look="industrial"]) .dialog { background: var(--panel); }
 :where([data-look="industrial"]) kbd { font-family: var(--mono); border-color: var(--fg); }
 :where([data-look="industrial"]) .sheet section { border-top: 0; background: radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 0 / 5px 2px repeat-x; }
