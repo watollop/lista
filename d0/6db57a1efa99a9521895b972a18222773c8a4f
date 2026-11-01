@@ -1,0 +1,23 @@
+src/parser/dates.ts
+  s_6a597e148d7476::t_73bc9086095bb1 27,43-71,92-112,176-177,199-200
+src/parser/parser.test.ts
+  s_6a597e148d7476::t_9633d211461268 152-204
+src/qa/edge.test.ts
+  s_6a597e148d7476::t_822fd8cf88af63 105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d06db57a1efa99a9521895b972a18222773c8a4f",
+  "prompts": {},
+  "sessions": {
+    "s_6a597e148d7476": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a93da9dfe417f1d04",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
