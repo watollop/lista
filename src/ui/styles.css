@@ -270,6 +270,10 @@ button.chip { min-height: 22px; }
 .row.sub.sel { padding-left: 58px; }
 .row.done .title { color: var(--faint); text-decoration: line-through; text-decoration-thickness: 1px; }
 .row.done .meta { opacity: .5; }
+/* Hechas: el texto pesa menos que el de las pendientes; sus etiquetas y chips también se apagan */
+.row.done .title { font-weight: 400; }
+.row.done .title .tag, .row.done .title .tag:hover { color: var(--faint); }
+.row.done .meta .chip, .row.done .meta .chip.warn { color: var(--faint); background: transparent; }
 .check {
   flex: none;
   width: 44px; height: 44px;

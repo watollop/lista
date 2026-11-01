@@ -100,6 +100,7 @@
 :where([data-look="industrial"]) .row.done .check i { background: var(--accent); border-color: var(--accent); }
 :where([data-look="industrial"]) .row.done .check i::after { width: 6px; height: 6px; border: 0; border-radius: 50%; background: var(--on-accent); transform: none; }
 :where([data-look="industrial"]) .row.done .title { text-decoration-color: var(--faint); }
+:where([data-look="industrial"]) .row.done .meta .chip { border-color: var(--line); }
 
 /* Chips: píldoras en mono */
 :where([data-look="industrial"]) .chip {
@@ -111,7 +112,9 @@
 :where([data-look="industrial"]) .chip.warn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 :where([data-look="industrial"]) .chip.ghost { border: 0; }
 :where([data-look="industrial"]) .title .tag { color: var(--muted); }
-:where([data-look="industrial"]) .title a { color: var(--accent); text-decoration: none; }
+:where([data-look="industrial"]) .title a { color: inherit; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: var(--muted); }
+@media (hover: hover) { :where([data-look="industrial"]) .title a:hover { text-decoration-color: currentColor; } }
+:where([data-look="industrial"]) .row.done .title a { text-decoration-color: var(--faint); }
 
 /* Captura: pantalla oscura con trama de puntos */
 :where([data-look="industrial"]) .capture { background: transparent; border-top: 0; padding-top: 8px; }
