@@ -80,6 +80,7 @@ class FakeServer {
   rows = new Map<string, Row>(); // `${userId}|${kind}|${id}`
   pairings = new Map<string, PairingDb>(); // por id, en orden de creación
   pairingsDown = false; // si true, /rest/v1/pairings responde 500
+  pairingListGets = 0; // listados de pairings (sin id=eq: los que hace el lado activado para buscar peticiones)
   private tokenSeq = 0;
   private seq = 0;
 
@@ -164,7 +165,10 @@ class FakeServer {
       if (!uid) return json({ message: 'JWT expired', code: 'PGRST303' }, 401);
       if (this.pairingsDown) return json({ message: 'pairings unavailable' }, 500);
       if (method === 'POST') return this.insertPairing(uid, body);
-      if (method === 'GET') return this.selectPairings(uid, url);
+      if (method === 'GET') {
+        if (!url.searchParams.has('id')) this.pairingListGets++;
+        return this.selectPairings(uid, url);
+      }
       if (method === 'PATCH') return this.patchPairings(uid, url, body);
       if (method === 'DELETE') return this.removePairings(uid, url);
     }
@@ -353,12 +357,22 @@ async function pollUntil(cond: () => boolean): Promise<void> {
   for (let i = 0; i < 20 && !cond(); i++) await pollOnce();
 }
 
+/** document simulado: el entorno de tests es node. Cambiar visibilityState y disparar visibilitychange. */
+const fakeDocument = Object.assign(new EventTarget(), { visibilityState: 'visible' });
+function setVisibility(state: 'visible' | 'hidden'): void {
+  fakeDocument.visibilityState = state;
+  fakeDocument.dispatchEvent(new Event('visibilitychange'));
+}
+
 describe('enlace de dispositivos', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    vi.stubGlobal('document', fakeDocument);
+    setVisibility('visible');
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -508,6 +522,42 @@ describe('enlace de dispositivos', () => {
     await vi.advanceTimersByTimeAsync(LINK_CHECK_MS);
     await settle();
 
+    expect(a.sync.link()).toEqual({ role: 'active', status: 'waiting' });
+    a.sync.stop();
+    b.sync.stop();
+  });
+
+  it('9b. con la pestaña oculta, avanzar LINK_CHECK_MS no consulta pairings', async () => {
+    const { server, a, b } = await encryptedPair();
+    a.sync.start();
+    await settle();
+
+    await b.sync.startLink();
+    setVisibility('hidden');
+    server.pairingListGets = 0;
+    await vi.advanceTimersByTimeAsync(LINK_CHECK_MS * 3);
+    await settle();
+
+    expect(server.pairingListGets).toBe(0);
+    expect(a.sync.link()).toBeNull();
+    a.sync.stop();
+    b.sync.stop();
+  });
+
+  it('9c. al volver a ser visible se comprueba el enlace al momento, sin esperar al intervalo', async () => {
+    const { server, a, b } = await encryptedPair();
+    a.sync.start();
+    await settle();
+    setVisibility('hidden');
+
+    await b.sync.startLink();
+    await settle();
+    expect(a.sync.link()).toBeNull();
+
+    server.pairingListGets = 0;
+    setVisibility('visible');
+    await settle(); // sin avanzar LINK_CHECK_MS
+    expect(server.pairingListGets).toBeGreaterThan(0);
     expect(a.sync.link()).toEqual({ role: 'active', status: 'waiting' });
     a.sync.stop();
     b.sync.stop();
