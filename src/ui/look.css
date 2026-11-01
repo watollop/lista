@@ -1,7 +1,26 @@
 /* Estilo «Industrial» (Ajustes → Apariencia): aspecto "aparato": monocromo y de puntos (Nothing) con gris cálido, naranja y rótulos en mono (Teenage Engineering). */
-@import '@fontsource/doto/latin-700.css';
-@import '@fontsource/space-mono/latin-400.css';
-@import '@fontsource/space-mono/latin-700.css';
+/* Solo woff2: todos los navegadores objetivo lo soportan; así no se emiten ni precachean los .woff. */
+@font-face {
+  font-family: 'Doto';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('@fontsource/doto/files/doto-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Space Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/space-mono/files/space-mono-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Space Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('@fontsource/space-mono/files/space-mono-latin-700-normal.woff2') format('woff2');
+}
 
 :root[data-look="industrial"] {
   --bg: #eeede9;
