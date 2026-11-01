@@ -7,7 +7,6 @@ import { TaskChips } from './Chips';
 import { PriorityIcon, RepeatIcon } from './Priority';
 import { SHORTCUTS } from './shortcuts';
 
-export const INTRO_KEY = 'lista.intro';
 
 interface Props {
   onClose: () => void;

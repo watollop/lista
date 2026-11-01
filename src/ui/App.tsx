@@ -12,13 +12,12 @@ import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
 import type { ChipTap } from './Chips';
 import { EntityEditor } from './EntityEditor';
-import { Settings } from './Settings';
-import { LinkDialog, LockedPanel } from './Encryption';
 import { UPDATE_READY_EVENT } from '../pwa/register';
 import { Critter } from './Critter';
-import { INTRO_KEY, Onboarding } from './Onboarding';
+import { INTRO_KEY } from './intro';
 import { startAppearanceSync } from './appearanceSync';
-import { ShortcutsSheet } from './ShortcutsSheet';
+import { LazyLinkDialog, LazyLockedPanel, LazyOnboarding, LazySettings, LazyShortcutsSheet, preloadViews } from './lazyViews';
+import { whenIdle } from './lazy';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 
@@ -51,6 +50,9 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     try { localStorage.setItem(INTRO_KEY, '1'); } catch { /* modo privado */ }
   };
   const [toast, setToast] = useState<Toast | null>(null);
+
+  // Tras el primer pintado, bajar los chunks de las vistas diferidas (Ajustes, bienvenida, cifrado, atajos, dictado).
+  useEffect(() => whenIdle(preloadViews), []);
 
   const captureRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -361,7 +363,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       />
 
       <main>
-        {enc === 'locked' && <LockedPanel sync={sync} onRecovery={() => setSettings(true)} />}
+        {enc === 'locked' && <LazyLockedPanel sync={sync} onRecovery={() => setSettings(true)} />}
         {data.ready && groups.length === 0 ? (
           <div class="empty">
             {isEmptyFilter(filter) ? (
@@ -408,16 +410,16 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       })()}
 
       {settings && (
-        <Settings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
+        <LazySettings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
           topics={data.topics} people={data.people} pending={pending}
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }} />
       )}
-      {shortcuts && <ShortcutsSheet onClose={() => setShortcuts(false)} />}
-      {link?.role === 'active' && <LinkDialog sync={sync} link={link} toast={showToast} />}
+      {shortcuts && <LazyShortcutsSheet onClose={() => setShortcuts(false)} />}
+      {link?.role === 'active' && <LazyLinkDialog sync={sync} link={link} toast={showToast} />}
       <Critter enabled={wide} />
       {intro && (
-        <Onboarding onClose={closeIntro} extended={intro === 'full'}
+        <LazyOnboarding onClose={closeIntro} extended={intro === 'full'}
           signIn={googleOk && syncState.status === 'signedOut' ? () => sync.signInWithGoogle() : undefined} />
       )}
     </div>
