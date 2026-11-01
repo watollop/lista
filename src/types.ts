@@ -210,6 +210,10 @@ export interface Repo {
   deleteEntity(kind: EntityKind, key: string): Promise<{ tasks: number; undo: () => Promise<void> }>;
 
   exportBackup(): Promise<Backup>;
+  /** Borra físicamente, solo en local, los tombstones sincronizados (deleted=1, dirty=0) con updatedAt anterior a
+   *  now - olderThanMs, en tareas, temas, personas y filtros. Nunca toca pendientes ni vivos. No notifica
+   *  (nada visible cambia). Devuelve cuántos registros borró. */
+  purgeTombstones(olderThanMs: number): Promise<number>;
   /** Borra todos los datos locales (tareas, temas, personas, filtros y metadatos de sync). */
   wipe(): Promise<void>;
 

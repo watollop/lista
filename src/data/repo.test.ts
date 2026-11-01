@@ -2,7 +2,8 @@ import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createRepo } from './repo';
-import type { ParsedLine, RemoteItem } from '../types';
+import type { ParsedLine, RemoteItem, Task } from '../types';
+import { ListaDB } from './db';
 
 function line(title: string, extra: Partial<ParsedLine> = {}): ParsedLine {
   return {
@@ -844,5 +845,95 @@ describe('preferencias (setting)', () => {
     await r.applyRemote([remote({ look: 'industrial' }, (await r.getSetting('appearance'))!.updatedAt + 10_000)]);
     expect((await r.getSetting<{ look: string }>('appearance'))?.value.look).toBe('industrial');
     expect(await r.pendingChanges()).toHaveLength(0);
+  });
+});
+
+describe('purga de tombstones y lecturas sin borrados', () => {
+  const DAY = 864e5;
+  const old = () => Date.now() - 90 * DAY;
+  const recent = () => Date.now() - 1 * DAY;
+  const task = (id: string, patch: Partial<Task>): Task => ({
+    id, title: id, topics: [], people: [], due: null, priority: null, recurrence: null, parentId: null,
+    done: 0, doneAt: null, nextId: null, order: 1, createdAt: 1, updatedAt: old(), deleted: 0, dirty: 0, ...patch,
+  });
+
+  it('purgeTombstones borra solo tombstones viejos sincronizados', async () => {
+    const name = 'test-' + crypto.randomUUID();
+    const seed = new ListaDB(name);
+    await seed.tasks.bulkPut([
+      task('viejo-borrado', { deleted: 1 }),
+      task('viejo-vivo', {}),
+      task('viejo-borrado-pendiente', { deleted: 1, dirty: 1 }),
+      task('reciente-borrado', { deleted: 1, updatedAt: recent() }),
+    ]);
+    await seed.topics.put({ key: 'tema', name: 'Tema', updatedAt: old(), deleted: 1, dirty: 0 });
+    seed.close();
+    const r = createRepo(name);
+    const cb = vi.fn();
+    r.subscribe(cb);
+    expect(await r.purgeTombstones(60 * DAY)).toBe(1 + 1);
+    expect(cb).not.toHaveBeenCalled();
+    const check = new ListaDB(name);
+    expect((await check.tasks.toArray()).map((t) => t.id).sort())
+      .toEqual(['reciente-borrado', 'viejo-borrado-pendiente', 'viejo-vivo']);
+    expect(await check.topics.count()).toBe(0);
+    check.close();
+    expect(await r.purgeTombstones(60 * DAY)).toBe(0);
+  });
+
+  it('purgeTombstones no toca preferencias (settings)', async () => {
+    const name = 'test-' + crypto.randomUUID();
+    const seed = new ListaDB(name);
+    await seed.settings.put({ key: 'appearance', value: {}, updatedAt: old(), deleted: 1, dirty: 0 });
+    seed.close();
+    expect(await createRepo(name).purgeTombstones(60 * DAY)).toBe(0);
+  });
+
+  it('listTasks no devuelve borrados tras la migración v4 y normaliza deleted a 0|1', async () => {
+    const name = 'test-' + crypto.randomUUID();
+    // Base creada con el esquema v3: sin índice en deleted y con valores heredados (undefined, booleanos).
+    const v3 = new Dexie(name);
+    v3.version(3).stores({
+      tasks: 'id, parentId, dirty, updatedAt', topics: 'key, dirty', people: 'key, dirty',
+      filters: 'id, dirty', settings: 'key, dirty', meta: 'key',
+    });
+    await v3.open();
+    const legacy = (id: string, deleted: unknown) => ({ ...task(id, {}), deleted: deleted as 0 });
+    await v3.table('tasks').bulkPut([legacy('sin-campo', undefined), legacy('borrado-bool', true), legacy('vivo-bool', false)]);
+    v3.close();
+    const r = createRepo(name);
+    expect((await r.listTasks()).map((t) => t.id).sort()).toEqual(['sin-campo', 'vivo-bool']);
+    const check = new ListaDB(name);
+    const rows = await check.tasks.toArray();
+    expect(rows.every((t) => t.deleted === 0 || t.deleted === 1)).toBe(true);
+    expect((await check.tasks.get('borrado-bool'))?.deleted).toBe(1);
+    check.close();
+  });
+
+  it('tombstone remoto sobre registro inexistente: se inserta como borrado, no crea tarea viva', async () => {
+    const r = newRepo();
+    const tombstone: RemoteItem = { kind: 'task', id: 'fantasma', data: task('fantasma', { deleted: 1 }), updated_at: 5_000, deleted: true };
+    await r.applyRemote([tombstone]);
+    expect(await r.listTasks()).toEqual([]);
+    expect(await r.pendingChanges()).toEqual([]);
+    // Una versión viva más antigua que el tombstone no resucita nada (LWW con el registro reinsertado).
+    await r.applyRemote([{ ...tombstone, data: task('fantasma', {}), updated_at: 4_000, deleted: false }]);
+    expect(await r.listTasks()).toEqual([]);
+    // Una versión viva más nueva sí se aplica.
+    await r.applyRemote([{ ...tombstone, data: task('fantasma', { title: 'vuelve' }), updated_at: 6_000, deleted: false }]);
+    expect((await r.listTasks()).map((t) => t.title)).toEqual(['vuelve']);
+  });
+
+  it('tras purgar, un tombstone que vuelve del servidor no resucita nada y lo vivo posterior sí entra', async () => {
+    const name = 'test-' + crypto.randomUUID();
+    const seed = new ListaDB(name);
+    await seed.tasks.put(task('t', { deleted: 1 }));
+    seed.close();
+    const r = createRepo(name);
+    expect(await r.purgeTombstones(60 * DAY)).toBe(1);
+    await r.applyRemote([{ kind: 'task', id: 't', data: task('t', { deleted: 1 }), updated_at: old(), deleted: true }]);
+    expect(await r.listTasks()).toEqual([]);
+    await r.applyRemote([{ kind: 'task', id: 't', data: task('t', { title: 'nueva' }), updated_at: Date.now(), deleted: false }]);
+    expect((await r.listTasks()).map((t) => t.title)).toEqual(['nueva']);
   });
 });
