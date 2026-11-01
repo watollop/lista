@@ -305,6 +305,9 @@ button.chip { min-height: 22px; }
 }
 .title .tag { color: var(--muted); cursor: pointer; }
 @media (hover: hover) { .title .tag:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; } }
+.title a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: var(--faint); }
+@media (hover: hover) { .title a:hover { text-decoration-color: currentColor; } }
+.row.done .title a { color: var(--faint); }
 .title.p1 { font-weight: 500; }
 .meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .meta:empty { display: none; }

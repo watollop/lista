@@ -4,6 +4,7 @@ import type { Entity, ID, ISODate, ParsedLine, Task } from '../types';
 import { formatLine, inlineTags, normalizeKey, parseLine } from '../parser';
 import { TaskChips, type ChipTap } from './Chips';
 import { isCurrentPeriod, periodEnd } from '../lib/period';
+import { splitLinks } from '../lib/links';
 import { addToAppleCalendar, addToCalendar, addToGoogleCalendar, prefersApple } from './calendar';
 import { addDays } from '../lib/date';
 import { useDrag, dragging } from './drag';
@@ -292,21 +293,32 @@ function useSwipe(onRight: () => void, onLeft: () => void, enabled: boolean) {
   return { handlers, style, active: dx !== 0 };
 }
 
-/** Título con los #temas y @personas resaltados; tocarlos filtra (sin abrir el editor). */
+/** Título con los #temas y @personas resaltados (tocarlos filtra, sin abrir el editor) y las web como enlaces cortos. */
 export function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
   const parts: preact.ComponentChildren[] = [];
-  let i = 0;
-  for (const t of inlineTags(text)) {
-    parts.push(text.slice(i, t.start));
-    parts.push(
-      <span key={t.start} class="tag" onClick={(e) => {
-        e.stopPropagation();
-        onChip(t.sym === '#' ? 'topic' : 'person', normalizeKey(t.name));
-      }}>{text.slice(t.start, t.end)}</span>,
-    );
-    i = t.end;
-  }
-  parts.push(text.slice(i));
+  splitLinks(text).forEach((seg, n) => {
+    if (seg.type === 'link') {
+      // Tocar el enlace abre la web y no hace nada más en la fila (ni selección, ni editor, ni deslizamiento).
+      const stop = (e: Event) => e.stopPropagation();
+      parts.push(
+        <a key={`link${n}`} href={seg.href} target="_blank" rel="noopener noreferrer" title={seg.href}
+          aria-label={`Abrir ${seg.host}`} onClick={stop} onPointerDown={stop}>{seg.host} ↗</a>,
+      );
+      return;
+    }
+    let i = 0;
+    for (const t of inlineTags(seg.raw)) {
+      parts.push(seg.raw.slice(i, t.start));
+      parts.push(
+        <span key={`tag${n}-${t.start}`} class="tag" onClick={(e) => {
+          e.stopPropagation();
+          onChip(t.sym === '#' ? 'topic' : 'person', normalizeKey(t.name));
+        }}>{seg.raw.slice(t.start, t.end)}</span>,
+      );
+      i = t.end;
+    }
+    parts.push(seg.raw.slice(i));
+  });
   return <>{parts}</>;
 }
 
