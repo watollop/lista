@@ -1,0 +1,19 @@
+public/_headers
+  s_527598c8a129db::t_4dd7aba7532af8 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5de543720bc496bcce4b8a2bafc32382be4a85ac",
+  "prompts": {},
+  "sessions": {
+    "s_527598c8a129db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e686eb5-6bf2-4366-9b8e-5993c0c3e5f8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
