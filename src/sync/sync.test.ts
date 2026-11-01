@@ -548,9 +548,8 @@ describe('sync: push y pull', () => {
   it('un registro demasiado grande no bloquea el lote: el resto se sube y él queda pendiente', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const server = new FakeServer();
-    server.addUser('ana@test.io', 'secreto');
-    const d = device(server, makeClock());
-    await d.sync.signIn('ana@test.io', 'secreto');
+    server.addUser('ana@test.io');
+    const d = device(server, makeClock(), 'ana@test.io');
 
     d.write('task', 'gigante', 'x'.repeat(70 * 1024), 100);
     d.write('task', 'normal', 'Llamar', 101);
