@@ -102,8 +102,7 @@ describe('2. fechas ambiguas', () => {
   });
 
   it('ARREGLADO: "29 feb" desde octubre de 2026 debe dar 29/02/2028 (actual: null, la fecha se pierde)', () => {
-    // BUG: src/parser/dates.ts parseSpanishDate: chrono descarta el 29/02/2026 (no bisiesto) y no
-    // reintenta el siguiente año bisiesto; el token no se reconoce y el título conserva "29 feb".
+    // El 29/02 sin año salta a los años bisiestos (src/parser/dates.ts, nextMonthDay).
     expect(parse('Renovar carnet 29 feb').due).toBe('2028-02-29');
   });
 

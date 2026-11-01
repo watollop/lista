@@ -1,4 +1,3 @@
-import * as chronoEs from 'chrono-node/es';
 import type { ISODate, Period } from '../types';
 import { addDays, fromISODate, toISODate, todayISO } from '../lib/date';
 import { periodEnd } from '../lib/period';
@@ -25,6 +24,7 @@ const DOW: Record<string, number> = {
   domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6,
 };
 const dow = (d: ISODate) => fromISODate(d).getDay();
+const DOW_RE = Object.keys(DOW).join('|');
 
 /** Próximo día de la semana estrictamente posterior a hoy. */
 const nextAfter = (today: ISODate, wd: number) => addDays(today, ((wd - dow(today) + 6) % 7) + 1);
@@ -38,6 +38,35 @@ function nextDayOfMonth(today: ISODate, day: number): ISODate | null {
     if (x.getDate() === day && (k > 0 || day >= t.getDate())) return toISODate(x);
   }
   return null;
+}
+
+/** Meses en español (texto plegado). "may" no entra: es también una palabra inglesa. */
+const MESES: Record<string, number> = {
+  enero: 1, ene: 1, febrero: 2, feb: 2, marzo: 3, mar: 3, abril: 4, abr: 4, mayo: 5,
+  junio: 6, jun: 6, julio: 7, jul: 7, agosto: 8, ago: 8, septiembre: 9, setiembre: 9, sept: 9, sep: 9,
+  octubre: 10, oct: 10, noviembre: 11, nov: 11, diciembre: 12, dic: 12,
+};
+const MES_RE = Object.keys(MESES).sort((a, b) => b.length - a.length).join('|');
+
+/** Fecha ISO de ese día si existe (rechaza 31/04, 29/02 de año no bisiesto…). */
+function isoOrNull(y: number, m: number, d: number): ISODate | null {
+  const x = new Date(y, m - 1, d);
+  return x.getFullYear() === y && x.getMonth() === m - 1 && x.getDate() === d ? toISODate(x) : null;
+}
+
+/** Próxima ocurrencia de un día y mes sin año (hoy incluido); el 29/02 salta a los años bisiestos. */
+function nextMonthDay(today: ISODate, m: number, d: number): ISODate | null {
+  const y0 = +today.slice(0, 4);
+  for (let k = 0; k < 9; k++) {
+    const c = isoOrNull(y0 + k, m, d);
+    if (c && c >= today) return c;
+  }
+  return null;
+}
+
+/** Día + mes (+ año opcional). Sin año: próxima ocurrencia, como "vence:DD/MM". */
+function dayMonth(d: string, m: number, y: string | undefined, today: ISODate): ISODate | null {
+  return y ? isoOrNull(+y, m, +d) : nextMonthDay(today, m, +d);
 }
 
 interface Rule {
@@ -60,13 +89,27 @@ const periodRules = (p: Period, noun: string): Rule[] => [
 
 const RULES: Rule[] = [
   {
-    re: word('29 de febrero|29 de feb|29 febrero|29 feb'),
-    date: (_, t) => {
-      for (let y = +t.slice(0, 4); ; y++) {
-        const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-        if (leap && `${y}-02-29` >= t) return `${y}-02-29`;
-      }
-    },
+    // "15 de marzo", "el 15 marzo", "15 mar 2027", "1 de enero de 2027", "lunes 2 de noviembre", "29 feb"
+    re: new RegExp(`(?<!${W})(?:(?:${DOW_RE})\\s+)?(?<d>\\d{1,2})(?:\\s+de)?\\s+(?<m>${MES_RE})(?:\\s+(?:de\\s+)?(?<y>\\d{4}))?(?!${W})`, 'gu'),
+    date: (m, t) => dayMonth(m.groups!.d, MESES[m.groups!.m], m.groups!.y, t),
+  },
+  {
+    // 15/3, 15/03/2027, 15-03-2027, 2027-03-15 (sin año: próxima ocurrencia; "15-3" sin año no cuenta)
+    re: new RegExp('(?<![\\p{N}/.:-])(?<d>\\d{1,2})\\/(?<m>\\d{1,2})(?:\\/(?<y>\\d{4}))?(?![\\p{N}/])', 'gu'),
+    date: (m, t) => dayMonth(m.groups!.d, +m.groups!.m, m.groups!.y, t),
+  },
+  {
+    re: new RegExp('(?<![\\p{N}/.:-])(?<d>\\d{1,2})-(?<m>\\d{1,2})-(?<y>\\d{4})(?![\\p{N}/])', 'gu'),
+    date: (m, t) => dayMonth(m.groups!.d, +m.groups!.m, m.groups!.y, t),
+  },
+  {
+    re: new RegExp('(?<![\\p{N}/.:-])(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2})(?![\\p{N}/])', 'gu'),
+    date: (m, t) => dayMonth(m.groups!.d, +m.groups!.m, m.groups!.y, t),
+  },
+  {
+    // "en 3 días", "dentro de 2 semanas", "en una semana"
+    re: new RegExp(`(?<!${W})(?:en|dentro\\s+de)\\s+(?<n>\\d{1,3}|una?)\\s+(?<u>dias?|semanas?)(?!${W})`, 'gu'),
+    date: (m, t) => addDays(t, (m.groups!.n.startsWith('u') ? 1 : +m.groups!.n) * (m.groups!.u.startsWith('s') ? 7 : 1)),
   },
   { re: word('hoy'), date: (_, t) => t },
   { re: word('pasado manana'), date: (_, t) => addDays(t, 2) },
@@ -130,8 +173,8 @@ function extendStart(f: string, start: number): number {
 }
 
 /**
- * Primera fecha (solo día, sin hora) del texto. Reglas propias en español primero; chrono-node/es
- * como respaldo. El texto puede contener MASK en lugar de tokens ya consumidos.
+ * Primera fecha (solo día, sin hora) del texto, con reglas propias en español. El texto puede
+ * contener MASK en lugar de tokens ya consumidos.
  */
 export function parseSpanishDate(text: string, now: Date = new Date()): DateSpan | null {
   const today = todayISO(now);
@@ -152,14 +195,8 @@ export function parseSpanishDate(text: string, now: Date = new Date()): DateSpan
       }
     }
   }
-  // chrono: solo cuenta si fija el día (descarta "a las 10", "por la mañana" sin fecha)
-  for (const r of chronoEs.parse(t, now, { forwardDate: true })) {
-    if (!r.start.isCertain('day')) continue;
-    cands.push({ start: r.index, end: r.index + r.text.length, date: toISODate(r.start.date()) });
-    break;
-  }
-
   // Una fecha natural en el pasado ("ayer", "el lunes pasado") no es un vencimiento: se queda en el texto.
-  const best = cands.filter((c) => c.date >= today).sort((a, b) => a.start - b.start)[0];
+  // Empate de inicio: gana el token más largo ("lunes 2 de noviembre" frente a "lunes").
+  const best = cands.filter((c) => c.date >= today).sort((a, b) => a.start - b.start || b.end - a.end)[0];
   return best ? { ...best, start: extendStart(f, best.start) } : null;
 }
