@@ -195,7 +195,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       <div class="body">
         {isEditing ? (
           <Editor task={task} names={names} onSave={(l) => onSave(task.id, l)} onCancel={() => onEdit(null)}
-            onTomorrow={(l) => onTomorrow(task.id, l)}
+            onTomorrow={task.done ? undefined : (l) => onTomorrow(task.id, l)}
             onDelete={() => onDelete(task.id)} onDragStart={task.done ? undefined : drag.start}
             onAddSubtask={sub ? undefined : onAddSubtask} />
         ) : (
@@ -348,7 +348,7 @@ function AddSubtaskButton({ onClick, inline = false }: { onClick: () => void; in
  *  para que una relativa ("mañana") no se recalcule al guardar. */
 function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragStart, onAddSubtask }: {
   task: Task; names: Map<string, Entity>;
-  onSave: (l: ParsedLine) => void; onCancel: () => void; onTomorrow: (l: ParsedLine | null) => void; onDelete: () => void;
+  onSave: (l: ParsedLine) => void; onCancel: () => void; onTomorrow?: (l: ParsedLine | null) => void; onDelete: () => void; // sin onTomorrow (tarea hecha) no hay botón «Mañana»
   onDragStart?: (e: PointerEvent) => void; // asa «Mover»: arrastrar la tarea a otro día
   onAddSubtask?: () => void;
 }) {
@@ -379,7 +379,7 @@ function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragSta
     const line = v === initial ? null : parseLine(v);
     if (line?.title && titleTooLong([line])) { setError(TITLE_TOO_LONG); return; }
     done.current = true;
-    onTomorrow(line?.title ? line : null);
+    onTomorrow?.(line?.title ? line : null);
   };
   return (
     <>
@@ -399,7 +399,7 @@ function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragSta
       />
       <div class="edit-actions">
         <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
-        <button class="link" title="Pasa la tarea a mañana" onMouseDown={(e) => e.preventDefault()} onClick={tomorrow}>Mañana</button>
+        {onTomorrow && <button class="link" title="Pasa la tarea a mañana" onMouseDown={(e) => e.preventDefault()} onClick={tomorrow}>Mañana</button>}
         {onAddSubtask && (
           <AddSubtaskButton inline onClick={() => { save(); onAddSubtask(); }} />
         )}

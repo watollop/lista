@@ -219,7 +219,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const tomorrow = async (id: ID, line: ParsedLine | null = null) => {
     setEditing(null);
     const t = data.tasks.find((x) => x.id === id);
-    if (!t) return;
+    if (!t || t.done) return; // una hecha no se pospone
     const next = scheduleFor('tomorrow', today);
     const before = { due: t.due, period: t.period ?? null };
     if (!line && next.due === t.due && next.period === before.period) return;
