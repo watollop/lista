@@ -1,0 +1,29 @@
+src/ui/look.css
+  s_e13c448bef805f::t_f59a80e73054f0 103,115-117
+src/ui/styles.css
+  s_299b8b5e7745e2::t_c378466869fd7d 273-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "822c720d9f429e0f7d400b7a822c47ca2004cfd1",
+  "prompts": {},
+  "sessions": {
+    "s_299b8b5e7745e2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c81ab9952ff5e2c",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_e13c448bef805f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8bb70328374ce6c5",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
