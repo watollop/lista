@@ -284,7 +284,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         return;
       }
       if (typing || settings || e.metaKey || e.ctrlKey || e.altKey) return;
-      if ((e.key === 'Enter' || e.key === ' ') && el.closest?.('button, a')) return;
+      if ((e.key === 'Enter' || e.key === ' ') && el.closest?.('button, a, [role="button"]')) return;
       const i = flat.findIndex((t) => t.id === selected);
       const go = (n: number) => {
         if (!flat.length) return;

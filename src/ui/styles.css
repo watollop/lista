@@ -302,6 +302,7 @@ button.chip { min-height: 22px; }
   line-height: 20px;
   overflow-wrap: anywhere;
   cursor: text;
+  touch-action: manipulation;
 }
 .title .tag { color: var(--muted); cursor: pointer; }
 @media (hover: hover) { .title .tag:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; } }

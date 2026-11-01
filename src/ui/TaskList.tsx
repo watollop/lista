@@ -171,6 +171,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   useEffect(() => {
     if (selected === task.id) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
+  const activate = () => { onSelect(task.id); if (childrenCount) onExpand?.(); else onEdit(task.id); };
 
   return (
     <li
@@ -197,15 +198,21 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
         ) : (
           <>
             <div class="title-line">
-              <button class={`title ${task.priority === 1 ? 'p1' : ''}`}
+              {/* No es un <button>: dentro puede ir un enlace, y un enlace no puede estar dentro de un botón. */}
+              <span class={`title ${task.priority === 1 ? 'p1' : ''}`} role="button" tabIndex={0}
                 aria-expanded={childrenCount ? expanded : undefined}
                 aria-controls={childrenCount && expanded ? `subtasks-${task.id}` : undefined}
                 aria-label={childrenCount ? `${task.title}: ${completedCount} de ${childrenCount} subtareas completadas` : undefined}
                 title={childrenCount ? `${expanded ? 'Ocultar' : 'Mostrar'} subtareas` : undefined}
-                onKeyDown={(e) => { if (childrenCount && (e.key === 'Enter' || e.key === ' ')) e.stopPropagation(); }}
-                onClick={() => { onSelect(task.id); if (childrenCount) onExpand?.(); else onEdit(task.id); }}>
+                onKeyDown={(e) => {
+                  // Enter y Espacio activan el título; si el foco está en un enlace dentro, lo activa el enlace.
+                  if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                  e.preventDefault();
+                  activate();
+                }}
+                onClick={activate}>
                 <TitleText text={task.title} onChip={onChip} />
-              </button>
+              </span>
               {childrenCount > 0 && (
                 <button class="edit-task" aria-label="Editar tarea" title="Editar tarea"
                   onClick={() => { onSelect(task.id); onEdit(task.id); }}>

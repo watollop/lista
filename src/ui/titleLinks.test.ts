@@ -2,7 +2,8 @@
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TitleText } from './TaskList';
+import { TaskList, TitleText, type Group } from './TaskList';
+import type { Task } from '../types';
 
 let root: HTMLDivElement;
 
@@ -54,5 +55,54 @@ describe('TitleText con enlaces', () => {
     mount('javascript:alert(1)');
     expect(root.querySelector('a')).toBeNull();
     expect(root.textContent).toBe('javascript:alert(1)');
+  });
+});
+
+describe('fila con enlace en el título', () => {
+  const task = (id: string, title: string, parentId: string | null = null): Task => ({
+    id, title, topics: [], people: [], due: null, priority: null, recurrence: null, parentId,
+    done: 0, doneAt: null, nextId: null, order: 0, createdAt: 0, updatedAt: 0, deleted: 0, dirty: 0,
+  });
+  const key = (el: Element, k: string) => act(() => { el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); });
+  const list = (groups: Group[], onEdit = vi.fn(), onSelect = vi.fn()) =>
+    act(() => render(h(TaskList, {
+      groups, names: new Map(), today: '2026-11-01', selected: null, editing: null,
+      onSelect, onEdit, onToggle: vi.fn(), onSave: vi.fn(), onDelete: vi.fn(),
+      onChip: vi.fn(), doneToday: new Set<string>(), pastMode: false, anchorKey: 'k', onMove: vi.fn(), onAddSubtasks: vi.fn(async () => {}),
+    }), root));
+
+  it('el enlace no está dentro de ningún botón y el título tiene rol de botón', () => {
+    list([{ task: task('t1', 'Leer https://github.com/a'), children: [] }]);
+    expect(root.querySelector('button a, button .title, a button')).toBeNull();
+    const title = root.querySelector('.title')!;
+    expect(title.tagName).toBe('SPAN');
+    expect(title.getAttribute('role')).toBe('button');
+    expect(title.getAttribute('tabindex')).toBe('0');
+    expect(title.querySelector('a')?.textContent).toBe('github.com ↗');
+  });
+
+  it('Enter y Espacio en el título editan la tarea', () => {
+    const onEdit = vi.fn();
+    list([{ task: task('t1', 'Comprar pan'), children: [] }], onEdit);
+    key(root.querySelector('.title')!, 'Enter');
+    key(root.querySelector('.title')!, ' ');
+    expect(onEdit.mock.calls).toEqual([['t1'], ['t1']]);
+  });
+
+  it('con subtareas, Enter en el título la expande', () => {
+    list([{ task: task('p', 'Proyecto'), children: [task('c', 'Paso', 'p')] }]);
+    expect(root.querySelector('.title')?.getAttribute('aria-expanded')).toBe('false');
+    key(root.querySelector('.title')!, 'Enter');
+    expect(root.querySelector('.title')?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('Enter y Espacio dentro del enlace no activan el título', () => {
+    const onEdit = vi.fn();
+    const onSelect = vi.fn();
+    list([{ task: task('t1', 'Leer https://github.com/a'), children: [] }], onEdit, onSelect);
+    key(root.querySelector('.title a')!, 'Enter');
+    key(root.querySelector('.title a')!, ' ');
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });
