@@ -131,6 +131,8 @@ La cobertura incluye todo `src/` y genera informes LCOV y JSON en `coverage/`, e
 
 **Si ya tenías una instalación:** para sincronizar la apariencia, ejecuta la [migración de ajustes](supabase/migrations/20261029_appearance_settings.sql) en el SQL editor, o vuelve a ejecutar el esquema. Utiliza el tipo `setting`, sin duplicar preferencias ni cambiar las políticas por usuario. Un servidor antiguo rechazará los envíos de apariencia hasta actualizarlo.
 
+**Límites del servidor:** ejecuta la [migración de límites](supabase/migrations/20261101_limites.sql) en el SQL editor, o vuelve a ejecutar el esquema. Añade un tope de 64 KiB por registro y borra cada 15 minutos los enlaces entre dispositivos caducados (con pg_cron, si el proyecto lo tiene disponible).
+
 La apariencia guardada en el dispositivo se migra una sola vez, sin sobrescribir una elección ya sincronizada. Si varios dispositivos tenían elecciones antiguas distintas, convergen en la aceptada por el servidor. Al actualizar, la base local fuerza una descarga completa para recuperar preferencias que una versión anterior pudo ignorar.
 
 </details>
