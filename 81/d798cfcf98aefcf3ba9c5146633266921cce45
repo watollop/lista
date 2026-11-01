@@ -1,0 +1,43 @@
+src/lib/capture.test.ts
+  s_527598c8a129db::t_00c1e2e6e94418 2,14-19,36-45
+src/sync/index.ts
+  s_527598c8a129db::t_dea8a7468cfdc1 146-159,261-268,270,384
+src/sync/sync.test.ts
+  s_527598c8a129db::t_4968f85ff81bcc 548-565
+src/lib/capture.ts
+  s_113eb78fdbbf81::t_eafc2bd48b1803 3-15,19,23-31,36,42,49
+src/ui/EntityEditor.tsx
+  s_113eb78fdbbf81::t_dcea0e6b55cfa7 44
+src/ui/FilterBar.tsx
+  s_113eb78fdbbf81::t_d7431837265eea 155
+src/ui/SubtaskInputs.tsx
+  s_113eb78fdbbf81::t_e8733758ffc040 4,33
+src/ui/TaskList.tsx
+  s_113eb78fdbbf81::t_9b2a971913c762 12,341,349-353,364,398
+src/sync/encryption.test.ts
+  s_527598c8a129db::t_dd260568d78a66 328-343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "81d798cfcf98aefcf3ba9c5146633266921cce45",
+  "prompts": {},
+  "sessions": {
+    "s_113eb78fdbbf81": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acde7a67e50416f04",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_527598c8a129db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e686eb5-6bf2-4366-9b8e-5993c0c3e5f8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
