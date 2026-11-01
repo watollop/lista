@@ -29,5 +29,19 @@ export class ListaDB extends Dexie {
       // Una versión anterior pudo avanzar el cursor ignorando preferencias aún desconocidas.
       await tx.table('meta').delete('sync.cursor');
     });
+    // Índice en `deleted` para leer solo los vivos (`where('deleted').equals(0)`) sin recorrer los tombstones.
+    // Los índices de IndexedDB ignoran los valores undefined o booleanos: la migración normaliza todo a 0|1 antes.
+    this.version(4).stores({
+      tasks: 'id, parentId, dirty, updatedAt, deleted',
+      topics: 'key, dirty, deleted',
+      people: 'key, dirty, deleted',
+      filters: 'id, dirty, deleted',
+    }).upgrade(async (tx) => {
+      for (const name of ['tasks', 'topics', 'people', 'filters']) {
+        await tx.table(name).toCollection()
+          .filter((r: { deleted?: unknown }) => r.deleted !== 0 && r.deleted !== 1)
+          .modify((r: { deleted?: unknown }) => { r.deleted = r.deleted ? 1 : 0; });
+      }
+    });
   }
 }

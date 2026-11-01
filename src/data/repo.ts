@@ -121,6 +121,15 @@ async function applyOne<R extends SyncRec>(tbl: Table<R, string>, item: RemoteIt
   return true;
 }
 
+/** Borra los tombstones sincronizados (dirty=0) y anteriores a `cutoff`. Nunca toca los pendientes de subir. */
+async function purgeOne<R extends SyncRec>(tbl: Table<R, string>, cutoff: number): Promise<number> {
+  const keys = await tbl.where('deleted').equals(1)
+    .filter((r) => r.dirty === 0 && r.updatedAt < cutoff)
+    .primaryKeys();
+  await tbl.bulkDelete(keys);
+  return keys.length;
+}
+
 export function createRepo(dbName = 'lista'): Repo {
   const db = new ListaDB(dbName);
   const subs = new Set<() => void>();
@@ -225,19 +234,19 @@ export function createRepo(dbName = 'lista'): Repo {
 
   const repo: Repo = {
     async listTasks() {
-      return live(await db.tasks.toArray());
+      return db.tasks.where('deleted').equals(0).toArray();
     },
 
     async listTopics() {
-      return live(await db.topics.toArray()).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      return (await db.topics.where('deleted').equals(0).toArray()).sort((a, b) => a.name.localeCompare(b.name, 'es'));
     },
 
     async listPeople() {
-      return live(await db.people.toArray()).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      return (await db.people.where('deleted').equals(0).toArray()).sort((a, b) => a.name.localeCompare(b.name, 'es'));
     },
 
     async listFilters() {
-      return live(await db.filters.toArray()).sort((a, b) => a.order - b.order);
+      return (await db.filters.where('deleted').equals(0).toArray()).sort((a, b) => a.order - b.order);
     },
 
     async addParsed(lines, defaultParentId = null) {
@@ -574,6 +583,21 @@ export function createRepo(dbName = 'lista'): Repo {
         return any;
       });
       if (wrote) notify();
+    },
+
+    // Seguridad LWW de la purga: el servidor nunca borra filas (conserva sus tombstones) y su trigger descarta
+    // escrituras con updated_at menor. Un tombstone solo se purga si ya está sincronizado (dirty=0), así que el
+    // servidor tiene una versión con updated_at >= la purgada. Si después llega de nuevo (pull completo), applyOne
+    // lo reinserta como tombstone; si llega una versión viva más antigua, el servidor la descarta. Una viva más
+    // nueva sí entra, como debe. Por eso no hace falta notificar: los tombstones ya estaban fuera de todas las listas.
+    // Las preferencias (settings) no se purgan: ahí la ausencia de registro cambia la semántica de
+    // setSetting(..., 'initialize'), y apenas ocupan espacio.
+    async purgeTombstones(olderThanMs) {
+      const cutoff = Date.now() - olderThanMs;
+      return db.transaction('rw', [db.tasks, db.topics, db.people, db.filters], async () =>
+        (await purgeOne(db.tasks, cutoff)) + (await purgeOne(db.topics, cutoff)) +
+        (await purgeOne(db.people, cutoff)) + (await purgeOne(db.filters, cutoff)),
+      );
     },
 
     async markAllDirty() {
