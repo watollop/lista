@@ -1,0 +1,45 @@
+src/main.tsx
+  s_527598c8a129db::t_60c48f51233161 9
+src/ui/App.tsx
+  s_527598c8a129db::t_2e4565b342e8ab 17,19-20,54-56,366,413,418-419,422
+src/ui/Capture.tsx
+  s_527598c8a129db::t_c8bfa0867136c9 6-7,194
+src/ui/Dictation.tsx
+  s_527598c8a129db::t_70e81f72035320 7
+src/ui/intro.ts
+  s_527598c8a129db::t_8721204f7002dc 1-2
+src/ui/lazyViews.ts
+  s_527598c8a129db::t_692238ea263e13 1-15
+src/ui/recognition.ts
+  s_527598c8a129db::t_ce6b7de6f65eb4 1-14
+src/ui/shortcuts.test.ts
+  s_527598c8a129db::t_c8b8f8dc6f2ac3 9,71,79,87,103
+src/ui/subtasks.test.ts
+  s_527598c8a129db::t_177f7a91b9fb65 12,82-87,519,551,570,585,613,626,654
+src/ui/lazy.ts
+  s_e352e270bbd4bf::t_ef84321f3966ac 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1c3fecfcbcd21d685b1c448a2ec4e66e51d3a93c",
+  "prompts": {},
+  "sessions": {
+    "s_527598c8a129db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e686eb5-6bf2-4366-9b8e-5993c0c3e5f8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_e352e270bbd4bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1ba6660203da730f",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
