@@ -1,0 +1,21 @@
+src/ui/App.tsx
+  s_527598c8a129db::t_e399c073800351 222
+src/ui/TaskList.tsx
+  s_527598c8a129db::t_3b5aad5c285489 198,351,382,402
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e90b64b305fd7df69a3207a5a236ae218e5dd770",
+  "prompts": {},
+  "sessions": {
+    "s_527598c8a129db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e686eb5-6bf2-4366-9b8e-5993c0c3e5f8",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
