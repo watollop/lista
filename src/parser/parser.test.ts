@@ -149,6 +149,59 @@ describe('fechas naturales', () => {
   });
 });
 
+describe('fechas en español con formatos numéricos y nombres de mes', () => {
+  // now = martes 27-oct-2026; sin año => próxima ocurrencia futura (hoy incluido)
+  const cases: [string, string | null, string | null][] = [
+    ['15 de marzo', '', '2027-03-15'],
+    ['el 15 de marzo', '', '2027-03-15'],
+    ['15 marzo', '', '2027-03-15'],
+    ['15 mar', '', '2027-03-15'],
+    ['15 MAR', '', '2027-03-15'],
+    ['el 15 de Marzo', '', '2027-03-15'],
+    ['3 de Noviembre', '', '2026-11-03'],
+    ['el 2 de nov', '', '2026-11-02'],
+    ['el 5 de dic', '', '2026-12-05'],
+    ['15 de octubre', '', '2027-10-15'],
+    ['1 de enero de 2027', '', '2027-01-01'],
+    ['12 dic 2026', '', '2026-12-12'],
+    ['lunes 2 de noviembre', '', '2026-11-02'],
+    ['15/3', '', '2027-03-15'],
+    ['15/03/2027', '', '2027-03-15'],
+    ['15/3/2027', '', '2027-03-15'],
+    ['1/11', '', '2026-11-01'],
+    ['15-03-2027', '', '2027-03-15'],
+    ['2027-03-15', '', '2027-03-15'],
+    ['el día 15', '', '2026-11-15'],
+    ['el 15', '', '2026-11-15'],
+    ['próximo lunes', '', '2026-11-02'],
+    ['el lunes que viene', '', '2026-11-02'],
+    ['dentro de 3 días', '', '2026-10-30'],
+    ['en 2 días', '', '2026-10-29'],
+    ['en 2 semanas', '', '2026-11-10'],
+    ['en una semana', '', '2026-11-03'],
+    ['Renovar carnet 29 feb', 'Renovar carnet', '2028-02-29'],
+  ];
+  for (const [input, title, date] of cases) {
+    it(`"${input}" => ${date}`, () => {
+      const l = parseLine(input, now);
+      expect(l.due).toBe(date);
+      expect(l.title).toBe(title ?? '');
+    });
+  }
+  it('la fecha inexistente o sin año ambiguo no produce fecha', () => {
+    for (const t of ['Pagar el 31 de noviembre', 'Pagar 31/02', 'Pagar 15-3', 'Pagar 1-11']) {
+      expect(due(t), t).toBeNull();
+    }
+  });
+  it('hora suelta con fecha: la fecha cuenta, la hora queda en el título', () => {
+    expect(parseLine('Reunión el 3 de noviembre a las 10', now)).toMatchObject({ due: '2026-11-03', title: 'Reunión a las 10' });
+  });
+  it('"a las 10" y "por la mañana" no son fecha', () => {
+    expect(due('Llamar a las 10')).toBeNull();
+    expect(due('Llamar por la mañana')).toBeNull();
+  });
+});
+
 describe('vence: explícito', () => {
   it('YYYY-MM-DD', () => expect(due('Pagar vence:2026-11-15')).toBe('2026-11-15'));
   it('DD/MM futuro', () => expect(due('vence:01/12')).toBe('2026-12-01'));
