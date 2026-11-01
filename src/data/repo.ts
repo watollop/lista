@@ -121,18 +121,6 @@ async function applyOne<R extends SyncRec>(tbl: Table<R, string>, item: RemoteIt
   return true;
 }
 
-async function mergeOne<R extends SyncRec>(tbl: Table<R, string>, rec: R, keyOf: (r: R) => string): Promise<void> {
-  const local = await tbl.get(keyOf(rec));
-  if (!local || rec.updatedAt > local.updatedAt) {
-    await tbl.put({ ...rec, dirty: 1 as const });
-  }
-}
-
-async function tombstoneAll<R extends SyncRec>(tbl: Table<R, string>, now: number): Promise<void> {
-  const rows = live(await tbl.toArray());
-  if (rows.length) await tbl.bulkPut(rows.map((r) => ({ ...r, deleted: 1 as const, dirty: 1 as const, updatedAt: now })));
-}
-
 export function createRepo(dbName = 'lista'): Repo {
   const db = new ListaDB(dbName);
   const subs = new Set<() => void>();
@@ -523,41 +511,6 @@ export function createRepo(dbName = 'lista'): Repo {
         people: live(people),
         filters: live(filters),
       };
-    },
-
-    async importBackup(b, mode) {
-      if (
-        !b ||
-        b.app !== 'lista' ||
-        b.version !== 1 ||
-        !Array.isArray(b.tasks) ||
-        !Array.isArray(b.topics) ||
-        !Array.isArray(b.people) ||
-        !Array.isArray(b.filters)
-      ) {
-        throw new Error('Copia de seguridad no válida');
-      }
-      await db.transaction('rw', allTables, async () => {
-        const now = stamp();
-        if (mode === 'replace') {
-          await tombstoneAll(db.tasks, now);
-          await tombstoneAll(db.topics, now);
-          await tombstoneAll(db.people, now);
-          await tombstoneAll(db.filters, now);
-          const put = <R extends SyncRec>(recs: R[]) => recs.map((r) => ({ ...r, dirty: 1 as const, updatedAt: now }));
-          await db.tasks.bulkPut(put(b.tasks));
-          await db.topics.bulkPut(put(b.topics));
-          await db.people.bulkPut(put(b.people));
-          await db.filters.bulkPut(put(b.filters));
-        } else {
-          for (const t of b.tasks) await mergeOne(db.tasks, t, (r) => r.id);
-          for (const t of b.topics) await mergeOne(db.topics, t, (r) => r.key);
-          for (const t of b.people) await mergeOne(db.people, t, (r) => r.key);
-          for (const f of b.filters) await mergeOne(db.filters, f, (r) => r.id);
-        }
-        await reconcileFamilies();
-      });
-      notify();
     },
 
     async pendingChanges() {
