@@ -24,6 +24,7 @@ interface Props {
   onEdit: (id: ID | null) => void;
   onToggle: (id: ID) => void;
   onSave: (id: ID, line: ParsedLine) => void;
+  onTomorrow: (id: ID, line: ParsedLine | null) => void; // botón «Mañana» del editor; line = texto editado, si lo hay
   onDelete: (id: ID) => void;
   onChip: ChipTap;
   doneToday: Set<ID>; // completadas hoy: se quedan en su sitio hasta que cambia el día
@@ -155,7 +156,7 @@ export function TaskList(props: Props) {
   );
 }
 
-function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd,
+function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onTomorrow, onDelete, onChip, onMove, onDragStart, onDragEnd,
   childrenCount = 0, completedCount = 0, expanded = false, onExpand, onAddSubtask }:
   Props & { task: Task; sub?: boolean; section: SectionKey; onDragStart: (id: ID) => void; onDragEnd: () => void;
     childrenCount?: number; completedCount?: number; expanded?: boolean; onExpand?: () => void; onAddSubtask?: () => void }) {
@@ -194,6 +195,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       <div class="body">
         {isEditing ? (
           <Editor task={task} names={names} onSave={(l) => onSave(task.id, l)} onCancel={() => onEdit(null)}
+            onTomorrow={task.done ? undefined : (l) => onTomorrow(task.id, l)}
             onDelete={() => onDelete(task.id)} onDragStart={task.done ? undefined : drag.start}
             onAddSubtask={sub ? undefined : onAddSubtask} />
         ) : (
@@ -344,9 +346,9 @@ function AddSubtaskButton({ onClick, inline = false }: { onClick: () => void; in
 
 /** Edición en línea con la misma sintaxis que la captura. Las fechas se muestran como vence:AAAA-MM-DD
  *  para que una relativa ("mañana") no se recalcule al guardar. */
-function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSubtask }: {
+function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragStart, onAddSubtask }: {
   task: Task; names: Map<string, Entity>;
-  onSave: (l: ParsedLine) => void; onCancel: () => void; onDelete: () => void;
+  onSave: (l: ParsedLine) => void; onCancel: () => void; onTomorrow?: (l: ParsedLine | null) => void; onDelete: () => void; // sin onTomorrow (tarea hecha) no hay botón «Mañana»
   onDragStart?: (e: PointerEvent) => void; // asa «Mover»: arrastrar la tarea a otro día
   onAddSubtask?: () => void;
 }) {
@@ -371,6 +373,14 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSub
     done.current = true;
     onSave(line);
   };
+  // Mismo criterio que Guardar: el texto editado se conserva; la fecha pasa a mañana tanto si hay texto nuevo como si no.
+  const tomorrow = () => {
+    if (done.current) return;
+    const line = v === initial ? null : parseLine(v);
+    if (line?.title && titleTooLong([line])) { setError(TITLE_TOO_LONG); return; }
+    done.current = true;
+    onTomorrow?.(line?.title ? line : null);
+  };
   return (
     <>
       <input
@@ -389,6 +399,7 @@ function Editor({ task, names, onSave, onCancel, onDelete, onDragStart, onAddSub
       />
       <div class="edit-actions">
         <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
+        {onTomorrow && <button class="link" title="Pasa la tarea a mañana" onMouseDown={(e) => e.preventDefault()} onClick={tomorrow}>Mañana</button>}
         {onAddSubtask && (
           <AddSubtaskButton inline onClick={() => { save(); onAddSubtask(); }} />
         )}

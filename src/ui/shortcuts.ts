@@ -4,6 +4,7 @@ export const SHORTCUTS: Array<[string[], string]> = [
   [['j', 'k'], 'moverse por la lista'],
   [['x'], 'completar'],
   [['e'], 'editar'],
+  [['m'], 'para mañana'],
   [['⌫'], 'borrar'],
   [['h', 's', 'v'], 'hoy · semana · vencidas'],
   [['1–9'], 'filtros guardados'],

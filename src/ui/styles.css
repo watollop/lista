@@ -459,9 +459,15 @@ button.chip { min-height: 22px; }
   padding: var(--sat) calc(var(--gutter) + var(--sar)) calc(40px + var(--sab)) calc(var(--gutter) + var(--sal));
 }
 .sheet-inner { max-width: 560px; margin: 0 auto; }
-.sheet h2 { font-size: 30px; font-weight: 300; letter-spacing: -0.01em; margin: 24px 0 28px; }
 .sheet section { border-top: 1px solid var(--line); padding: 20px 0 26px; }
 .sheet section > .label { color: var(--faint); display: block; margin-bottom: 14px; }
+/* Grupos de Ajustes (Cuenta, Apariencia, Tus datos, Ayuda): encabezado de grupo; las subsecciones van dentro. */
+.sheet .group { border-top: 0; padding: 0; background: none; }
+.sheet .group-title { font-size: 19px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg); margin: 40px 0 10px; }
+.sheet .bar + .group .group-title { margin-top: 24px; }
+.sheet .group > section { border-top: 1px solid var(--line); padding: 20px 0 26px; }
+.sheet .group > section:first-of-type { border-top: 0; padding-top: 0; }
+.sheet .group .row-btns + p { margin-top: 12px; }
 .sheet p { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
 .sheet form { display: grid; gap: 10px; }
 .sheet form input { font-size: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -1093,14 +1099,18 @@ section.droppable.drop-on .section { color: var(--fg); }
 @media (min-width: 900px) {
   .sheet-inner { max-width: 1040px; columns: 2; column-gap: 24px; padding-bottom: 24px; }
   .sheet-inner > .bar, .sheet-inner > .credit { column-span: all; }
-  .sheet .sheet-inner > section {
+  /* Cada grupo es una tarjeta que no se parte entre columnas. */
+  .sheet .group {
     break-inside: avoid;
     margin-bottom: 24px;
     padding: 22px 26px 26px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--panel, var(--surface)) none;
+    background: var(--panel, var(--surface));
   }
+  .sheet .group-title, .sheet .bar + .group .group-title { margin: 0 0 8px; }
+  .sheet .group > section { padding: 18px 0 20px; }
+  .sheet .group > section:first-of-type { padding-top: 0; }
   .sheet-inner > .lock-panel { break-inside: avoid; }
   .sheet-inner > .credit { border-top: 0; padding-top: 8px; }
   .sheet p { max-width: 62ch; }

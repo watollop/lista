@@ -25,7 +25,7 @@
 
 **Activación (automática)**
 1. Ana entra con Google. La primera sincronización genera la clave, sube todo cifrado y recifra lo que hubiera en claro en el servidor. No tiene que hacer nada.
-2. En Ajustes → Cifrado ve "Tus datos se guardan cifrados" y, sin obligar, "Crear clave de recuperación".
+2. En Ajustes → Cuenta → Cifrado ve "Tus datos se guardan cifrados" y, sin obligar, "Crear clave de recuperación".
 
 **Otro dispositivo (como WhatsApp Web)**
 1. Abre la app en el portátil y entra con Google. Ve: "Tus datos están cifrados. Abre Lista en un dispositivo ya activado para enlazar este". Debajo, un código: `482 913`.

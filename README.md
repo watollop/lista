@@ -72,6 +72,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 - **Encuentra lo importante.** Toca un tema, una persona o una fecha para filtrar.
 - **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas.
 - **Cambia de planes.** Selecciona una tarea y arrastra **Mover** para cambiarla de día; usa el lápiz para editarla.
+- **Para mañana.** Desde el editor de una tarea, pulsa **Mañana** (en ordenador, también **m** con la tarea seleccionada) para pasarla a mañana; **Deshacer** la devuelve a su fecha anterior.
 - **Abre los enlaces.** Una dirección web en una tarea se muestra corta; tócala para abrirla.
 
 ## A tu manera
@@ -88,7 +89,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 
 Todo se guarda primero **en tu dispositivo**. Puedes usar Lista sin cuenta y sin conexión;
 si quieres llevar tus tareas del móvil al ordenador, entra con **Google**.
-Desde Ajustes puedes exportarlo todo o borrarlo todo.
+Desde **Ajustes → Tus datos** puedes exportarlo todo o borrarlo todo.
 
 Para tenerla siempre a mano, instálala como una app:
 
