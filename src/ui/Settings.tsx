@@ -283,7 +283,7 @@ function CaptureFold() {
         <span class="ent-head-count"><span class="caret" aria-hidden="true" /></span>
       </button>
       {open && <div class="fold-body">
-        <p>Desde cualquier app, «Compartir» → Lista apunta el contenido como tarea sin abrir la app. Hace falta tener Lista instalada en el móvil.</p>
+        <p>Desde cualquier app, «Compartir» → Lista y el contenido se apunta como tarea. Hace falta tener Lista instalada en el móvil.</p>
       </div>}
     </div>
   );
