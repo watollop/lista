@@ -1,0 +1,35 @@
+README.md
+  s_3d93b84a1945cb::t_92115d51f64f33 75
+src/lib/reschedule.test.ts
+  s_3d93b84a1945cb::t_0a0518fce94594 15-40
+src/ui/App.tsx
+  s_3d93b84a1945cb::t_025837273bc4b5 217-239,327,400
+src/ui/Onboarding.tsx
+  s_3d93b84a1945cb::t_79501e981a736e 45
+src/ui/Settings.tsx
+  s_3d93b84a1945cb::t_545482edf85973 49
+src/ui/TaskList.tsx
+  s_3d93b84a1945cb::t_bbb5c0dfa7e0dc 27,159,198,349,351,376-383,402
+src/ui/shortcuts.test.ts
+  s_3d93b84a1945cb::t_0dfa69471d74e7 12-13,23,108-124
+src/ui/shortcuts.ts
+  s_3d93b84a1945cb::t_09540b5aa6be99 7
+src/ui/titleLinks.test.ts
+  s_3d93b84a1945cb::t_90725c9e582d86 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6625a89508158241367a315023b89791d107c397",
+  "prompts": {},
+  "sessions": {
+    "s_3d93b84a1945cb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae7d4c2a96331b04b",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
