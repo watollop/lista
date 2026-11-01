@@ -87,7 +87,7 @@ async function app(repo: Repo) {
 describe('captura con subtareas', () => {
   it('la captura externa conserva varias familias inline y limpia la URL solo al guardarlas', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
-    history.replaceState(null, '', '/?nueva=' + encodeURIComponent('Viaje <Billetes\nCompra <Pan !alta'));
+    history.replaceState(null, '', '/?text=' + encodeURIComponent('Viaje <Billetes\nCompra <Pan !alta'));
     await app(repo);
     await vi.waitFor(async () => expect(await repo.listTasks()).toHaveLength(4));
     const tasks = await repo.listTasks();
@@ -102,7 +102,7 @@ describe('captura con subtareas', () => {
 
   it.each(['Proyecto <', '<Paso', 'Proyecto <<Paso'])('la captura externa informa de títulos vacíos sin crear tareas ni perder la URL: %s', async (text) => {
     const repo = createRepo('ui-' + crypto.randomUUID());
-    const query = '?nueva=' + encodeURIComponent(text);
+    const query = '?text=' + encodeURIComponent(text);
     history.replaceState(null, '', '/' + query);
     await app(repo);
     await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('título'));
@@ -113,10 +113,10 @@ describe('captura con subtareas', () => {
   it('un fallo de captura externa se muestra y permite reintentar desde la misma URL', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     vi.spyOn(repo, 'addParsed').mockRejectedValue(new Error('Sin espacio'));
-    history.replaceState(null, '', '/?nueva=Viaje%20%3CBilletes');
+    history.replaceState(null, '', '/?text=Viaje%20%3CBilletes');
     await app(repo);
     await vi.waitFor(() => expect(root.querySelector('.toast')?.textContent).toContain('Sin espacio'));
-    expect(location.search).toBe('?nueva=Viaje%20%3CBilletes');
+    expect(location.search).toBe('?text=Viaje%20%3CBilletes');
     expect(await repo.listTasks()).toEqual([]);
   });
   it('mantiene la guía sin botones de subtarea y guarda el conjunto inline con Enter', async () => {

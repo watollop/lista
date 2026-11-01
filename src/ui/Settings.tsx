@@ -46,7 +46,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <span class="label">Ayuda</span>
           <p>Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.</p>
           <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
-          <CaptureFold toast={toast} />
+          <CaptureFold />
         </section>
         <BackupSection repo={repo} toast={toast} />
         <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
@@ -273,27 +273,17 @@ function DangerSection({ repo, sync, state, toast }: { repo: Repo; sync: Sync; s
   );
 }
 
-/** Apuntar sin abrir la app (Siri, «Compartir» en Android o un enlace): plegado dentro de Ayuda. */
-function CaptureFold({ toast }: { toast: (m: string) => void }) {
+/** Apuntar desde Android con «Compartir» (share_target): plegado dentro de Ayuda. */
+function CaptureFold() {
   const [open, setOpen] = useState(false);
-  const link = `${location.origin}${location.pathname}?nueva=`;
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(link); toast('Enlace copiado'); } catch { toast(link); }
-  };
   return (
     <div class="help-fold">
       <button class={`ent-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>Apuntar sin abrir la app</span>
+        <span>Compartir desde Android</span>
         <span class="ent-head-count"><span class="caret" aria-hidden="true" /></span>
       </button>
       {open && <div class="fold-body">
-      <ul class="howto">
-        <li><b>iPhone, con Siri.</b> En la app Atajos crea un atajo con «Dictar texto» y «Abrir URL» con el enlace de abajo seguido del texto dictado. Llámalo «Apuntar en Lista» y di «Oye Siri, apuntar en Lista». Se abre en el navegador: inicia sesión también allí para que llegue a la app.</li>
-        <li><b>Android.</b> Desde cualquier app, «Compartir» → Lista (con la app instalada).</li>
-        <li><b>Ordenador.</b> Cualquier enlace con el texto detrás apunta la tarea al abrirlo.</li>
-      </ul>
-      <code class="howto-link">{link}<span>Llamar a Ana mañana</span></code>
-      <div class="row-btns"><button class="btn" onClick={copy}>Copiar enlace</button></div>
+        <p>Desde cualquier app, «Compartir» → Lista y el contenido se apunta como tarea. Hace falta tener Lista instalada en el móvil.</p>
       </div>}
     </div>
   );
