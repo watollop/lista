@@ -5,6 +5,7 @@ import { normalizeKey, parseLine } from '../parser';
 import { todayISO } from '../lib/date';
 import { TaskChips } from './Chips';
 import { PriorityIcon, RepeatIcon } from './Priority';
+import { SHORTCUTS } from './shortcuts';
 
 export const INTRO_KEY = 'lista.intro';
 
@@ -346,22 +347,11 @@ function PrioRepeatDemo() {
   );
 }
 
-const KEYS: Array<[string[], string]> = [
-  [['⌘K', '/', 'n'], 'escribir tarea'],
-  [['j', 'k'], 'moverse por la lista'],
-  [['x'], 'completar'],
-  [['e'], 'editar'],
-  [['⌫'], 'borrar'],
-  [['h', 's', 'v'], 'hoy · semana · vencidas'],
-  [['f'], 'buscar'],
-  [['esc'], 'limpiar filtro'],
-];
-
 /** Atajos de teclado (solo en ordenador). */
 function KeysDemo() {
   return (
     <dl class="keys ref-keys">
-      {KEYS.map(([keys, what]) => (
+      {SHORTCUTS.map(([keys, what]) => (
         <div key={what}>
           <dt>{keys.map((k) => <kbd key={k}>{k}</kbd>)}</dt>
           <dd>{what}</dd>

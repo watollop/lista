@@ -139,6 +139,7 @@
 
 /* Ajustes */
 :where([data-look="industrial"]) .sheet h2 { font-family: var(--dots); font-weight: 700; font-size: 40px; text-transform: uppercase; }
+:where([data-look="industrial"]) kbd { font-family: var(--mono); border-color: var(--fg); }
 :where([data-look="industrial"]) .sheet section { border-top: 0; background: radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 0 / 5px 2px repeat-x; }
 
 /* Escritorio */

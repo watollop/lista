@@ -18,6 +18,7 @@ import { UPDATE_READY_EVENT } from '../pwa/register';
 import { Critter } from './Critter';
 import { INTRO_KEY, Onboarding } from './Onboarding';
 import { startAppearanceSync } from './appearanceSync';
+import { ShortcutsSheet } from './ShortcutsSheet';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 
@@ -40,6 +41,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const [editing, setEditing] = useState<ID | null>(null);
   const [sheetEnt, setSheetEnt] = useState<{ kind: EntityKind; key: string } | null>(null); // editor de tema/persona en móvil
   const [settings, setSettings] = useState(false);
+  const [shortcuts, setShortcuts] = useState(false); // hoja «?» con los atajos (escritorio)
   // 'first': primera vez; 'full': abierta desde Ajustes (mismas slides, el último botón dice «Listo»).
   const [intro, setIntro] = useState<false | 'first' | 'full'>(() => { try { return localStorage.getItem(INTRO_KEY) ? false : 'first'; } catch { return false; } });
   const [googleOk, setGoogleOk] = useState(false);
@@ -278,6 +280,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       const el = e.target as HTMLElement;
       const typing = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
       if (intro) return; // la bienvenida gestiona su propio teclado
+      if (shortcuts) { if (e.key === '?' || e.key === 'Escape') { e.preventDefault(); setShortcuts(false); } return; }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         captureRef.current?.focus();
@@ -299,6 +302,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       else if ((key === 'x' || key === ' ') && selected) run(() => toggle(selected));
       else if ((key === 'e' || key === 'Enter') && selected) run(() => setEditing(selected));
       else if ((key === 'Backspace' || key === 'Delete') && selected) run(() => remove(selected));
+      else if (key === '?') run(() => setShortcuts(true));
       else if (key === 'h') run(() => setFilter({ ...emptyFilter(), dates: ['today'] }));
       else if (key === 's') run(() => setFilter({ ...emptyFilter(), dates: ['week'] }));
       else if (key === 'v') run(() => setFilter({ ...emptyFilter(), dates: ['overdue'] }));
@@ -409,6 +413,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }} />
       )}
+      {shortcuts && <ShortcutsSheet onClose={() => setShortcuts(false)} />}
       {link?.role === 'active' && <LinkDialog sync={sync} link={link} toast={showToast} />}
       <Critter enabled={wide} />
       {intro && (
