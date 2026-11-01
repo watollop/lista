@@ -1052,9 +1052,14 @@ section.droppable.drop-on .section { color: var(--fg); }
 }
 .dialog {
   width: 100%; max-width: 420px; padding: 22px 22px 18px; background: var(--bg); color: var(--fg);
+  border: 1px solid var(--line); /* en oscuro el fondo del diálogo y el de la página coinciden */
   border-radius: var(--radius); box-shadow: 0 20px 50px rgb(0 0 0 / .3);
 }
 .dialog p { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
+/* El foco va al contenedor solo para que el lector de pantalla anuncie el diálogo: sin contorno. */
+.dialog:focus { outline: none; }
+.dialog.shortcuts .label { display: block; margin-bottom: 16px; }
+.dialog.shortcuts .row-btns { margin-top: 20px; }
 .dialog .enc-warn { color: var(--warn); }
 .toast.toast-top { top: calc(16px + var(--sat)); bottom: auto; z-index: 41; }
 .recovery-key {
