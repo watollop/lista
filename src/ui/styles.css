@@ -440,6 +440,13 @@ button.chip { min-height: 22px; }
   animation: rise .2s ease;
 }
 .toast .link { color: var(--bg); opacity: .7; padding: 0 10px; }
+/* Con aviso visible, la lista reserva hueco al final: la última fila se desplaza por encima del aviso. */
+.app:has(> .toast:not(.toast-top)) main { padding-bottom: 72px; }
+/* Móvil con un editor en línea abierto: el aviso sube arriba para no tapar Guardar, Mover o Borrar. */
+@media (max-width: 899px) {
+  .app:has(.edit) > .toast:not(.toast-top) { top: calc(16px + var(--sat)); bottom: auto; }
+  .app:has(.edit) > .toast-top ~ .toast:not(.toast-top) { top: calc(72px + var(--sat)); }
+}
 
 /* ---------- ajustes ---------- */
 .sheet {
