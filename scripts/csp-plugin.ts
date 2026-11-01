@@ -18,15 +18,38 @@ async function sha256(text: string): Promise<string> {
   return `'sha256-${btoa(String.fromCharCode(...digest))}'`;
 }
 
+/**
+ * Fuentes de connect-src: 'self' y, si hay sincronización, solo el origen exacto de
+ * VITE_SUPABASE_URL (no *.supabase.co, que permitiría hablar con cualquier proyecto).
+ */
+export function connectSrc(supabaseUrl: string | undefined): string {
+  const value = (supabaseUrl ?? '').trim();
+  if (!value) return "'self'";
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`lista-csp: VITE_SUPABASE_URL no es una URL válida: ${value}`);
+  }
+  const localDev = url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1');
+  if (url.protocol !== 'https:' && !localDev) {
+    throw new Error(`lista-csp: VITE_SUPABASE_URL debe empezar por https:// (${value})`);
+  }
+  return `'self' ${url.origin}`;
+}
+
 // Sustituye __CSP__ en dist/_headers por una Content-Security-Policy con los hashes del
 // <script> y <style> en línea de index.html (cambian si se edita index.html).
 export function cspPlugin(): Plugin {
   let outDir = 'dist';
+  let supabaseSrc = "'self'";
   return {
     name: 'lista-csp',
     apply: 'build',
     configResolved(config) {
       outDir = `${config.root}/${config.build.outDir}`;
+      // config.env incluye las VITE_* de .env y del entorno (mismo valor que ve import.meta.env).
+      supabaseSrc = connectSrc(config.env.VITE_SUPABASE_URL);
     },
     async writeBundle() {
       const fs = loadFs();
@@ -38,7 +61,7 @@ export function cspPlugin(): Plugin {
         `script-src 'self' ${(await Promise.all(scripts.map(sha256))).join(' ')}`.trim(),
         `style-src 'self' ${(await Promise.all(styles.map(sha256))).join(' ')}`.trim(),
         "img-src 'self' data:",
-        "connect-src 'self' https://*.supabase.co",
+        `connect-src ${supabaseSrc}`,
         "manifest-src 'self'",
         "worker-src 'self'",
         "object-src 'none'",
