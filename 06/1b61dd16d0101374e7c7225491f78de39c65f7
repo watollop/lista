@@ -1,0 +1,31 @@
+README.md
+  s_abce1504e0320f::t_92db2003ebfc4c 134-135
+supabase/migrations/20261101_limites.sql
+  s_34befed2a3ef97::t_59dcff950e9947 1-69
+supabase/schema.sql
+  s_34befed2a3ef97::t_a16f25ddcd4694 26-31,93-95,97-107,110-118,134-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "061b61dd16d0101374e7c7225491f78de39c65f7",
+  "prompts": {},
+  "sessions": {
+    "s_34befed2a3ef97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a205191e5a2a3d828",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_abce1504e0320f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a002818-d0d6-4eea-a7a1-d291ffcb5dd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
