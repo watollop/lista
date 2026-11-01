@@ -157,7 +157,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     }
   };
 
-  // Tarea que llega desde fuera (?nueva=… de un Atajo/Siri, o «Compartir con Lista»): se apunta una vez
+  // Tarea que llega desde fuera («Compartir con Lista» en Android): se apunta una vez
   // y se limpia la URL para que recargar no la duplique.
   useEffect(() => {
     const text = externalCapture(location.search);
