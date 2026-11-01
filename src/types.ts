@@ -212,8 +212,6 @@ export interface Repo {
   exportBackup(): Promise<Backup>;
   /** Borra todos los datos locales (tareas, temas, personas, filtros y metadatos de sync). */
   wipe(): Promise<void>;
-  /** merge: LWW por updatedAt. replace: borra todo y carga. */
-  importBackup(b: Backup, mode: 'merge' | 'replace'): Promise<void>;
 
   /** Preferencias que viajan con la cuenta. setSetting marca dirty y notifica; las remotas llegan por applyRemote. */
   getSetting<T = unknown>(key: string): Promise<{ value: T; updatedAt: number } | undefined>;

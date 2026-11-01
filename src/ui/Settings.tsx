@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
-import type { Backup, Entity, EntityKind, Repo, Sync, SyncState } from '../types';
+import type { Entity, EntityKind, Repo, Sync, SyncState } from '../types';
 import { saveAppearance } from './appearanceSync';
 import { EncryptionSection } from './Encryption';
 import { APPEARANCE_CHANGE_EVENT, DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
@@ -48,7 +48,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
           <CaptureFold />
         </section>
-        <BackupSection repo={repo} toast={toast} />
+        <BackupSection repo={repo} />
         <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
         <footer class="credit">
           <span>Código Do Norte <span class="heart" aria-label="con cariño">♥</span> Coruña</span>
@@ -289,7 +289,7 @@ function CaptureFold() {
   );
 }
 
-function BackupSection({ repo, toast }: { repo: Repo; toast: (m: string) => void }) {
+function BackupSection({ repo }: { repo: Repo }) {
   const exportJSON = async () => {
     const b = await repo.exportBackup();
     const blob = new Blob([JSON.stringify(b)], { type: 'application/json' });
@@ -299,31 +299,12 @@ function BackupSection({ repo, toast }: { repo: Repo; toast: (m: string) => void
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
-  const importJSON = (mode: 'merge' | 'replace') => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json,.json';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      if (mode === 'replace' && !confirm('Se sustituirán todas las tareas actuales por las de la copia. ¿Continuar?')) return;
-      try {
-        await repo.importBackup(JSON.parse(await file.text()) as Backup, mode);
-        toast('Copia importada');
-      } catch (e) {
-        toast((e as Error).message || 'No se pudo importar');
-      }
-    };
-    input.click();
-  };
   return (
     <section>
       <span class="label">Copia de seguridad</span>
-      <p>Exporta todas tus tareas a un archivo JSON. Al importar, «Combinar» conserva lo más reciente de cada tarea.</p>
+      <p>Descarga todas tus tareas en un archivo JSON.</p>
       <div class="row-btns">
         <button class="btn" onClick={exportJSON}>Exportar</button>
-        <button class="btn" onClick={() => importJSON('merge')}>Importar · combinar</button>
-        <button class="btn" onClick={() => importJSON('replace')}>Importar · sustituir</button>
       </div>
     </section>
   );

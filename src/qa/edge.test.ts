@@ -139,15 +139,6 @@ describe('2. fechas ambiguas', () => {
 
 // ---------- 3. duplicados ----------
 
-async function countsOf(r: Repo) {
-  return {
-    tasks: (await r.listTasks()).length,
-    topics: (await r.listTopics()).length,
-    people: (await r.listPeople()).length,
-    filters: (await r.listFilters()).length,
-  };
-}
-
 describe('3. duplicados', () => {
   it('dos tareas con tema nuevo en el mismo lote crean una sola entidad', async () => {
     const r = newRepo();
@@ -163,18 +154,6 @@ describe('3. duplicados', () => {
     await r.deleteTask(t.id);
     expect((await r.listTopics()).map((e) => e.key)).toEqual(['casa']);
     expect((await r.listPeople()).map((e) => e.key)).toEqual(['ana']);
-  });
-
-  it('importBackup en modo merge dos veces es idempotente', async () => {
-    const src = newRepo();
-    await src.addParsed(parseBlock('Comprar pan #Casa @Ana\n> Harina #Casa\nLlamar !1', at(2026, 10, 27)));
-    const backup = await src.exportBackup();
-    const dst = newRepo();
-    await dst.importBackup(backup, 'merge');
-    const first = await countsOf(dst);
-    expect(first).toEqual({ tasks: 3, topics: 1, people: 1, filters: 0 });
-    await dst.importBackup(backup, 'merge');
-    expect(await countsOf(dst)).toEqual(first);
   });
 });
 

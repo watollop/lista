@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createRepo } from './repo';
-import type { Backup, ParsedLine, RemoteItem, Task } from '../types';
+import type { ParsedLine, RemoteItem } from '../types';
 
 function line(title: string, extra: Partial<ParsedLine> = {}): ParsedLine {
   return {
@@ -135,10 +135,8 @@ describe('addParsed', () => {
   it('resucita una entidad borrada conservando su nombre', async () => {
     const r = newRepo();
     await r.addParsed([line('x', { topics: ['Casa'] })]);
-    const b = await r.exportBackup();
-    expect(b.topics).toHaveLength(1);
-    // borrar la tarea no borra el tema; forzamos borrado de tema vía importación replace vacía
-    await r.importBackup({ ...b, topics: [], tasks: [], people: [], filters: [] }, 'replace');
+    expect(await r.listTopics()).toHaveLength(1);
+    await r.deleteEntity('topic', 'casa');
     expect(await r.listTopics()).toHaveLength(0);
     await r.addParsed([line('y', { topics: ['casa'] })]);
     const topics = await r.listTopics();
@@ -521,32 +519,6 @@ describe('ciclo de vida de subtareas', () => {
     parent = (await r.listTasks()).find((t) => t.id === p.id)!;
     expect(parent.done).toBe(0);
   });
-
-  it('importar una familia recurrente completa no duplica la siguiente ocurrencia', async () => {
-    const src = newRepo();
-    const [p, child] = await src.addParsed([
-      line('P', { recurrence: { unit: 'day', every: 1 } }), line('Paso', { isSubtask: true }),
-    ]);
-    const { spawned } = await src.toggleDone(child.id);
-    const backup = await src.exportBackup();
-    const dst = newRepo();
-    await dst.importBackup(backup, 'replace');
-    expect((await dst.listTasks()).map((t) => t.id).sort()).toEqual(backup.tasks.map((t) => t.id).sort());
-    expect((await dst.listTasks()).find((t) => t.id === p.id)?.nextId).toBe(spawned?.id);
-  });
-
-  it('importar una copia incoherente restaura el estado derivado del padre', async () => {
-    const r = newRepo();
-    const [p] = await r.addParsed([line('P'), line('Paso', { isSubtask: true })]);
-    const backup = await r.exportBackup();
-    await r.importBackup({ ...backup, tasks: backup.tasks.map((t) => ({ ...t, done: 1, doneAt: t.updatedAt })) }, 'replace');
-    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(1);
-    const completed = await r.exportBackup();
-    await r.importBackup({
-      ...completed, tasks: completed.tasks.map((t) => t.parentId ? { ...t, done: 0, doneAt: null } : t),
-    }, 'replace');
-    expect((await r.listTasks()).find((t) => t.id === p.id)?.done).toBe(0);
-  });
 });
 
 describe('deleteTask / restoreTask', () => {
@@ -703,8 +675,8 @@ describe('applyRemote', () => {
   });
 });
 
-describe('export / import', () => {
-  it('exporta solo registros vivos y valida la copia', async () => {
+describe('exportBackup', () => {
+  it('exporta solo registros vivos', async () => {
     const r = newRepo();
     const [a, b] = await r.addParsed([line('a', { topics: ['t'] }), line('b')]);
     await r.deleteTask(b.id);
@@ -712,49 +684,6 @@ describe('export / import', () => {
     expect(bk.app).toBe('lista');
     expect(bk.version).toBe(1);
     expect(bk.tasks.map((t) => t.id)).toEqual([a.id]);
-    await expect(r.importBackup({ ...bk, app: 'otra' as 'lista' }, 'merge')).rejects.toThrow('Copia de seguridad no válida');
-  });
-
-  it('merge: solo entra lo más nuevo y queda dirty', async () => {
-    const src = newRepo();
-    const dst = newRepo();
-    const [t] = await src.addParsed([line('origen')]);
-    const bk = await src.exportBackup();
-    await dst.importBackup(bk, 'merge');
-    const [got] = await dst.listTasks();
-    expect(got.title).toBe('origen');
-    expect(got.dirty).toBe(1);
-    expect(got.updatedAt).toBe(t.updatedAt);
-
-    // importar otra vez la misma copia no cambia nada
-    const cb = vi.fn();
-    dst.subscribe(cb);
-    await dst.importBackup(bk, 'merge');
-    expect(await dst.listTasks()).toHaveLength(1);
-    expect(cb).toHaveBeenCalledTimes(1); // notifica una vez por importación
-  });
-
-  it('merge no sobrescribe un registro local más nuevo', async () => {
-    const r = newRepo();
-    const [t] = await r.addParsed([line('local')]);
-    const bk: Backup = { ...(await r.exportBackup()), tasks: [{ ...t, title: 'vieja', updatedAt: t.updatedAt - 1 } as Task] };
-    await r.importBackup(bk, 'merge');
-    expect((await r.listTasks())[0].title).toBe('local');
-  });
-
-  it('replace: borra lo local (tombstones dirty) y carga la copia', async () => {
-    const src = newRepo();
-    const dst = newRepo();
-    await src.addParsed([line('de la copia', { topics: ['x'] })]);
-    await dst.addParsed([line('local que desaparece')]);
-    await dst.importBackup(await src.exportBackup(), 'replace');
-    const tasks = await dst.listTasks();
-    expect(tasks.map((t) => t.title)).toEqual(['de la copia']);
-    expect(tasks[0].dirty).toBe(1);
-    expect((await dst.listTopics()).map((t) => t.key)).toEqual(['x']);
-    // los tombstones de la copia anterior quedan pendientes de subir
-    const pending = await dst.pendingChanges();
-    expect(pending.some((p) => p.deleted && p.kind === 'task')).toBe(true);
   });
 });
 
