@@ -18,8 +18,6 @@ export type SessionStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 export type FetchLike = typeof fetch;
 
 export const SESSION_KEY = 'lista.session';
-export const SIGNUP_CONFIRM_MESSAGE = 'Revisa tu email para confirmar la cuenta y luego inicia sesión';
-const BAD_CREDENTIALS_MESSAGE = 'Email o contraseña incorrectos';
 
 interface AuthBody {
   access_token?: string;
@@ -32,12 +30,9 @@ interface AuthBody {
   error?: string;
 }
 
-/** Traduce el error de GoTrue a un mensaje en castellano. */
+/** Traduce el error de GoTrue a un mensaje en castellano. Solo llega aquí desde el refresco de sesión. */
 function authMessage(status: number, body: AuthBody): string {
   const raw = String(body.error_description || body.msg || body.message || body.error || '');
-  if (/invalid login credentials/i.test(raw)) return BAD_CREDENTIALS_MESSAGE;
-  if (/email not confirmed/i.test(raw)) return SIGNUP_CONFIRM_MESSAGE;
-  if (/already (registered|been registered)/i.test(raw)) return 'Ya existe una cuenta con ese email';
   if (/rate limit|too many|security purposes/i.test(raw)) return 'Demasiados intentos: espera unos minutos';
   return raw || `No se pudo completar la operación (${status})`;
 }
@@ -69,30 +64,6 @@ function toSession(body: AuthBody, now: number): Session {
     userId: body.user.id,
     email: body.user.email ?? '',
   };
-}
-
-export async function signIn(
-  cfg: SyncConfig,
-  email: string,
-  password: string,
-  fetchImpl: FetchLike,
-  now: () => number = Date.now,
-): Promise<Session> {
-  const body = await authPost(cfg, '/auth/v1/token?grant_type=password', { email, password }, fetchImpl);
-  return toSession(body, now());
-}
-
-/** Sin access_token en la respuesta => la confirmación por email está activada. */
-export async function signUp(
-  cfg: SyncConfig,
-  email: string,
-  password: string,
-  fetchImpl: FetchLike,
-  now: () => number = Date.now,
-): Promise<Session> {
-  const body = await authPost(cfg, '/auth/v1/signup', { email, password }, fetchImpl);
-  if (!body.access_token) throw new Error(SIGNUP_CONFIRM_MESSAGE);
-  return toSession(body, now());
 }
 
 /** URL de Google OAuth de Supabase. Al volver, los tokens llegan en el hash de redirectTo. */

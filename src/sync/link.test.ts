@@ -74,7 +74,7 @@ function stripUser({ user_id: _uid, ...rest }: PairingDb): PairingRow {
 }
 
 class FakeServer {
-  users = new Map<string, { id: string; email: string; password: string }>();
+  users = new Map<string, { id: string; email: string }>();
   accessTokens = new Map<string, string>(); // token -> userId
   refreshTokens = new Map<string, { userId: string; email: string }>();
   rows = new Map<string, Row>(); // `${userId}|${kind}|${id}`
@@ -83,8 +83,15 @@ class FakeServer {
   private tokenSeq = 0;
   private seq = 0;
 
-  addUser(email: string, password: string): void {
-    this.users.set(email, { id: `user-${this.users.size + 1}`, email, password });
+  addUser(email: string): void {
+    this.users.set(email, { id: `user-${this.users.size + 1}`, email });
+  }
+
+  /** Tokens de una sesión ya iniciada para `email`: el dispositivo la arranca con ellos guardados. */
+  session(email: string, now = Date.now()) {
+    const u = this.users.get(email)!;
+    const body = this.issue(u.id, u.email);
+    return { accessToken: body.access_token, refreshToken: body.refresh_token, expiresAt: now + 3600_000, userId: u.id, email };
   }
 
   rowsOf(kind: string): Row[] {
@@ -134,13 +141,6 @@ class FakeServer {
     if (headerOf(init, 'apikey') !== CFG.anonKey) return json({ message: 'Invalid API key' }, 401);
 
     if (url.pathname === '/auth/v1/token') {
-      if (url.searchParams.get('grant_type') === 'password') {
-        const u = this.users.get(body.email);
-        if (!u || u.password !== body.password) {
-          return json({ error: 'invalid_grant', error_description: 'Invalid login credentials' }, 400);
-        }
-        return json(this.issue(u.id, u.email));
-      }
       const stored = this.refreshTokens.get(body.refresh_token);
       if (!stored) return json({ error_description: 'Invalid Refresh Token' }, 400);
       this.refreshTokens.delete(body.refresh_token);
@@ -285,9 +285,10 @@ interface Device {
 }
 
 /** Dispositivo con su propia base IndexedDB. El reloj es el real: el servidor falso también usa Date.now(). */
-function device(server: FakeServer): Device {
+function device(server: FakeServer, email?: string): Device {
   const repo = createRepo(`link-test-${crypto.randomUUID()}`);
   const storage = memStorage();
+  if (email) storage.setItem('lista.session', JSON.stringify(server.session(email)));
   const sync = createSync(repo, CFG, {
     fetch: server.fetch as unknown as typeof fetch,
     storage,
@@ -324,13 +325,13 @@ async function titles(repo: Repo): Promise<string[]> {
  */
 async function encryptedPair() {
   const server = new FakeServer();
-  server.addUser('ana@test.io', 'secreto');
-  const a = device(server);
-  await a.sync.signIn('ana@test.io', 'secreto');
+  server.addUser('ana@test.io');
+  const a = device(server, 'ana@test.io');
+  await a.sync.syncNow();
   await addTask(a.repo, 'Tarea de A');
   await a.sync.syncNow();
-  const b = device(server);
-  await b.sync.signIn('ana@test.io', 'secreto');
+  const b = device(server, 'ana@test.io');
+  await b.sync.syncNow();
   expect(b.sync.encryption()).toBe('locked');
   return { server, a, b };
 }

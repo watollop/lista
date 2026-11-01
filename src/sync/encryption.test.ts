@@ -50,15 +50,22 @@ function matches(row: Row, url: URL): boolean {
 }
 
 class FakeServer {
-  users = new Map<string, { id: string; email: string; password: string }>();
+  users = new Map<string, { id: string; email: string }>();
   accessTokens = new Map<string, string>(); // token -> userId
   refreshTokens = new Map<string, { userId: string; email: string }>();
   rows = new Map<string, Row>(); // `${userId}|${kind}|${id}`
   private tokenSeq = 0;
   private seq = 0;
 
-  addUser(email: string, password: string): void {
-    this.users.set(email, { id: `user-${this.users.size + 1}`, email, password });
+  addUser(email: string): void {
+    this.users.set(email, { id: `user-${this.users.size + 1}`, email });
+  }
+
+  /** Tokens de una sesión ya iniciada para `email`: el dispositivo la arranca con ellos guardados. */
+  session(email: string, now = Date.now()) {
+    const u = this.users.get(email)!;
+    const body = this.issue(u.id, u.email);
+    return { accessToken: body.access_token, refreshToken: body.refresh_token, expiresAt: now + 3600_000, userId: u.id, email };
   }
 
   /** Filas de un kind (todos los usuarios). */
@@ -105,13 +112,6 @@ class FakeServer {
     if (headerOf(init, 'apikey') !== CFG.anonKey) return json({ message: 'Invalid API key' }, 401);
 
     if (url.pathname === '/auth/v1/token') {
-      if (url.searchParams.get('grant_type') === 'password') {
-        const u = this.users.get(body.email);
-        if (!u || u.password !== body.password) {
-          return json({ error: 'invalid_grant', error_description: 'Invalid login credentials' }, 400);
-        }
-        return json(this.issue(u.id, u.email));
-      }
       const stored = this.refreshTokens.get(body.refresh_token);
       if (!stored) return json({ error_description: 'Invalid Refresh Token' }, 400);
       this.refreshTokens.delete(body.refresh_token);
@@ -212,9 +212,10 @@ interface Device {
 }
 
 /** Dispositivo con su propia base IndexedDB (fake-indexeddb): dos de ellos son dos navegadores. */
-function device(server: FakeServer, clock: ReturnType<typeof makeClock>): Device {
+function device(server: FakeServer, clock: ReturnType<typeof makeClock>, email?: string): Device {
   const repo = createRepo(`enc-test-${crypto.randomUUID()}`);
   const storage = memStorage();
+  if (email) storage.setItem('lista.session', JSON.stringify(server.session(email, clock.now())));
   const sync = createSync(repo, CFG, {
     fetch: server.fetch as unknown as typeof fetch,
     storage,
@@ -256,17 +257,17 @@ async function titles(repo: Repo): Promise<string[]> {
   return (await repo.listTasks()).map((t) => t.title);
 }
 
-/** Inicia sesión en un dispositivo (la cuenta es la misma para todos). */
+/** Arranca la sesión de un dispositivo, ya guardada en su storage: la primera sincronización, como hacía el login. */
 async function login(d: Device): Promise<void> {
-  await d.sync.signIn('ana@test.io', 'secreto');
+  await d.sync.syncNow();
 }
 
-/** Dos dispositivos de la misma cuenta, sin sesión iniciada todavía. */
+/** Dos dispositivos de la misma cuenta, con la sesión guardada pero sin sincronizar todavía. */
 function twoDevices() {
   const server = new FakeServer();
-  server.addUser('ana@test.io', 'secreto');
+  server.addUser('ana@test.io');
   const clock = makeClock();
-  return { server, a: device(server, clock), b: device(server, clock) };
+  return { server, a: device(server, clock, 'ana@test.io'), b: device(server, clock, 'ana@test.io') };
 }
 
 /** Un registro en claro que sube un cliente antiguo, con la sesión de un dispositivo. */
