@@ -1,0 +1,45 @@
+README.md
+  s_527598c8a129db::t_c4eb1237f7f358 130
+src/sync/encryption.test.ts
+  s_527598c8a129db::t_85db09a5681193 53,60-68,215,218,260,262,265,268,270
+src/sync/sync.test.ts
+  s_527598c8a129db::t_358c3e837197db 33,44-52,94-97,218,221,248,255,270,273,280-284,293-294,302-306,323-325,328,330,336-340,343,353-355,358-359,368-370,392-394,416,418,421-422,424-425,431,433,435-445,450-452,469-471,487,489-492,505,507-510,532,534-537,552,554-555,571-573,586-588,603-605,620-622,634-636,648-650,673-675,690-691,694
+src/qa/edge.test.ts
+  s_7c9f38770237a0::t_9fb0e7c35e8bdb 301,308-316,405,410-411,414,422-426
+src/sync/auth.ts
+  s_020e3a65cd8ef3::t_8737664cb3fd19 33
+src/sync/link.test.ts
+  s_7c9f38770237a0::t_ccabf6e4892787 77,86-94,288,291,328-330,333-334
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "06aa2a9ced5b2fa5ff1757bf6a9e71363792d36a",
+  "prompts": {},
+  "sessions": {
+    "s_020e3a65cd8ef3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6b676d305fef220c",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_527598c8a129db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e686eb5-6bf2-4366-9b8e-5993c0c3e5f8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_7c9f38770237a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7d1e59b87d24a071",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
