@@ -1,0 +1,27 @@
+src/lib/capture.test.ts
+  s_0257c1fd89150f::t_9da081e7ecf8ec 17-19,23
+src/lib/capture.ts
+  s_0257c1fd89150f::t_729dbdeb0f5c32 10-11
+src/ui/App.tsx
+  s_0257c1fd89150f::t_bfa56db72c7e7d 160
+src/ui/Settings.tsx
+  s_0257c1fd89150f::t_26c8203d047393 49,276-277,282,286
+src/ui/subtasks.test.ts
+  s_0257c1fd89150f::t_9677959a0c268b 90,105,116,119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "742d30d28848062c0c2ec8e3cd846e02d85324e4",
+  "prompts": {},
+  "sessions": {
+    "s_0257c1fd89150f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a847c09d6f482602c",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
