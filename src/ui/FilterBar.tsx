@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import type { DateFilter, Entity, EntityKind, Filter, ID, Priority, SavedFilter } from '../types';
 import { emptyFilter, isEmptyFilter, toggleIn } from '../filters';
 import { PRIORITY_LABEL, PriorityName } from './Priority';
+import { formatDue } from '../parser';
 
 interface Props {
   filter: Filter;
@@ -12,6 +13,8 @@ interface Props {
   names: Map<string, Entity>;
   pending: Map<string, number>; // '#clave' | '@clave' -> pendientes
   counts: Record<DateFilter | 'open', number>;
+  today: string;
+  week: preact.ComponentChildren; // pantalla de Hoy: en móvil, al abrir Buscar (en escritorio, arriba de la barra lateral)
   open: boolean; // fila de búsqueda visible
   setOpen: (v: boolean) => void;
   searchRef: { current: HTMLInputElement | null };
@@ -53,6 +56,7 @@ export function FilterBar(p: Props) {
 
   const dateValues = [
     ...f.dates.map((d) => DATES.find((x) => x[0] === d)![1]),
+    ...(f.day ? [formatDue(f.day, p.today)] : []),
     ...(f.status === 'done' ? ['Hechas'] : []),
   ];
   const selectors: Array<[Menu, string, boolean]> = [
@@ -103,6 +107,7 @@ export function FilterBar(p: Props) {
 
   return (
     <>
+      {p.open && p.week}
       {p.open && (
         <input ref={p.searchRef} class="search" type="search" placeholder="Buscar" value={f.text} aria-label="Buscar"
           onInput={(e) => set({ text: e.currentTarget.value })}
@@ -124,7 +129,7 @@ export function FilterBar(p: Props) {
             <>
               {DATES.map(([d, l]) => (
                 <Chip key={d} on={f.dates.includes(d)} warn={d === 'overdue' && p.counts.overdue > 0}
-                  onClick={() => set({ dates: toggleIn(f.dates, d) })}>
+                  onClick={() => set({ dates: toggleIn(f.dates, d), day: undefined })}>
                   {l}{p.counts[d] > 0 && <sup>{p.counts[d]}</sup>}
                 </Chip>
               ))}
@@ -160,7 +165,7 @@ export function FilterBar(p: Props) {
           ) : (
             <>
               <button class="link" onClick={() => { setFilter(emptyFilter()); setMenu(null); }}>Limpiar ×</button>
-              {!current && <button class="link" onClick={() => setNaming(true)}>Guardar filtro</button>}
+              {!current && !f.day && <button class="link" onClick={() => setNaming(true)}>Guardar filtro</button>}
             </>
           )}
         </div>

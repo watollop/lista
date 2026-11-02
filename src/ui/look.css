@@ -29,6 +29,7 @@
   --faint: #9a9892;
   --line: #cfcdc6;
   --dot: #b9b7b0; /* separadores de puntos */
+  --hair: #e6e4de; /* separador fino entre filas */
   --surface: #e2e1dc;
   --panel: #f7f6f2; /* módulos (tarjetas) */
   --screen: #141414; /* "pantalla" de la captura */
@@ -43,13 +44,13 @@
 }
 @media (prefers-color-scheme: dark) {
   :root[data-look="industrial"]:not([data-theme="light"]) {
-    --bg: #000000; --fg: #f1f0ea; --muted: #9a9892; --faint: #5c5b57; --line: #262624; --dot: #3a3936;
+    --bg: #000000; --fg: #f1f0ea; --muted: #9a9892; --faint: #5c5b57; --line: #262624; --dot: #3a3936; --hair: #1d1d1c;
     --surface: #161615; --panel: #0e0e0d; --screen: #1c1c1b; --screen-fg: #f1f0ea;
     --accent: #ff5a14; --on-accent: #000000; --warn: #ff5a14;
   }
 }
 :root[data-look="industrial"][data-theme="dark"] {
-  --bg: #000000; --fg: #f1f0ea; --muted: #9a9892; --faint: #5c5b57; --line: #262624; --dot: #3a3936;
+  --bg: #000000; --fg: #f1f0ea; --muted: #9a9892; --faint: #5c5b57; --line: #262624; --dot: #3a3936; --hair: #1d1d1c;
   --surface: #161615; --panel: #0e0e0d; --screen: #1c1c1b; --screen-fg: #f1f0ea;
   --accent: #ff5a14; --on-accent: #000000; --warn: #ff5a14;
 }
@@ -68,35 +69,36 @@
 :where([data-look="industrial"]) .tab.on { border-bottom-color: var(--accent); }
 :where([data-look="industrial"]) .tab sup { font-family: var(--mono); }
 
-/* Secciones numeradas: 01 HOY ······ 03 */
+/* Secciones: ■ HOY 02 ············ 04 (marca, título, número discreto y recuento en puntos, sin píldora) */
 :where([data-look="industrial"]) main { counter-reset: sec; }
 :where([data-look="industrial"]) main section { counter-increment: sec; }
 :where([data-look="industrial"]) main section.past { counter-increment: none; } /* Pasadas no cuenta: la numeración empieza en el presente */
-:where([data-look="industrial"]) .past .section > span:first-child::before { content: '00'; }
+:where([data-look="industrial"]) .past .section > span:first-child::after { content: '00'; }
 :where([data-look="industrial"]) .section {
   align-items: center; gap: 10px;
   color: var(--fg);
   border-bottom: 0;
-  padding: 30px 0 10px;
+  padding: 30px 8px 10px;
+  font-size: 10px;
 }
-:where([data-look="industrial"]) .section > span:first-child::before { content: counter(sec, decimal-leading-zero); color: var(--faint); margin-right: 10px; }
-:where([data-look="industrial"]) .section::after {
-  content: ''; order: 1; flex: 1; height: 2px;
-  background: radial-gradient(circle, var(--dot) 1px, transparent 1.2px) 0 50% / 6px 2px repeat-x;
-}
-:where([data-look="industrial"]) .section > span:last-child { order: 2; min-width: 28px; height: 20px; padding: 0 6px; display: grid; place-items: center; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 10px; }
-:where([data-look="industrial"]) .section.warn > span:last-child { background: var(--accent); color: var(--on-accent); }
-:where([data-look="industrial"]) .section.warn { color: var(--accent); }
+:where([data-look="industrial"]) .section > span:first-child::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--fg); margin-right: 10px; vertical-align: 1px; }
+:where([data-look="industrial"]) .section > span:first-child::after { content: counter(sec, decimal-leading-zero); color: var(--faint); margin-left: 10px; }
+:where([data-look="industrial"]) .section::after { content: ''; order: 1; flex: 1; }
+:where([data-look="industrial"]) .section > span:last-child { order: 2; font-family: var(--dots); font-weight: 700; font-size: 18px; letter-spacing: .04em; line-height: 1; }
+:where([data-look="industrial"]) .section.warn, :where([data-look="industrial"]) .section.warn > span:first-child::after { color: var(--accent); }
+:where([data-look="industrial"]) .section.warn > span:first-child::before { background: var(--accent); }
 
 /* Lista dentro de un módulo */
-:where([data-look="industrial"]) .list { background: var(--panel); border-radius: var(--r); margin: 0; padding: 0 16px; }
-:where([data-look="industrial"]) .row { border-bottom: 0; background: radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 100% / 5px 2px repeat-x; }
+:where([data-look="industrial"]) .list { background: var(--panel); border-radius: 18px; margin: 0; padding: 0 20px; }
+/* Separador fino que empieza tras la casilla, como las listas agrupadas de iOS */
+:where([data-look="industrial"]) .row { border-bottom: 0; background: linear-gradient(var(--hair), var(--hair)) 34px 100% / calc(100% - 34px) 1px no-repeat; }
 :where([data-look="industrial"]) .row:last-child { background: none; }
-:where([data-look="industrial"]) .row::before, :where([data-look="industrial"]) .row::after { margin: 0 -16px; padding: 0 16px; border-radius: var(--r); font-family: var(--mono); }
+:where([data-look="industrial"]) .row::before, :where([data-look="industrial"]) .row::after { margin: 0 -20px; padding: 0 20px; border-radius: var(--r); font-family: var(--mono); }
 :where([data-look="industrial"]) .row.sel { box-shadow: inset 2px 0 0 var(--accent); }
 
 /* Casilla: punto */
-:where([data-look="industrial"]) .check i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--fg); }
+:where([data-look="industrial"]) .check i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--faint); transition: border-color .12s; }
+@media (hover: hover) { :where([data-look="industrial"]) .check:hover i { border-color: var(--fg); } }
 :where([data-look="industrial"]) .row.done .check i { background: var(--accent); border-color: var(--accent); }
 :where([data-look="industrial"]) .row.done .check i::after { width: 6px; height: 6px; border: 0; border-radius: 50%; background: var(--on-accent); transform: none; }
 :where([data-look="industrial"]) .row.done .title { text-decoration-color: var(--faint); }
@@ -105,13 +107,17 @@
 /* Chips: píldoras en mono */
 :where([data-look="industrial"]) .chip {
   font-size: 10.5px; text-transform: uppercase;
-  background: transparent; border: 1px solid var(--line); color: var(--muted);
-  height: 22px; padding: 0 9px;
+  background: transparent; border: 1px solid transparent; color: var(--muted);
+  height: 22px; padding: 0 6px;
 }
 :where([data-look="industrial"]) .chip.on { background: var(--fg); border-color: var(--fg); color: var(--bg); }
-:where([data-look="industrial"]) .chip.warn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+/* Vencida: fecha en naranja con un punto, sin relleno; la prioridad alta sí es una tecla naranja */
+:where([data-look="industrial"]) .chip.warn { background: transparent; border-color: transparent; color: var(--accent); }
+:where([data-look="industrial"]) .row .chip.warn:not(.prio)::before { content: '●'; margin-right: 6px; font-size: 8px; }
+:where([data-look="industrial"]) .chip.prio.warn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 :where([data-look="industrial"]) .chip.ghost { border: 0; }
 :where([data-look="industrial"]) .title .tag { color: var(--muted); }
+:where([data-look="industrial"]) .title.p1 { font-weight: 400; } /* la prioridad alta ya la marca su tecla naranja */
 :where([data-look="industrial"]) .title a { color: inherit; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: var(--muted); }
 @media (hover: hover) { :where([data-look="industrial"]) .title a:hover { text-decoration-color: currentColor; } }
 :where([data-look="industrial"]) .row.done .title a { text-decoration-color: var(--faint); }
@@ -121,9 +127,9 @@
 :where([data-look="industrial"]) .capture-inner {
   background: var(--screen) radial-gradient(circle, rgb(255 255 255 / .07) .8px, transparent 1px) 0 0 / 6px 6px;
   color: var(--screen-fg);
-  border-radius: var(--r);
+  border-radius: 18px;
   padding: 0 18px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(255 255 255 / .08);
+  box-shadow: 0 10px 30px -12px rgb(0 0 0 / .35), inset 0 0 0 1px rgb(255 255 255 / .08);
 }
 :where([data-look="industrial"]) .capture input, :where([data-look="industrial"]) .capture-guide { font-family: var(--mono); font-weight: 400; }
 :where([data-look="industrial"]) .capture input { font-size: 16px; }
@@ -166,13 +172,39 @@
   :where([data-look="industrial"]) .capture input { height: 54px; }
   :where([data-look="industrial"]) .capture input { font-size: 18px; }
 }
-:where([data-look="industrial"]) .app.wide .top { border-bottom: 0; background: var(--bg) radial-gradient(circle, var(--dot) .8px, transparent 1px) 0 100% / 6px 2px repeat-x; }
-:where([data-look="industrial"]) .side-group > .label { color: var(--fg); }
-:where([data-look="industrial"]) .side-group > .label::before { content: '■'; color: var(--accent); margin-right: 8px; font-size: 9px; vertical-align: 1px; }
-:where([data-look="industrial"]) .side-item { border-radius: 999px; font-size: 14px; }
+:where([data-look="industrial"]) .app.wide .top { border-bottom: 0; background: var(--bg); }
+/* Barra lateral: cada grupo es un módulo, como una lista agrupada */
+:where([data-look="industrial"]) .side-group { margin-top: 22px; }
+:where([data-look="industrial"]) .side-group > .label { color: var(--muted); font-size: 10px; padding: 0 2px; margin-bottom: 8px; }
+:where([data-look="industrial"]) .side-group > .side-list { background: var(--panel); border-radius: var(--r); padding: 4px; margin: 0 -10px; }
+:where([data-look="industrial"]) .side-group .side-item { width: 100%; margin: 0; }
+:where([data-look="industrial"]) .side-item { border-radius: 10px; font-size: 14px; color: var(--fg); }
 :where([data-look="industrial"]) .side-item.on { background: var(--fg); color: var(--bg); }
 :where([data-look="industrial"]) .side-item.on .side-count { color: var(--bg); }
-:where([data-look="industrial"]) .side-search { font-family: var(--mono); font-size: 13px; }
+:where([data-look="industrial"]) .side-item.warn, :where([data-look="industrial"]) .side-item.warn .side-count { color: var(--accent); }
+:where([data-look="industrial"]) .side-item.on.warn, :where([data-look="industrial"]) .side-item.on.warn .side-count { color: var(--bg); }
+:where([data-look="industrial"]) .side-search { font-family: var(--mono); font-size: 13px; background: var(--surface); border-bottom: 0; border-radius: 12px; padding: 10px 12px; }
+
+/* Pantalla de Hoy: la misma pantalla oscura con trama de puntos que la captura */
+:where([data-look="industrial"]) .week {
+  background: var(--screen) radial-gradient(circle, rgb(255 255 255 / .06) .8px, transparent 1px) 0 0 / 6px 6px;
+  color: var(--screen-fg); border-radius: 20px; padding: 18px 16px 12px;
+  box-shadow: 0 14px 30px -16px rgb(0 0 0 / .5), inset 0 0 0 1px rgb(255 255 255 / .06);
+}
+:where([data-look="industrial"]) .week-head { color: rgb(241 240 234 / .55); }
+:where([data-look="industrial"]) .week-big { font-family: var(--dots); font-weight: 700; font-size: 64px; line-height: .85; }
+:where([data-look="industrial"]) .week-late { color: var(--accent); }
+:where([data-look="industrial"]) .week-days { border-top-color: rgb(255 255 255 / .1); }
+:where([data-look="industrial"]) .week-days button { color: rgb(241 240 234 / .35); font-family: var(--mono); }
+:where([data-look="industrial"]) .week-n { font-family: var(--dots); font-weight: 700; font-size: 15px; }
+:where([data-look="industrial"]) .week-days .busy .week-n, :where([data-look="industrial"]) .week-days .busy .week-c { color: rgb(241 240 234 / .85); }
+:where([data-look="industrial"]) .week-dots { color: rgb(241 240 234 / .75); }
+:where([data-look="industrial"]) .week-days .now { background: rgb(255 255 255 / .08); }
+:where([data-look="industrial"]) .week-days .now .week-n { color: #fff; }
+:where([data-look="industrial"]) .week-days .now .week-d, :where([data-look="industrial"]) .week-days .now .week-c, :where([data-look="industrial"]) .week-days .now .week-dots { color: var(--accent); }
+@media (hover: hover) { :where([data-look="industrial"]) .week-days button:not(.on):hover { background: rgb(255 255 255 / .12); } }
+:where([data-look="industrial"]) .week-days .on, :where([data-look="industrial"]) .week-days .on :is(.week-n, .week-c, .week-d, .week-dots) { background: var(--accent); color: #fff; }
+:where([data-look="industrial"]) .week-days .on .week-dots { background: none; }
 @media (pointer: coarse) { :where([data-look="industrial"]) .side-search { font-size: 16px; } } /* iPad: sin zoom al enfocar */
 
 /* Bienvenida */

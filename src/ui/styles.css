@@ -265,6 +265,13 @@ button.chip { min-height: 22px; }
   }
   .row:hover .trash, .row.sel .trash, .trash:focus-visible { opacity: 1; }
   .trash:hover { color: var(--warn); }
+  /* Los botones no reservan hueco: fechas y etiquetas llegan al borde y se apartan solo al pasar o seleccionar la fila. */
+  .row > .trash { position: absolute; right: 0; top: 9px; margin: 0; }
+  .row > .trash.cal { right: 30px; }
+  .row > .body { transition: transform .2s ease, padding .15s ease; }
+  .row:has(> .trash):is(:hover, .sel, :focus-within) > .body { padding-right: 34px; }
+  .row:has(> .cal):is(:hover, .sel, :focus-within) > .body { padding-right: 64px; }
+  .app.wide .row > .trash { top: 8px; }
 }
 .row.sel { box-shadow: inset 2px 0 0 var(--fg); padding-left: 10px; margin-left: -10px; }
 .row.sub.sel { padding-left: 58px; }
@@ -1115,3 +1122,23 @@ section.droppable.drop-on .section { color: var(--fg); }
   .sheet-inner > .credit { border-top: 0; padding-top: 8px; }
   .sheet p { max-width: 62ch; }
 }
+
+/* ---------- pantalla de Hoy: pendientes de hoy y los próximos 7 días (barra lateral; en móvil, al abrir Buscar) ---------- */
+.week { display: grid; gap: 12px; padding: 16px 16px 12px; margin-bottom: 18px; border-radius: var(--radius); background: var(--surface); }
+.week-head { display: flex; justify-content: space-between; gap: 8px; color: var(--faint); font-size: 10px; }
+.week-now { display: flex; align-items: baseline; gap: 10px; }
+.week-big { font-size: 48px; font-weight: 600; line-height: .9; font-variant-numeric: tabular-nums; }
+.week-late { color: var(--warn); font-size: 10px; }
+.week-days { list-style: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; padding-top: 10px; border-top: 1px solid var(--line); }
+.week-days button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 6px 0 7px; border-radius: 9px; font-size: 10px; color: var(--faint); font-variant-numeric: tabular-nums; transition: background .12s, color .12s; }
+.week-n { font-size: 13px; }
+.week-days .busy .week-n, .week-days .busy .week-c { color: var(--fg); }
+.week-dots { display: flex; flex-direction: column-reverse; gap: 3px; height: 32px; color: var(--muted); }
+.week-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.week-days .now { background: var(--bg); }
+.week-days .now .week-d, .week-days .now .week-c, .week-days .now .week-dots { color: var(--accent); }
+@media (hover: hover) { .week-days button:not(.on):hover { background: var(--bg); } }
+/* Día filtrado: tecla encendida */
+.week-days .on, .week-days .on .week-n, .week-days .on .week-c, .week-days .on .week-d, .week-days .on .week-dots { background: var(--fg); color: var(--bg); }
+.week-days .on .week-dots { background: none; }
+.top .week { margin: 4px 0 12px; } /* móvil: dentro de la cabecera, sobre la búsqueda */

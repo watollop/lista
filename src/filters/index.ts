@@ -14,7 +14,8 @@ export function isEmptyFilter(f: Filter): boolean {
     f.dates.length === 0 &&
     f.priorities.length === 0 &&
     f.status === 'open' &&
-    f.text.trim() === ''
+    f.text.trim() === '' &&
+    !f.day
   );
 }
 
@@ -67,6 +68,7 @@ export function matches(task: Task, f: Filter, today: ISODate, parent?: Task): b
     });
     if (!ok) return false;
   }
+  if (f.day && task.due !== f.day) return false;
   if (f.priorities.length && (task.priority === null || !f.priorities.includes(task.priority))) return false;
   if (f.status === 'open' && task.done !== 0) return false;
   if (f.status === 'done' && task.done !== 1) return false;
@@ -139,4 +141,16 @@ export function counts(
     nodate: open.filter((t) => t.due === null).length,
     open: open.length,
   };
+}
+
+/** Pendientes que vencen cada uno de los próximos `days` días, empezando hoy (mini calendario). */
+export function dayLoad(tasks: Task[], today: ISODate, days = 7): Array<{ date: ISODate; count: number }> {
+  const out = Array.from({ length: days }, (_, i) => ({ date: addDays(today, i), count: 0 }));
+  const at = new Map(out.map((d, i) => [d.date, i]));
+  for (const t of tasks) {
+    if (t.deleted || t.done !== 0 || t.due === null) continue;
+    const i = at.get(t.due);
+    if (i !== undefined) out[i].count++;
+  }
+  return out;
 }

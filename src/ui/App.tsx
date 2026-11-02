@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { DateFilter, Entity, EntityKind, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../types';
-import { applyFilter, counts, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
+import { applyFilter, counts, dayLoad, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
 import { formatDue, parseBlock } from '../parser';
 import { toISODate } from '../lib/date';
 import { externalCapture, validateCapture } from '../lib/capture';
@@ -18,6 +18,7 @@ import { INTRO_KEY } from './intro';
 import { startAppearanceSync } from './appearanceSync';
 import { LazyLinkDialog, LazyLockedPanel, LazyOnboarding, LazySettings, LazyShortcutsSheet, preloadViews } from './lazyViews';
 import { whenIdle } from './lazy';
+import { Week } from './Week';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 
@@ -150,6 +151,12 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   }, [past, visible, data.tasks]);
   const flat = useMemo(() => groups.flatMap((g) => [g.task, ...g.children]), [groups]);
   const tally = useMemo(() => counts(data.tasks, today), [data.tasks, today]);
+  // Un día del mini calendario que ya pasó (la app quedó abierta o se guardó ayer) deja de filtrar.
+  useEffect(() => { if (filter.day && filter.day < today) setFilter({ ...filter, day: undefined }); }, [today, filter.day]);
+  const load = useMemo(() => dayLoad(data.tasks, today), [data.tasks, today]);
+  // Tocar un día del mini calendario muestra solo ese día (sustituye a los filtros de Fecha); tocarlo otra vez lo quita.
+  const pickDay = (d: string) => setFilter({ ...filter, dates: [], day: filter.day === d ? undefined : d });
+  const week = <Week today={tally.today} overdue={tally.overdue} open={tally.open} days={load} day={filter.day} onPick={pickDay} />;
 
 
   // ---------- acciones ----------
@@ -365,7 +372,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         {!wide && (
           <FilterBar
             filter={filter} setFilter={setFilter} saved={data.filters} topics={shownTopics} people={shownPeople}
-            names={names} pending={pending} counts={tally} open={panel} setOpen={setPanel} searchRef={searchRef}
+            names={names} pending={pending} counts={tally} today={today} week={week} open={panel} setOpen={setPanel} searchRef={searchRef}
             onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
             onEditEntity={(kind, key) => setSheetEnt({ kind, key })} onDeleteEntity={deleteEntity}
           />
@@ -376,7 +383,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         <Sidebar
           filter={filter} setFilter={setFilter} saved={data.filters} topics={shownTopics}
           people={shownPeople} allTopics={data.topics} allPeople={data.people} pending={pending}
-          counts={tally} searchRef={searchRef} onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
+          counts={tally} week={week} searchRef={searchRef} onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
           onRename={renameEntity} onDelete={deleteEntity}
         />
       )}

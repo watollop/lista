@@ -17,6 +17,7 @@ interface Props {
   allPeople: Entity[];
   pending: Map<string, number>; // '#clave' | '@clave' | '!prioridad' -> pendientes
   counts: Record<DateFilter | 'open', number>;
+  week: preact.ComponentChildren; // pantalla de Hoy con los próximos 7 días
   searchRef: { current: HTMLInputElement | null };
   onSave: (name: string) => void;
   onDeleteSaved: (id: ID) => void;
@@ -45,6 +46,7 @@ export function Sidebar(p: Props) {
 
   return (
     <aside class="side" aria-label="Filtros">
+      {p.week}
       <input ref={p.searchRef} class="side-search" type="search" placeholder="Buscar" value={f.text} aria-label="Buscar"
         onInput={(e) => set({ text: e.currentTarget.value })}
         onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }} />
@@ -57,7 +59,7 @@ export function Sidebar(p: Props) {
         {DATES.map(([d, l]) => (
           <Item key={d} on={f.dates.includes(d)} count={p.counts[d]} warn={d === 'overdue' && p.counts.overdue > 0}
             drop={d === 'today' ? 'today' : d === 'week' ? 'week' : d === 'nodate' ? 'nodate' : undefined}
-            onClick={() => set({ dates: toggleIn(f.dates, d) })}>{l}</Item>
+            onClick={() => set({ dates: toggleIn(f.dates, d), day: undefined })}>{l}</Item>
         ))}
         <Item on={f.status === 'done'} onClick={() => set({ status: f.status === 'done' ? 'open' : 'done' })}>Hechas</Item>
       </Group>
@@ -81,7 +83,7 @@ export function Sidebar(p: Props) {
           onRename={p.onRename} onDelete={p.onDelete} />
       )}
 
-      {(p.saved.length > 0 || (!isEmptyFilter(f) && !current)) && (
+      {(p.saved.length > 0 || (!isEmptyFilter(f) && !current && !f.day)) && (
         <Group title="Guardados">
           {p.saved.map((s, i) => (
             <li key={s.id} class="side-pair">
@@ -92,7 +94,7 @@ export function Sidebar(p: Props) {
               <button class="side-x" aria-label={`Borrar filtro ${s.name}`} onClick={() => p.onDeleteSaved(s.id)}>×</button>
             </li>
           ))}
-          {!isEmptyFilter(f) && !current && (
+          {!isEmptyFilter(f) && !current && !f.day && ( /* un día concreto no se guarda: mañana ya no sería el mismo */
             <li>
               {naming ? (
                 <input autoFocus class="side-search" placeholder="Nombre del filtro" value={name} aria-label="Nombre del filtro"
