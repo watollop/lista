@@ -12,10 +12,12 @@ interface Props {
   overdue: number;
   open: number;
   days: Array<{ date: ISODate; count: number }>; // de hoy en adelante
+  day?: ISODate; // día filtrado
+  onPick: (date: ISODate) => void;
 }
 
-/** «Pantalla» de Hoy: pendientes de hoy en grande y los próximos 7 días con un punto por tarea. Solo informa; filtrar sigue en Fecha. */
-export function Week({ today, overdue, open, days }: Props) {
+/** «Pantalla» de Hoy: pendientes de hoy en grande y los próximos 7 días con un punto por tarea. Tocar un día muestra solo ese día. */
+export function Week({ today, overdue, open, days, day, onPick }: Props) {
   const first = fromISODate(days[0].date);
   const tasks = (n: number) => `${n} ${n === 1 ? 'tarea' : 'tareas'}`;
   return (
@@ -32,14 +34,17 @@ export function Week({ today, overdue, open, days }: Props) {
         {days.map((d, i) => {
           const x = fromISODate(d.date);
           return (
-            <li key={d.date} class={`${i === 0 ? 'now' : ''} ${d.count ? 'busy' : ''}`}
-              aria-label={`${DAY_NAME[x.getDay()]} ${x.getDate()} ${MES[x.getMonth()]}: ${d.count ? tasks(d.count) : 'nada'}`}>
-              <span class="week-d" aria-hidden="true">{DAY[x.getDay()]}</span>
-              <span class="week-n" aria-hidden="true">{pad(x.getDate())}</span>
-              <span class="week-dots" aria-hidden="true">
-                {Array.from({ length: Math.min(d.count, DOTS) }, (_, k) => <i key={k} />)}
-              </span>
-              <span class="week-c" aria-hidden="true">{d.count || '·'}</span>
+            <li key={d.date}>
+              <button class={`${i === 0 ? 'now' : ''} ${d.count ? 'busy' : ''} ${day === d.date ? 'on' : ''}`}
+                aria-pressed={day === d.date} onClick={() => onPick(d.date)}
+                aria-label={`${DAY_NAME[x.getDay()]} ${x.getDate()} ${MES[x.getMonth()]}: ${d.count ? tasks(d.count) : 'nada'}`}>
+                <span class="week-d" aria-hidden="true">{DAY[x.getDay()]}</span>
+                <span class="week-n" aria-hidden="true">{pad(x.getDate())}</span>
+                <span class="week-dots" aria-hidden="true">
+                  {Array.from({ length: Math.min(d.count, DOTS) }, (_, k) => <i key={k} />)}
+                </span>
+                <span class="week-c" aria-hidden="true">{d.count || '·'}</span>
+              </button>
             </li>
           );
         })}

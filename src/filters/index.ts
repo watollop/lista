@@ -14,7 +14,8 @@ export function isEmptyFilter(f: Filter): boolean {
     f.dates.length === 0 &&
     f.priorities.length === 0 &&
     f.status === 'open' &&
-    f.text.trim() === ''
+    f.text.trim() === '' &&
+    !f.day
   );
 }
 
@@ -67,6 +68,7 @@ export function matches(task: Task, f: Filter, today: ISODate, parent?: Task): b
     });
     if (!ok) return false;
   }
+  if (f.day && task.due !== f.day) return false;
   if (f.priorities.length && (task.priority === null || !f.priorities.includes(task.priority))) return false;
   if (f.status === 'open' && task.done !== 0) return false;
   if (f.status === 'done' && task.done !== 1) return false;

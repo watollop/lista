@@ -149,8 +149,12 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   }, [past, visible, data.tasks]);
   const flat = useMemo(() => groups.flatMap((g) => [g.task, ...g.children]), [groups]);
   const tally = useMemo(() => counts(data.tasks, today), [data.tasks, today]);
+  // Un día del mini calendario que ya pasó (la app quedó abierta o se guardó ayer) deja de filtrar.
+  useEffect(() => { if (filter.day && filter.day < today) setFilter({ ...filter, day: undefined }); }, [today, filter.day]);
   const load = useMemo(() => dayLoad(data.tasks, today), [data.tasks, today]);
-  const week = <Week today={tally.today} overdue={tally.overdue} open={tally.open} days={load} />;
+  // Tocar un día del mini calendario muestra solo ese día (sustituye a los filtros de Fecha); tocarlo otra vez lo quita.
+  const pickDay = (d: string) => setFilter({ ...filter, dates: [], day: filter.day === d ? undefined : d });
+  const week = <Week today={tally.today} overdue={tally.overdue} open={tally.open} days={load} day={filter.day} onPick={pickDay} />;
 
 
   // ---------- acciones ----------
@@ -342,7 +346,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         {!wide && (
           <FilterBar
             filter={filter} setFilter={setFilter} saved={data.filters} topics={shownTopics} people={shownPeople}
-            names={names} pending={pending} counts={tally} week={week} open={panel} setOpen={setPanel} searchRef={searchRef}
+            names={names} pending={pending} counts={tally} today={today} week={week} open={panel} setOpen={setPanel} searchRef={searchRef}
             onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
             onEditEntity={(kind, key) => setSheetEnt({ kind, key })} onDeleteEntity={deleteEntity}
           />

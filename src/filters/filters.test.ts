@@ -312,3 +312,18 @@ describe('dayLoad', () => {
     expect(load.map((d) => d.count)).toEqual([2, 0, 0, 1, 0, 0, 0]);
   });
 });
+
+describe('día concreto', () => {
+  it('muestra solo lo que vence ese día y cuenta como filtro activo', () => {
+    const f: Filter = { ...emptyFilter(), day: '2026-10-30' };
+    expect(isEmptyFilter(f)).toBe(false);
+    expect(matches(mk({ due: '2026-10-30' }), f, TODAY)).toBe(true);
+    expect(matches(mk({ due: '2026-10-29' }), f, TODAY)).toBe(false);
+    expect(matches(mk(), f, TODAY)).toBe(false);
+  });
+  it('los filtros guardados sin día siguen funcionando', () => {
+    const old = { topics: [], people: [], dates: [], priorities: [], status: 'open', text: '' } as Filter;
+    expect(isEmptyFilter(old)).toBe(true);
+    expect(matches(mk(), old, TODAY)).toBe(true);
+  });
+});

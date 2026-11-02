@@ -56,6 +56,7 @@ export interface Filter {
   priorities: Priority[];
   status: StatusFilter;
   text: string; // búsqueda libre, insensible a mayúsculas y acentos
+  day?: ISODate; // un día concreto (mini calendario); opcional: los filtros guardados antes no lo tienen
 }
 
 /** Preferencia sincronizada entre dispositivos (p. ej. la apariencia). key identifica la preferencia. */
