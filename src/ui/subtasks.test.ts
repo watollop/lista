@@ -471,8 +471,13 @@ describe('lista de subtareas', () => {
     click(root.querySelector('.edit-actions [aria-label="Añadir subtarea"]'));
     type(input('Subtarea 1'), 'Paso añadido');
     enter(input('Subtarea 1'));
-    enter(input('Subtarea 2'));
+    // Se guarda al momento, con el campo abierto y vacío para la siguiente.
     await vi.waitFor(() => expect(root.querySelector('.row.sub .title')?.textContent).toBe('Paso añadido'));
+    expect(root.querySelector('.subtask-composer')).not.toBeNull();
+    expect(input('Subtarea 1').value).toBe('');
+    expect(root.querySelector('[aria-label="Subtarea 2"]')).toBeNull();
+    enter(input('Subtarea 1'));
+    await vi.waitFor(() => expect(root.querySelector('.subtask-composer')).toBeNull());
     const children = (await repo.listTasks()).filter((t) => t.parentId === parent.id);
     expect(children).toHaveLength(1);
     const add = root.querySelector('.row.sub:last-child [aria-label="Añadir subtarea"]');
@@ -486,7 +491,8 @@ describe('lista de subtareas', () => {
     click(add);
     type(input('Subtarea 1'), 'Otro paso desde el más <Paso inline !alta');
     enter(input('Subtarea 1'));
-    enter(input('Subtarea 2'));
+    await vi.waitFor(() => expect(input('Subtarea 1').value).toBe(''));
+    enter(input('Subtarea 1'));
     await vi.waitFor(() => expect(root.querySelectorAll('.row.sub')).toHaveLength(3));
     const updated = (await repo.listTasks()).filter((t) => t.parentId === parent.id);
     expect(updated).toHaveLength(3);
@@ -529,7 +535,7 @@ describe('lista de subtareas', () => {
     expect(focus).not.toHaveBeenCalled();
     click(button('Cerrar'));
     expect(input(field).value).toBe(draft);
-    if (parentId) click(button('Añadir subtareas'));
+    if (parentId) click(button('Listo'));
     else enter(input('Nueva tarea'));
     if (!parentId) {
       await vi.waitFor(() => expect(root.querySelector('.row.has-subtasks')).not.toBeNull());
