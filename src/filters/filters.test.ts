@@ -64,13 +64,21 @@ describe('date filters', () => {
     expect(matches(t, f({ dates: ['today'] }), TODAY)).toBe(true);
     expect(matches(mk({ due: '2026-10-28' }), f({ dates: ['today'] }), TODAY)).toBe(false);
   });
-  it('week includes day 0 and day 6, excludes day 7 and past', () => {
+  it('week includes day 0 and day 6, excludes day 7; overdue always shows', () => {
     const w = f({ dates: ['week'] });
     expect(matches(mk({ due: '2026-10-27' }), w, TODAY)).toBe(true);
     expect(matches(mk({ due: '2026-11-02' }), w, TODAY)).toBe(true); // today+6
     expect(matches(mk({ due: '2026-11-03' }), w, TODAY)).toBe(false); // today+7
-    expect(matches(mk({ due: '2026-10-26' }), w, TODAY)).toBe(false);
+    expect(matches(mk({ due: '2026-10-26' }), w, TODAY)).toBe(true); // vencida
+    expect(matches(mk({ due: '2026-10-26', done: 1 }), { ...w, status: 'all' }, TODAY)).toBe(false); // hecha, no vencida
     expect(matches(mk({ due: null }), w, TODAY)).toBe(false);
+  });
+  it('overdue shows with any date filter or calendar day, still respecting other filters', () => {
+    const late = mk({ due: '2026-10-26', topics: ['casa'] });
+    expect(matches(late, f({ dates: ['today'] }), TODAY)).toBe(true);
+    expect(matches(late, f({ dates: ['nodate'] }), TODAY)).toBe(true);
+    expect(matches(late, f({ day: '2026-10-30' }), TODAY)).toBe(true);
+    expect(matches(late, f({ dates: ['today'], topics: ['trabajo'] }), TODAY)).toBe(false);
   });
   it('overdue excludes done and future', () => {
     const o = f({ dates: ['overdue'], status: 'all' });
