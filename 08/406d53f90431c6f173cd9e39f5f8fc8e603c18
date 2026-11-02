@@ -1,0 +1,19 @@
+src/ui/App.tsx
+  s_607cf3f063bca9::t_a4a6c5cfd331ed 23,118,123-125,400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "08406d53f90431c6f173cd9e39f5f8fc8e603c18",
+  "prompts": {},
+  "sessions": {
+    "s_607cf3f063bca9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5010a65c-d6c4-4a39-a38c-e427ce5059de",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
