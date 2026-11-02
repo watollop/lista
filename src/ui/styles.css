@@ -557,19 +557,31 @@ kbd {
 /* La captura se queda bajo la cabecera: al colocar el presente arriba (hay pasadas) no se va de la vista. */
 .app.wide .capture { grid-area: capture; position: sticky; top: calc(88px + var(--sat)); z-index: 4; background: var(--bg); padding-bottom: 6px; }
 .app.wide main { grid-area: main; min-width: 0; }
+/* El hueco final va dentro de main y no en .app: así el área de la barra lateral llega hasta abajo
+   y, al desplazar hasta el final, la barra no sube y se despega de la captura. */
+.app.wide { padding-bottom: 0; }
+.app.wide main { padding-bottom: 80px; } /* los 80 px que .app tiene en escritorio */
+.app.wide:has(> .toast:not(.toast-top)) main { padding-bottom: 152px; } /* + los 72 px del aviso */
 .side {
   grid-area: side;
   position: sticky;
-  top: 104px;
+  /* Su primer elemento queda a la altura de la captura, con la página arriba o desplazada:
+     --side-top + --side-pad = donde se queda la captura al pegarse; --side-pad = su separación sin desplazar. */
+  --side-pad: 9px;
+  --side-top: calc(79px + var(--sat));
+  top: var(--side-top);
   align-self: start;
-  max-height: calc(100dvh - 120px);
+  max-height: calc(100dvh - var(--side-top));
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: thin;
+  /* Si los filtros no caben, se desplazan con la rueda o el trackpad, sin barra visible; abajo se desvanecen. */
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
   /* 10 px de margen a cada lado para el fondo de las opciones, sin desbordar (y sin scroll lateral). */
   margin: 0 -10px;
-  padding: 18px 10px 40px;
+  padding: var(--side-pad) 10px 40px;
 }
+.side::-webkit-scrollbar { display: none; }
 .side-search {
   width: 100%;
   font-size: 15px;

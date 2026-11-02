@@ -25,7 +25,8 @@ interface Toast { msg: string; action?: { label: string; run: () => void } }
 const FILTER_KEY = 'lista.filter';
 const PAST_DAYS = 30;
 const loadFilter = (): Filter => {
-  try { return { ...emptyFilter(), ...JSON.parse(localStorage.getItem(FILTER_KEY) || '{}') }; } catch { return emptyFilter(); }
+  // El día del mini calendario es un vistazo: no se recuerda al volver a abrir (si no, se esconden las vencidas y el resto).
+  try { return { ...emptyFilter(), ...JSON.parse(localStorage.getItem(FILTER_KEY) || '{}'), day: undefined }; } catch { return emptyFilter(); }
 };
 
 export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
@@ -61,7 +62,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
   const setFilter = (f: Filter) => {
     setFilterRaw(f);
-    try { localStorage.setItem(FILTER_KEY, JSON.stringify(f)); } catch { /* modo privado */ }
+    try { localStorage.setItem(FILTER_KEY, JSON.stringify({ ...f, day: undefined })); } catch { /* modo privado */ }
   };
 
   const showToast = (t: Toast | string) => {
