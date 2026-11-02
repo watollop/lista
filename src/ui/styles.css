@@ -839,10 +839,13 @@ kbd {
 
 /* ---------- firma en Ajustes ---------- */
 .credit {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  border-top: 1px solid var(--line);
-  padding: 32px 0 8px;
-  font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+  /* Fija al pie de Ajustes: siempre visible, encima del contenido que pasa por debajo. */
+  position: sticky; bottom: calc(-40px - var(--sab)); z-index: 1;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 24px calc(-1 * var(--gutter)) calc(-40px - var(--sab));
+  padding: 6px 0 calc(6px + var(--sab));
+  background: var(--bg); border-top: 1px solid var(--line);
+  font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--muted);
 }
 .credit .heart { color: var(--warn); }
@@ -1120,7 +1123,7 @@ section.droppable.drop-on .section { color: var(--fg); }
 /* ---------- ajustes en escritorio: dos columnas de módulos en vez de la hoja estrecha del móvil ---------- */
 @media (min-width: 900px) {
   .sheet-inner { max-width: 1040px; columns: 2; column-gap: 24px; padding-bottom: 24px; }
-  .sheet-inner > .bar, .sheet-inner > .credit { column-span: all; }
+  .sheet-inner > .bar { column-span: all; }
   /* Cada grupo es una tarjeta que no se parte entre columnas. */
   .sheet .group {
     break-inside: avoid;
@@ -1134,7 +1137,6 @@ section.droppable.drop-on .section { color: var(--fg); }
   .sheet .group > section { padding: 18px 0 20px; }
   .sheet .group > section:first-of-type { padding-top: 0; }
   .sheet-inner > .lock-panel { break-inside: avoid; }
-  .sheet-inner > .credit { border-top: 0; padding-top: 8px; }
   .sheet p { max-width: 62ch; }
 }
 
