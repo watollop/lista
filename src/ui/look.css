@@ -173,6 +173,8 @@
   :where([data-look="industrial"]) .capture input { font-size: 18px; }
 }
 :where([data-look="industrial"]) .app.wide .top { border-bottom: 0; background: var(--bg); }
+/* La captura de Industrial baja 18 px (margen) y su pantalla 8 px más (relleno): la barra lateral la acompaña */
+:where([data-look="industrial"]) .side { --side-pad: 26px; --side-top: calc(70px + var(--sat)); }
 /* Barra lateral: cada grupo es un módulo, como una lista agrupada */
 :where([data-look="industrial"]) .side-group { margin-top: 22px; }
 :where([data-look="industrial"]) .side-group > .label { color: var(--muted); font-size: 10px; padding: 0 2px; margin-bottom: 8px; }
