@@ -622,10 +622,10 @@ kbd {
 .app.wide .body { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; }
 .app.wide .title { flex: 1; width: auto; }
 .app.wide .meta { margin-top: 0; flex: 0 1 auto; max-width: 55%; justify-content: flex-end; }
-.app.wide .edit { flex: 1 1 100%; }
+.app.wide .edit-line { flex: 1 1 100%; }
 /* Editando: el texto ocupa toda la fila y las acciones van debajo, con Borrar al otro extremo. */
 .app.wide .edit-actions { margin-top: -4px; flex: 1 1 100%; }
-.app.wide .edit-actions .danger { margin-left: auto; }
+.edit-actions .danger { margin-left: auto; }
 .app.wide .title-line { flex: 1 1 180px; }
 /* Solo vertical: el padding-left lo usa .row.sel para compensar la barra de selección. */
 .app.wide .row { padding-top: 12px; padding-bottom: 12px; }
@@ -1025,8 +1025,12 @@ section.droppable.drop-on .section { color: var(--fg); }
 .help-fold { margin-top: 18px; border-top: 1px solid var(--line); }
 .help-fold .ent-head { font-size: 14px; color: var(--muted); }
 
-/* Asa «Mover» del editor: se arrastra (no se pulsa). */
-.edit-actions .move { cursor: grab; touch-action: none; }
+/* Editor: texto y, a la derecha, el asa para arrastrar la tarea a otro día (se arrastra, no se pulsa). */
+.edit-line { display: flex; align-items: center; gap: 6px; }
+.edit-line .edit { flex: 1; min-width: 0; }
+.edit-line .move { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin-right: -8px; color: var(--faint); cursor: grab; touch-action: none; }
+@media (hover: hover) { .edit-line .move:hover { color: var(--fg); } }
+.edit-actions .link { color: var(--muted); }
 .edit-actions { flex-wrap: wrap; column-gap: 18px; row-gap: 0; }
 .edit-actions .grip { flex: none; }
 

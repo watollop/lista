@@ -333,9 +333,10 @@ export function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
 }
 
 function AddSubtaskButton({ onClick, inline = false }: { onClick: () => void; inline?: boolean }) {
+  // En el editor es texto, como el resto de acciones; en la subtarea, el «+» de la izquierda.
+  if (inline) return <button class="link" aria-label="Añadir subtarea" onMouseDown={(e) => e.preventDefault()} onClick={onClick}>+ Subtarea</button>;
   return (
-    <button class={`add-subtask-action ${inline ? '' : 'add-subtask-icon'}`} aria-label="Añadir subtarea" title="Añadir subtarea"
-      onMouseDown={(e) => { if (inline) e.preventDefault(); }} onClick={onClick}>
+    <button class="add-subtask-action add-subtask-icon" aria-label="Añadir subtarea" title="Añadir subtarea" onClick={onClick}>
       <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none"
         stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <path d="M10 4v12M4 10h12" />
@@ -360,6 +361,7 @@ function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragSta
   });
   const [v, setV] = useState(initial);
   const [error, setError] = useState('');
+  const [cal, setCal] = useState(false); // elegir Apple / Google
   const ref = useRef<HTMLInputElement>(null);
   const done = useRef(false);
   useEffect(() => { ref.current?.focus(); }, []);
@@ -381,45 +383,49 @@ function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragSta
     done.current = true;
     onTomorrow?.(line?.title ? line : null);
   };
+  const keep = (e: Event) => e.preventDefault(); // que el clic no quite el foco (blur = guardar)
+  const both = task.due && prefersApple() && !touch(); // en Mac se elige Apple o Google; si no, va directo
   return (
     <>
-      <input
-        ref={ref}
-        class="edit"
-        value={v}
-        aria-label="Editar tarea"
-        autocomplete="off"
-        enterkeyhint="done"
-        onInput={(e) => { setV(e.currentTarget.value); setError(''); }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); save(); }
-          if (e.key === 'Escape') { e.preventDefault(); done.current = true; onCancel(); }
-        }}
-        onBlur={save}
-      />
-      <div class="edit-actions">
-        <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={save}>Guardar</button>
-        {onTomorrow && <button class="link" title="Pasa la tarea a mañana" onMouseDown={(e) => e.preventDefault()} onClick={tomorrow}>Mañana</button>}
-        {onAddSubtask && (
-          <AddSubtaskButton inline onClick={() => { save(); onAddSubtask(); }} />
-        )}
+      <div class="edit-line">
+        <input
+          ref={ref}
+          class="edit"
+          value={v}
+          aria-label="Editar tarea"
+          autocomplete="off"
+          enterkeyhint="done"
+          onInput={(e) => { setV(e.currentTarget.value); setError(''); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); save(); }
+            if (e.key === 'Escape') { e.preventDefault(); done.current = true; onCancel(); }
+          }}
+          onBlur={save}
+        />
         {onDragStart && (
-          <button class="link move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
-            onMouseDown={(e) => e.preventDefault()} onTouchStart={(e) => e.preventDefault()} onPointerDown={onDragStart}>
+          <button class="move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
+            onMouseDown={keep} onTouchStart={keep} onPointerDown={onDragStart}>
             <svg class="grip" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
               <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" /><circle cx="5.5" cy="8" r="1.4" />
               <circle cx="10.5" cy="8" r="1.4" /><circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
             </svg>
-            Mover
           </button>
         )}
-        {task.due && (prefersApple() ? (
+      </div>
+      {/* Se guarda con Enter o al salir: no hace falta botón «Guardar». */}
+      <div class="edit-actions">
+        {onTomorrow && <button class="link" title="Pasa la tarea a mañana" onMouseDown={keep} onClick={tomorrow}>Mañana</button>}
+        {onAddSubtask && <AddSubtaskButton inline onClick={() => { save(); onAddSubtask(); }} />}
+        {task.due && (cal && both ? (
           <>
-            <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToAppleCalendar(task)}><CalendarIcon />Calendario</button>
-            {!touch() && <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToGoogleCalendar(task)}>Google</button>}
+            <button class="link" onMouseDown={keep} onClick={() => { addToAppleCalendar(task); setCal(false); }}>Apple</button>
+            <button class="link" onMouseDown={keep} onClick={() => { addToGoogleCalendar(task); setCal(false); }}>Google</button>
           </>
         ) : (
-          <button class="link" onMouseDown={(e) => e.preventDefault()} onClick={() => addToGoogleCalendar(task)}><CalendarIcon />Google Calendar</button>
+          <button class="link" title="Añadir a tu calendario" onMouseDown={keep}
+            onClick={() => (both ? setCal(true) : prefersApple() ? addToAppleCalendar(task) : addToGoogleCalendar(task))}>
+            Calendario
+          </button>
         ))}
         <button class="link danger" onMouseDown={(e) => { e.preventDefault(); done.current = true; }} onClick={onDelete}>
           Borrar

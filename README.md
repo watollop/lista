@@ -72,7 +72,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 - **Encuentra lo importante.** Toca un tema, una persona o una fecha para filtrar.
 - **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas. Las vencidas se ven siempre arriba, filtres por la fecha que filtres.
 - **Tu semana de un vistazo.** Arriba de los filtros (en el móvil, al tocar **Buscar**) verás cuántas tareas tienes hoy, las vencidas y cuántas tareas tienes cada uno de los próximos 7 días. Toca un día para ver solo sus tareas (y las vencidas); tócalo otra vez (o vuelve a abrir Lista) para verlas todas.
-- **Cambia de planes.** Selecciona una tarea y arrastra **Mover** para cambiarla de día; usa el lápiz para editarla.
+- **Cambia de planes.** Toca una tarea para editarla: se guarda sola al pulsar Enter o al salir. Arrastra el asa ⠿ de la derecha para cambiarla de día; debajo tienes **Mañana**, **+ Subtarea**, **Calendario** y **Borrar**.
 - **Para mañana.** Desde el editor de una tarea, pulsa **Mañana** (en ordenador, también **m** con la tarea seleccionada) para pasarla a mañana; **Deshacer** la devuelve a su fecha anterior.
 - **Abre los enlaces.** Una dirección web en una tarea se muestra corta; tócala para abrirla.
 

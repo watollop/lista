@@ -458,8 +458,7 @@ describe('lista de subtareas', () => {
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
     type(input('Editar tarea'), 'Proyecto editado');
     const action = root.querySelector('.edit-actions [aria-label="Añadir subtarea"]');
-    expect(action?.textContent?.trim()).toBe('');
-    expect(action?.querySelector('svg')).not.toBeNull();
+    expect(action?.textContent?.trim()).toBe('+ Subtarea');
     const editorMouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
     act(() => { action!.dispatchEvent(editorMouseDown); });
     expect(editorMouseDown.defaultPrevented).toBe(true);
