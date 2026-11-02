@@ -198,13 +198,11 @@
 :where([data-look="industrial"]) .week-days button { color: rgb(241 240 234 / .35); font-family: var(--mono); }
 :where([data-look="industrial"]) .week-n { font-family: var(--dots); font-weight: 700; font-size: 15px; }
 :where([data-look="industrial"]) .week-days .busy .week-n, :where([data-look="industrial"]) .week-days .busy .week-c { color: rgb(241 240 234 / .85); }
-:where([data-look="industrial"]) .week-dots { color: rgb(241 240 234 / .75); }
 :where([data-look="industrial"]) .week-days .now { background: rgb(255 255 255 / .08); }
 :where([data-look="industrial"]) .week-days .now .week-n { color: #fff; }
-:where([data-look="industrial"]) .week-days .now .week-d, :where([data-look="industrial"]) .week-days .now .week-c, :where([data-look="industrial"]) .week-days .now .week-dots { color: var(--accent); }
+:where([data-look="industrial"]) .week-days .now .week-d, :where([data-look="industrial"]) .week-days .now .week-c { color: var(--accent); }
 @media (hover: hover) { :where([data-look="industrial"]) .week-days button:not(.on):hover { background: rgb(255 255 255 / .12); } }
-:where([data-look="industrial"]) .week-days .on, :where([data-look="industrial"]) .week-days .on :is(.week-n, .week-c, .week-d, .week-dots) { background: var(--accent); color: #fff; }
-:where([data-look="industrial"]) .week-days .on .week-dots { background: none; }
+:where([data-look="industrial"]) .week-days .on, :where([data-look="industrial"]) .week-days .on :is(.week-n, .week-c, .week-d) { background: var(--accent); color: #fff; }
 @media (pointer: coarse) { :where([data-look="industrial"]) .side-search { font-size: 16px; } } /* iPad: sin zoom al enfocar */
 
 /* Bienvenida */

@@ -35,6 +35,8 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  // La página pregunta qué build sirve este SW: si ya está ejecutando esa misma, no hace falta avisar de nada.
+  if (event.data === 'PRECACHE' && event.ports[0]) event.ports[0].postMessage(PRECACHE);
 });
 
 self.addEventListener('fetch', (event) => {
