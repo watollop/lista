@@ -1,0 +1,35 @@
+README.md
+  s_e71eef5e88d64e::t_7bf27ae1b4a625 74
+src/filters/filters.test.ts
+  s_e71eef5e88d64e::t_30db7ff1355582 13,302-314
+src/filters/index.ts
+  s_e71eef5e88d64e::t_22554077a49d35 143-154
+src/ui/App.tsx
+  s_e71eef5e88d64e::t_60e2fcccc58bb6 3,22,152-153,345,356
+src/ui/FilterBar.tsx
+  s_e71eef5e88d64e::t_02b103f9979abe 15,107
+src/ui/Sidebar.tsx
+  s_e71eef5e88d64e::t_074c4813506586 20,49
+src/ui/look.css
+  s_e71eef5e88d64e::t_349dfb1d5d030e 32,47,53,72,76,81-82,84-89,92-94,96,100-101,109-110,113-116,119,127,129,159-165,168-188
+src/ui/styles.css
+  s_e71eef5e88d64e::t_053dcff78fdddf 1097-1112
+src/ui/Week.tsx
+  s_e71eef5e88d64e::t_8a27e48ac69302 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fa122621f1900bed4bb05e7982e9a1a0c0d5028d",
+  "prompts": {},
+  "sessions": {
+    "s_e71eef5e88d64e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb7c439a-50e6-49e1-97d7-12b3b69c19dc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
