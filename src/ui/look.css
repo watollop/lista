@@ -177,21 +177,24 @@
 :where([data-look="industrial"]) .side { --side-pad: 26px; --side-top: calc(70px + var(--sat)); }
 /* Barra lateral: cada grupo es un módulo, como una lista agrupada */
 :where([data-look="industrial"]) .side-group { margin-top: 22px; }
-:where([data-look="industrial"]) .side-group > .label { color: var(--muted); font-size: 10px; padding: 0 2px; margin-bottom: 8px; }
-:where([data-look="industrial"]) .side-group > .side-list { background: var(--panel); border-radius: var(--r); padding: 4px; margin: 0 -10px; }
-:where([data-look="industrial"]) .side-group .side-item { width: 100%; margin: 0; }
-:where([data-look="industrial"]) .side-item { border-radius: 10px; font-size: 14px; color: var(--fg); }
+:where([data-look="industrial"]) .side-group > .label { color: var(--muted); font-size: 10px; padding: 0 var(--side-in); margin-bottom: 8px; }
+/* Todo en la misma columna (calendario, buscador, «Todas», paneles) y el texto a --side-in del borde en todos. */
+:where([data-look="industrial"]) .side { --side-in: 16px; }
+:where([data-look="industrial"]) .side-group > .side-list { background: var(--panel); border-radius: var(--r); padding: 4px; margin: 0; }
+:where([data-look="industrial"]) .side-item { width: 100%; margin: 0; padding-left: var(--side-in); padding-right: var(--side-in); border-radius: 12px; font-size: 14px; color: var(--fg); }
+:where([data-look="industrial"]) .side-group .side-item { padding-left: calc(var(--side-in) - 4px); padding-right: calc(var(--side-in) - 4px); border-radius: calc(var(--r) - 4px); }
 :where([data-look="industrial"]) .side-item.on { background: var(--fg); color: var(--bg); }
 :where([data-look="industrial"]) .side-item.on .side-count { color: var(--bg); }
 :where([data-look="industrial"]) .side-item.warn, :where([data-look="industrial"]) .side-item.warn .side-count { color: var(--accent); }
 :where([data-look="industrial"]) .side-item.on.warn, :where([data-look="industrial"]) .side-item.on.warn .side-count { color: var(--bg); }
-:where([data-look="industrial"]) .side-search { font-family: var(--mono); font-size: 13px; background: var(--surface); border-bottom: 0; border-radius: 12px; padding: 10px 12px; }
+:where([data-look="industrial"]) .side-search { font-family: var(--mono); font-size: 13px; background: var(--surface); border-bottom: 0; border-radius: 12px; padding: 10px var(--side-in); }
 
 /* Pantalla de Hoy: la misma pantalla oscura con trama de puntos que la captura */
 :where([data-look="industrial"]) .week {
   background: var(--screen) radial-gradient(circle, rgb(255 255 255 / .06) .8px, transparent 1px) 0 0 / 6px 6px;
-  color: var(--screen-fg); border-radius: 20px; padding: 18px 16px 12px;
-  box-shadow: 0 14px 30px -16px rgb(0 0 0 / .5), inset 0 0 0 1px rgb(255 255 255 / .06);
+  color: var(--screen-fg); border-radius: var(--r); padding: 18px 16px 12px;
+  /* Sin sombra exterior: la barra lateral recorta lo que sale de su caja y se veía un rectángulo claro. */
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06);
 }
 :where([data-look="industrial"]) .week-head { color: rgb(241 240 234 / .55); }
 :where([data-look="industrial"]) .week-big { font-family: var(--dots); font-weight: 700; font-size: 64px; line-height: .85; }
