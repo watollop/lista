@@ -17,6 +17,7 @@ interface Props {
   allPeople: Entity[];
   pending: Map<string, number>; // '#clave' | '@clave' | '!prioridad' -> pendientes
   counts: Record<DateFilter | 'open', number>;
+  week: preact.ComponentChildren; // pantalla de Hoy con los próximos 7 días
   searchRef: { current: HTMLInputElement | null };
   onSave: (name: string) => void;
   onDeleteSaved: (id: ID) => void;
@@ -45,6 +46,7 @@ export function Sidebar(p: Props) {
 
   return (
     <aside class="side" aria-label="Filtros">
+      {p.week}
       <input ref={p.searchRef} class="side-search" type="search" placeholder="Buscar" value={f.text} aria-label="Buscar"
         onInput={(e) => set({ text: e.currentTarget.value })}
         onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }} />

@@ -12,6 +12,7 @@ interface Props {
   names: Map<string, Entity>;
   pending: Map<string, number>; // '#clave' | '@clave' -> pendientes
   counts: Record<DateFilter | 'open', number>;
+  week: preact.ComponentChildren; // pantalla de Hoy: en móvil, al abrir Buscar (en escritorio, arriba de la barra lateral)
   open: boolean; // fila de búsqueda visible
   setOpen: (v: boolean) => void;
   searchRef: { current: HTMLInputElement | null };
@@ -103,6 +104,7 @@ export function FilterBar(p: Props) {
 
   return (
     <>
+      {p.open && p.week}
       {p.open && (
         <input ref={p.searchRef} class="search" type="search" placeholder="Buscar" value={f.text} aria-label="Buscar"
           onInput={(e) => set({ text: e.currentTarget.value })}

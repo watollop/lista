@@ -140,3 +140,15 @@ export function counts(
     open: open.length,
   };
 }
+
+/** Pendientes que vencen cada uno de los próximos `days` días, empezando hoy (mini calendario). */
+export function dayLoad(tasks: Task[], today: ISODate, days = 7): Array<{ date: ISODate; count: number }> {
+  const out = Array.from({ length: days }, (_, i) => ({ date: addDays(today, i), count: 0 }));
+  const at = new Map(out.map((d, i) => [d.date, i]));
+  for (const t of tasks) {
+    if (t.deleted || t.done !== 0 || t.due === null) continue;
+    const i = at.get(t.due);
+    if (i !== undefined) out[i].count++;
+  }
+  return out;
+}

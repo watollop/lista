@@ -10,6 +10,7 @@ import {
   applyFilter,
   groupTasks,
   counts,
+  dayLoad,
 } from './index';
 
 const TODAY = '2026-10-27';
@@ -296,5 +297,18 @@ describe('counts', () => {
 describe('isEmptyFilter', () => {
   it('is false when status is not open', () => {
     expect(isEmptyFilter(f({ status: 'done' }))).toBe(false);
+  });
+});
+
+describe('dayLoad', () => {
+  it('cuenta las pendientes de cada uno de los 7 días desde hoy', () => {
+    const load = dayLoad([
+      mk({ due: TODAY }), mk({ due: TODAY }), mk({ due: '2026-10-30' }),
+      mk({ due: '2026-10-26' }), // vencida: fuera
+      mk({ due: '2026-11-03' }), // octavo día: fuera
+      mk({ due: TODAY, done: 1 }), mk({ due: TODAY, deleted: 1 } as Partial<Task>), mk(),
+    ], TODAY);
+    expect(load.map((d) => d.date)).toEqual(['2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02']);
+    expect(load.map((d) => d.count)).toEqual([2, 0, 0, 1, 0, 0, 0]);
   });
 });
