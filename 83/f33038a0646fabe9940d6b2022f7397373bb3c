@@ -1,0 +1,65 @@
+README.md
+  s_e71eef5e88d64e::t_c2a2ddc581a70f 76,93
+docs/plan-cifrado.md
+  s_e71eef5e88d64e::t_7a2c4717ad9696 28
+src/lib/reschedule.test.ts
+  s_e71eef5e88d64e::t_0261efcb411d8e 15-40
+src/main.tsx
+  s_e71eef5e88d64e::t_a36fab75f7578f 9
+src/parser/dates.ts
+  s_e71eef5e88d64e::t_13f91a258ebf69 27,43-71,92-112,176-177,199-200
+src/parser/parser.test.ts
+  s_e71eef5e88d64e::t_f4969a2245e34a 152-204
+src/qa/edge.test.ts
+  s_e71eef5e88d64e::t_f8ff57ae74e257 105
+src/ui/App.tsx
+  s_e71eef5e88d64e::t_054642c06b705f 17,19-20,55-57,226-248,336,397,409,444,449-450,453
+src/ui/Capture.tsx
+  s_e71eef5e88d64e::t_3bb85646f3cb3a 6-7,194
+src/ui/Dictation.tsx
+  s_e71eef5e88d64e::t_3e7dd5ced98d49 7
+src/ui/Onboarding.tsx
+  s_e71eef5e88d64e::t_d620498921b63d 44,61
+src/ui/Settings.tsx
+  s_e71eef5e88d64e::t_0ecb3dab41cb8f 35-64
+src/ui/TaskList.tsx
+  s_e71eef5e88d64e::t_d3228f98d3d906 27,159,198,349,351,376-383,402
+src/ui/intro.ts
+  s_e71eef5e88d64e::t_b8ff36b7d4d98c 1-2
+src/ui/lazy.ts
+  s_e71eef5e88d64e::t_ce994637a345eb 1-50
+src/ui/lazyViews.ts
+  s_e71eef5e88d64e::t_372ab14b652357 1-15
+src/ui/look.css
+  s_e71eef5e88d64e::t_9d0c94d020c262 105,121-123,150-163
+src/ui/recognition.ts
+  s_e71eef5e88d64e::t_cd2115be0049cc 1-14
+src/ui/shortcuts.test.ts
+  s_e71eef5e88d64e::t_d87dc8d8efb3ba 9,12-13,23,73,81,89,105,111-127
+src/ui/shortcuts.ts
+  s_e71eef5e88d64e::t_4c9d5677f03336 7
+src/ui/styles.css
+  s_e71eef5e88d64e::t_55587bcc7b56c5 280-283,450-456,471-477,1109-1110,1116,1118-1120
+src/ui/subtasks.test.ts
+  s_e71eef5e88d64e::t_4fa004323c765c 12,82-87,519,551,570,585,613,626,654
+src/ui/titleLinks.test.ts
+  s_e71eef5e88d64e::t_465c0b15063fa1 70
+supabase/schema.sql
+  s_e71eef5e88d64e::t_5061da9cf980b9 119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "83f33038a0646fabe9940d6b2022f7397373bb3c",
+  "prompts": {},
+  "sessions": {
+    "s_e71eef5e88d64e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb7c439a-50e6-49e1-97d7-12b3b69c19dc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
