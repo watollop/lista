@@ -1,6 +1,8 @@
 import type { Priority } from '../types';
+import { lang } from '../i18n';
 
-export const PRIORITY_LABEL: Record<Priority, string> = { 1: 'Alta', 2: 'Media', 3: 'Baja' };
+/** Nombre de la prioridad en el idioma activo (función: se evalúa después de initLang). */
+export const priorityLabel = (p: Priority) => (lang() === 'en' ? { 1: 'High', 2: 'Medium', 3: 'Low' } : { 1: 'Alta', 2: 'Media', 3: 'Baja' })[p];
 
 /** Icono de prioridad: ⇈ alta, ↑ media, ↓ baja. Trazo fino en currentColor. */
 export function PriorityIcon({ p }: { p: Priority }) {
@@ -16,7 +18,7 @@ export function PriorityIcon({ p }: { p: Priority }) {
 
 /** Icono y nombre, para menús y filtros. */
 export function PriorityName({ p }: { p: Priority }) {
-  return <><PriorityIcon p={p} /> {PRIORITY_LABEL[p]}</>;
+  return <><PriorityIcon p={p} /> {priorityLabel(p)}</>;
 }
 
 /** Reloj con flecha de vuelta: tarea recurrente. */

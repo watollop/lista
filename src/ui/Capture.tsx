@@ -5,6 +5,7 @@ import { validateCapture } from '../lib/capture';
 import { TaskChips } from './Chips';
 import { canDictate } from './recognition';
 import { LazyDictation } from './lazyViews';
+import { tr } from '../i18n';
 
 interface Props {
   topics: Entity[];
@@ -122,13 +123,13 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     if (!text.includes('\n')) return;
     e.preventDefault();
     if (busy) {
-      setError('Guarda primero la tarea con sus subtareas antes de pegar varias líneas.');
+      setError(tr('Guarda primero la tarea con sus subtareas antes de pegar varias líneas.', 'Save the task and its subtasks before pasting several lines.'));
       return;
     }
     const pasted = parseBlock(text);
     if (pasted.length) {
       try { await onAdd(validateCapture(pasted)); }
-      catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron añadir las tareas.'); }
+      catch (e) { setError(e instanceof Error ? e.message : tr('No se pudieron añadir las tareas.', 'Couldn’t add the tasks.')); }
     }
   };
 
@@ -141,7 +142,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
               <li class={i === sel ? 'on' : ''} key={s.key}>
                 <button onMouseDown={(e) => { e.preventDefault(); accept(s); }}>
                   {active!.type === 'topic' ? '#' : '@'}{s.name}
-                  <small>{active!.type === 'topic' ? 'tema' : 'persona'}</small>
+                  <small>{active!.type === 'topic' ? tr('tema', 'topic') : tr('persona', 'person')}</small>
                 </button>
               </li>
             ))}
@@ -152,8 +153,8 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           ref={inputRef}
           value={value}
           disabled={busy}
-          placeholder="Viaje <Billetes mañana !alta #ocio @ana"
-          aria-label="Nueva tarea"
+          placeholder={tr('Viaje <Billetes mañana !alta #ocio @ana', 'Trip <Tickets tomorrow !high #fun @ana')}
+          aria-label={tr('Nueva tarea', 'New task')}
           aria-describedby="capture-guide"
           autocomplete="off"
           enterkeyhint="enter" // la tecla azul dice "intro": no se confunde con el ✓ de iOS, que solo cierra el teclado
@@ -166,7 +167,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           onCompositionEnd={() => (composing.current = false)}
         />
         {mic && (
-          <button class="mic" disabled={busy} aria-label="Dictar tareas" title="Dictar tareas" onClick={() => setDictating(true)}>
+          <button class="mic" disabled={busy} aria-label={tr('Dictar tareas', 'Dictate tasks')} title={tr('Dictar tareas', 'Dictate tasks')} onClick={() => setDictating(true)}>
             <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
               stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5" /><path d="M3 7.5a5 5 0 0 0 10 0M8 12.5v2" />
@@ -174,7 +175,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           </button>
         )}
         </div>
-        <div id="capture-guide" class="capture-guide">#tema @persona !prioridad fecha &lt;subtarea</div>
+        <div id="capture-guide" class="capture-guide">{tr('#tema @persona !prioridad fecha <subtarea', '#topic @person !priority date <subtask')}</div>
         {error && <p class="err" role="alert">{error}</p>}
         <div class="preview">
           {parsed && parsed.tokens.length > 0 && (

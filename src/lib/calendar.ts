@@ -1,5 +1,6 @@
 import type { Recurrence, Task } from '../types';
 import { addDays } from './date';
+import { tr } from '../i18n';
 
 /**
  * Evento de calendario de día completo para una tarea con fecha (copia puntual: no se sincroniza).
@@ -20,7 +21,7 @@ export function rrule(rec: Recurrence, due: string): string {
 }
 
 /** Texto del evento: el título tal cual (con sus #temas y @personas). */
-const summary = (t: Pick<Task, 'title'>) => t.title.trim() || 'Tarea';
+const summary = (t: Pick<Task, 'title'>) => t.title.trim() || tr('Tarea', 'Task');
 
 /** Escapa texto para iCalendar. */
 const esc = (s: string) => s.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\r?\n/g, '\\n');

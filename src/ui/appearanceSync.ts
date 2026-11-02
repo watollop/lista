@@ -1,6 +1,7 @@
 import type { Repo } from '../types';
 import { getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
 import { isSecondaryColor } from '../lib/preferences';
+import { tr } from '../i18n';
 
 /** Apariencia que viaja con la cuenta (ver Repo.setSetting). */
 export interface Appearance { theme: Theme; look: Look; subtaskColor: string }
@@ -46,7 +47,7 @@ export function startAppearanceSync(repo: Repo, onError: (error: unknown) => voi
       return;
     }
     seeded = true;
-    if (!valid(s.value)) throw new Error('La apariencia sincronizada no es válida.');
+    if (!valid(s.value)) throw new Error(tr('La apariencia sincronizada no es válida.', 'The synced appearance isn’t valid.'));
     if (same(s.value, current())) return;
     setTheme(s.value.theme);
     setLook(s.value.look);

@@ -19,6 +19,7 @@ import { nextOccurrence } from '../lib/recurrence';
 import { addDays, diffDays, todayISO } from '../lib/date';
 import { retagTitle } from '../parser/retag';
 import { ListaDB } from './db';
+import { tr } from '../i18n';
 
 /** Reloj monotónico: dos escrituras en el mismo ms reciben valores estrictamente crecientes. */
 let lastStamp = 0;
@@ -256,9 +257,9 @@ export function createRepo(dbName = 'lista'): Repo {
         let defaultParent: ID | null = null;
         if (defaultParentId) {
           const p = rows.find((t) => t.id === defaultParentId && t.deleted === 0);
-          if (!p) throw new Error('La tarea principal ya no existe.');
+          if (!p) throw new Error(tr('La tarea principal ya no existe.', 'The parent task no longer exists.'));
           defaultParent = p.parentId ?? p.id;
-          if (!rows.some((t) => t.id === defaultParent && !t.deleted)) throw new Error('La tarea principal ya no existe.');
+          if (!rows.some((t) => t.id === defaultParent && !t.deleted)) throw new Error(tr('La tarea principal ya no existe.', 'The parent task no longer exists.'));
         }
         const out: Task[] = [];
         let lastTop: ID | null = null;
@@ -299,9 +300,9 @@ export function createRepo(dbName = 'lista'): Repo {
       const updated = await db.transaction('rw', allTables, async () => {
         const now = stamp();
         const task = await db.tasks.get(id);
-        if (!task || task.deleted === 1) throw new Error('Tarea no encontrada');
+        if (!task || task.deleted === 1) throw new Error(tr('Tarea no encontrada', 'Task not found'));
         const fields = fieldsFromLine(line);
-        if (!fields.title) throw new Error('El título no puede estar vacío');
+        if (!fields.title) throw new Error(tr('El título no puede estar vacío', 'The title can’t be empty'));
         const topics = await ensureEntities(db.topics, line.topics, now);
         const people = await ensureEntities(db.people, line.people, now);
         const next: Task = { ...task, ...fields, topics, people, updatedAt: now, dirty: 1 };
@@ -316,7 +317,7 @@ export function createRepo(dbName = 'lista'): Repo {
       const updated = await db.transaction('rw', db.tasks, async () => {
         const now = stamp();
         const task = await db.tasks.get(id);
-        if (!task) throw new Error('Tarea no encontrada');
+        if (!task) throw new Error(tr('Tarea no encontrada', 'Task not found'));
         const next: Task = { ...task, ...patch, id: task.id, updatedAt: now, dirty: 1 };
         await db.tasks.put(next);
         return next;
@@ -329,7 +330,7 @@ export function createRepo(dbName = 'lista'): Repo {
       const result = await db.transaction('rw', db.tasks, async () => {
         const now = stamp();
         const task = await db.tasks.get(id);
-        if (!task || task.deleted === 1) throw new Error('Tarea no encontrada');
+        if (!task || task.deleted === 1) throw new Error(tr('Tarea no encontrada', 'Task not found'));
         const children = await childrenOf(id);
         const done = task.done ? 0 : 1;
         const changes: { before: Task; after: Task }[] = [];
@@ -350,7 +351,7 @@ export function createRepo(dbName = 'lista'): Repo {
               const current = await db.tasks.get(before.id);
               if (!current || current.deleted || current.done !== after.done ||
                 current.doneAt !== after.doneAt || current.nextId !== after.nextId) {
-                throw new Error('La tarea ha cambiado; no se puede deshacer esta acción.');
+                throw new Error(tr('La tarea ha cambiado; no se puede deshacer esta acción.', 'The task has changed; this can’t be undone.'));
               }
               await changeDone(current, before.done, now, false);
             }
@@ -399,7 +400,7 @@ export function createRepo(dbName = 'lista'): Repo {
       await db.transaction('rw', db.tasks, async () => {
         const now = stamp();
         const task = await db.tasks.get(id);
-        if (!task || task.deleted === 1) throw new Error('Tarea no encontrada');
+        if (!task || task.deleted === 1) throw new Error(tr('Tarea no encontrada', 'Task not found'));
         const sibs = live(await db.tasks.toArray())
           .filter((t) => t.parentId === task.parentId && t.id !== id)
           .sort((a, b) => a.order - b.order);
@@ -452,7 +453,7 @@ export function createRepo(dbName = 'lista'): Repo {
 
     async renameEntity(kind, key, newName) {
       const name = newName.trim().replace(/^[#@]/, '').trim();
-      if (!name) throw new Error('Nombre vacío');
+      if (!name) throw new Error(tr('Nombre vacío', 'Empty name'));
       const newKey = normalizeKey(name);
       const result = await db.transaction('rw', allTables, async () => {
         const now = stamp();

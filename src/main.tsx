@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import { initLang } from './i18n';
 import './ui/styles.css';
 import './ui/look.css';
 import { createRepo } from './data/repo';
@@ -11,6 +12,7 @@ import { whenIdle } from './ui/lazy';
 /** Tombstones sincronizados que se conservan en local antes de purgarlos (el servidor los guarda siempre). */
 const TOMBSTONE_RETENTION_MS = 60 * 24 * 60 * 60 * 1000;
 
+initLang(); // antes de pintar nada: idioma del navegador o el elegido en Ajustes
 const repo = createRepo();
 const sync = createSync(repo, syncConfigFromEnv());
 

@@ -6,6 +6,7 @@ import { todayISO } from '../lib/date';
 import { TaskChips } from './Chips';
 import { PriorityIcon, RepeatIcon } from './Priority';
 import { SHORTCUTS } from './shortcuts';
+import { isEn, tr } from '../i18n';
 
 
 interface Props {
@@ -16,19 +17,23 @@ interface Props {
 
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** En táctil (móvil) se dice "este móvil"; con ratón (ordenador) "este ordenador". */
-const device = () => (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 'móvil' : 'ordenador');
+const isPhone = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+const device = () => (isPhone() ? tr('móvil', 'phone') : tr('ordenador', 'computer'));
 
-const SLIDES = [
+// Funciones, no constantes: los textos dependen del idioma, que se fija al arrancar (después de importar los módulos).
+const SLIDES = (): Slide[] => [
   {
-    title: 'Una lista. Nada más.',
-    text: () => 'Sin IA, sin anuncios y sin avisos que te persigan. Escribes lo que tienes pendiente y te olvidas. Sencilla, rápida y tuya.',
+    title: tr('Una lista. Nada más.', 'A list. Nothing more.'),
+    text: () => tr('Sin IA, sin anuncios y sin avisos que te persigan. Escribes lo que tienes pendiente y te olvidas. Sencilla, rápida y tuya.',
+      'No AI, no ads and no nagging notifications. Write down what you need to do and forget about it. Simple, fast and yours.'),
     Demo: CoverDemo,
   },
-  { title: 'Escribe en una línea', text: () => 'Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', Demo: TypingDemo },
-  { title: 'Completa y filtra', text: () => 'Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas. Las vencidas siempre están arriba.', Demo: SwipeDemo },
+  { title: tr('Escribe en una línea', 'Write it in one line'), text: () => tr('Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', 'Date, topic, priority and repeat are picked up as you type. Repeating tasks come back on their own.'), Demo: TypingDemo },
+  { title: tr('Completa y filtra', 'Complete and filter'), text: () => tr('Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas. Las vencidas siempre están arriba.', 'Swipe right to complete. Tap a person or a topic to see only their tasks. Overdue tasks are always at the top.'), Demo: SwipeDemo },
   {
-    title: 'Tus datos, contigo',
-    text: () => `Todo se guarda solo en este ${device()} y funciona sin conexión, sin cuenta. Si quieres tenerlo también en otros dispositivos, entra con Google para sincronizar.`,
+    title: tr('Tus datos, contigo', 'Your data stays with you'),
+    text: () => tr(`Todo se guarda solo en este ${device()} y funciona sin conexión, sin cuenta. Si quieres tenerlo también en otros dispositivos, entra con Google para sincronizar.`,
+      `Everything is stored only on this ${device()} and works offline, with no account. To have it on your other devices too, sign in with Google to sync.`),
     Demo: DevicesDemo,
     google: true,
   },
@@ -38,10 +43,10 @@ const SLIDES = [
 const hasKeyboard = () => typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 /** Referencia de todo lo que se puede escribir (al final de la bienvenida). */
-const EXTRA = [
-  { title: 'Fechas como las dirías', text: () => 'Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', Demo: DatesDemo },
-  { title: 'Prioridad y repetición', text: () => 'Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla; «cada 2 martes» empieza el próximo martes y sigue cada dos semanas.', Demo: PrioRepeatDemo },
-  { title: 'Atajos de teclado', text: () => 'Sin soltar el teclado: escribe, muévete por la lista, completa, pasa a mañana y filtra.', Demo: KeysDemo, keyboard: true },
+const EXTRA = (): Slide[] => [
+  { title: tr('Fechas como las dirías', 'Dates the way you’d say them'), text: () => tr('Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', 'Write the day in words or numbers. Periods are due at their end: a week, on Friday.'), Demo: DatesDemo },
+  { title: tr('Prioridad y repetición', 'Priority and repeat'), text: () => tr('Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla; «cada 2 martes» empieza el próximo martes y sigue cada dos semanas.', 'Mark what matters with !high, !medium or !low. With “every” the task comes back when you complete it; “every 2 tuesdays” starts next Tuesday and repeats every two weeks.'), Demo: PrioRepeatDemo },
+  { title: tr('Atajos de teclado', 'Keyboard shortcuts'), text: () => tr('Sin soltar el teclado: escribe, muévete por la lista, completa, pasa a mañana y filtra.', 'Without leaving the keyboard: write, move through the list, complete, move to tomorrow and filter.'), Demo: KeysDemo, keyboard: true },
 ];
 
 type Slide = { title: string; text: () => string; Demo: () => preact.JSX.Element; google?: boolean; keyboard?: boolean };
@@ -61,7 +66,7 @@ const FOCUSABLE = 'button:not([disabled])';
 /** Bienvenida completa: portada, tres pasos y referencia. Se muestra la primera vez y desde Ajustes → Ayuda → Cómo funciona. */
 export function Onboarding({ onClose, signIn, extended }: Props) {
   // Siempre todas: portada, los tres pasos y la referencia (fechas, prioridad y repetición; teclado solo con ratón).
-  const [slides] = useState<Slide[]>(() => [...SLIDES, ...EXTRA.filter((s) => !s.keyboard || hasKeyboard())]);
+  const [slides] = useState<Slide[]>(() => [...SLIDES(), ...EXTRA().filter((s) => !s.keyboard || hasKeyboard())]);
   const [i, setI] = useState(0);
   const last = i === slides.length - 1;
   const { Demo } = slides[i];
@@ -103,7 +108,7 @@ export function Onboarding({ onClose, signIn, extended }: Props) {
   });
 
   return (
-    <div class="intro" role="dialog" aria-modal="true" aria-label="Cómo funciona">
+    <div class="intro" role="dialog" aria-modal="true" aria-label={tr('Cómo funciona', 'How it works')}>
       <div class="intro-card" ref={card}
         onTouchStart={(e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
         onTouchEnd={(e) => {
@@ -117,7 +122,7 @@ export function Onboarding({ onClose, signIn, extended }: Props) {
         }}>
         <div class="bar">
           <span class="label" aria-live="polite">{i + 1} / {slides.length}</span>
-          <button class="link" onClick={onClose}>Saltar</button>
+          <button class="link" onClick={onClose}>{tr('Saltar', 'Skip')}</button>
         </div>
         <div class="intro-stage" key={i}>
           <Fit><Demo /></Fit>
@@ -134,15 +139,15 @@ export function Onboarding({ onClose, signIn, extended }: Props) {
         <div class="intro-foot">
           <span class="intro-dots">
             {slides.map((_, k) => (
-              <button key={k} class={k === i ? 'on' : ''} aria-label={`Ir a la diapositiva ${k + 1}`}
+              <button key={k} class={k === i ? 'on' : ''} aria-label={tr(`Ir a la diapositiva ${k + 1}`, `Go to slide ${k + 1}`)}
                 aria-current={k === i ? 'step' : undefined} onClick={() => setI(k)}>
                 <i />
               </button>
             ))}
           </span>
           <span class="row-btns">
-            {slides[i].google && signIn && <button class="btn btn-google" onClick={() => { onClose(); signIn(); }}><GoogleG />Entrar con Google</button>}
-            <button class="btn solid" onClick={next} ref={primary}>{last ? (extended ? 'Listo' : 'Empezar') : 'Siguiente'}</button>
+            {slides[i].google && signIn && <button class="btn btn-google" onClick={() => { onClose(); signIn(); }}><GoogleG />{tr('Entrar con Google', 'Sign in with Google')}</button>}
+            <button class="btn solid" onClick={next} ref={primary}>{last ? (extended ? tr('Listo', 'Done') : tr('Empezar', 'Get started')) : tr('Siguiente', 'Next')}</button>
           </span>
         </div>
       </div>
@@ -174,10 +179,11 @@ function Fit({ children }: { children: ComponentChildren }) {
   return <div class="demo-fit" ref={ref}>{children}</div>;
 }
 
-const DEMO_LINE = 'Revisar ventas cada lunes #trabajo !alta';
+const demoLine = () => tr('Revisar ventas cada lunes #trabajo !alta', 'Review sales every monday #work !high');
 
 /** La frase se escribe sola y los chips aparecen con el parser real. */
 function TypingDemo() {
+  const DEMO_LINE = demoLine();
   const [n, setN] = useState(() => (reduced() ? DEMO_LINE.length : 0));
   useEffect(() => {
     if (reduced()) return;
@@ -198,7 +204,7 @@ function TypingDemo() {
           people={[]} names={names} today={todayISO()} />
       </div>
       <p class={`demo-repeat ${p.recurrence ? 'on' : ''}`}>
-        <RepeatIcon /> Al completarla, vuelve sola el lunes siguiente
+        <RepeatIcon /> {tr('Al completarla, vuelve sola el lunes siguiente', 'When you complete it, it comes back next Monday')}
       </p>
     </div>
   );
@@ -207,7 +213,14 @@ function TypingDemo() {
 /** Lista por días: una tarea se desliza y queda hecha; al tocar @ana se pliegan las que no son suyas. */
 function SwipeDemo() {
   // [clave, día (cabecera antes de la fila), texto, ¿es de @ana?]
-  const rows: Array<[string, string | null, string, boolean]> = [
+  const rows: Array<[string, string | null, string, boolean]> = isEn() ? [
+    ['a', 'Today', 'Call @ana', true],
+    ['b', null, 'Buy bread #home', false],
+    ['c', 'Tomorrow', 'Send proposal to @ana', true],
+    ['d', null, 'Pay electricity #home', false],
+    ['e', 'This week', 'Prepare meeting #work', false],
+    ['f', null, 'Review notes with @ana', true],
+  ] : [
     ['a', 'Hoy', 'Llamar a @ana', true],
     ['b', null, 'Comprar pan #casa', false],
     ['c', 'Mañana', 'Enviar propuesta a @ana', true],
@@ -254,7 +267,7 @@ function SwipeDemo() {
 /** Primero solo el móvil (local, con candado); después el ordenador sincronizado. */
 function DevicesDemo() {
   const where = device();
-  const desk = where === 'ordenador';
+  const desk = !isPhone();
   const lines = (
     <>
       <span class="demo-line"><i /><b /><em><PriorityIcon p={1} /></em></span>
@@ -289,8 +302,8 @@ function DevicesDemo() {
         </div>
       </div>
       <div class="demo-captions label">
-        <span class="local">Solo en este {where}</span>
-        <span class="synced">Sincronizado · solo tú lo ves</span>
+        <span class="local">{tr(`Solo en este ${where}`, `Only on this ${where}`)}</span>
+        <span class="synced">{tr('Sincronizado · solo tú lo ves', 'Synced · only you can see it')}</span>
       </div>
     </div>
   );
@@ -316,20 +329,26 @@ const chips = (list: string[]) => <span class="ref-chips">{list.map((c) => <code
 function DatesDemo() {
   return (
     <div class="ref">
-      <div class="ref-group"><span class="label">Día</span>{chips(['hoy', 'mañana', 'pasado', 'el viernes', '15 nov', 'en 3 días'])}</div>
-      <div class="ref-group"><span class="label">Periodo</span>{chips(['esta semana', 'este mes', 'este trimestre', 'este año'])}</div>
-      <div class="ref-group"><span class="label">Exacta</span>{chips(['vence:15/11', 'vence:2026-11-15'])}</div>
+      {isEn() ? <>
+        <div class="ref-group"><span class="label">Day</span>{chips(['today', 'tomorrow', 'friday', 'Nov 15', 'in 3 days'])}</div>
+        <div class="ref-group"><span class="label">Period</span>{chips(['this week', 'this month', 'this quarter', 'this year'])}</div>
+        <div class="ref-group"><span class="label">Exact</span>{chips(['due:15/11', 'due:2026-11-15'])}</div>
+      </> : <>
+        <div class="ref-group"><span class="label">Día</span>{chips(['hoy', 'mañana', 'pasado', 'el viernes', '15 nov', 'en 3 días'])}</div>
+        <div class="ref-group"><span class="label">Periodo</span>{chips(['esta semana', 'este mes', 'este trimestre', 'este año'])}</div>
+        <div class="ref-group"><span class="label">Exacta</span>{chips(['vence:15/11', 'vence:2026-11-15'])}</div>
+      </>}
     </div>
   );
 }
 
 /** Prioridades con su icono y repeticiones. */
 function PrioRepeatDemo() {
-  const prio: Array<[string, 1 | 2 | 3]> = [['!alta', 1], ['!media', 2], ['!baja', 3]];
+  const prio: Array<[string, 1 | 2 | 3]> = isEn() ? [['!high', 1], ['!medium', 2], ['!low', 3]] : [['!alta', 1], ['!media', 2], ['!baja', 3]];
   return (
     <div class="ref">
       <div class="ref-group">
-        <span class="label">Prioridad</span>
+        <span class="label">{tr('Prioridad', 'Priority')}</span>
         <span class="ref-chips">
           {prio.map(([w, p]) => (
             <span key={w} class="ref-pair"><code class="chip">{w}</code><span class={`chip ${p === 1 ? 'warn' : ''}`}><PriorityIcon p={p} /></span></span>
@@ -337,9 +356,9 @@ function PrioRepeatDemo() {
         </span>
       </div>
       <div class="ref-group">
-        <span class="label">Repetir</span>
+        <span class="label">{tr('Repetir', 'Repeat')}</span>
         <span class="ref-chips">
-          {['cada día', 'cada lunes', 'cada 2 martes', 'cada mes', 'cada año'].map((c) => <span key={c} class="chip"><RepeatIcon /> {c}</span>)}
+          {(isEn() ? ['every day', 'every monday', 'every 2 tuesdays', 'every month', 'every year'] : ['cada día', 'cada lunes', 'cada 2 martes', 'cada mes', 'cada año']).map((c) => <span key={c} class="chip"><RepeatIcon /> {c}</span>)}
         </span>
       </div>
     </div>
@@ -350,7 +369,7 @@ function PrioRepeatDemo() {
 function KeysDemo() {
   return (
     <dl class="keys ref-keys">
-      {SHORTCUTS.map(([keys, what]) => (
+      {SHORTCUTS().map(([keys, what]) => (
         <div key={what}>
           <dt>{keys.map((k) => <kbd key={k}>{k}</kbd>)}</dt>
           <dd>{what}</dd>

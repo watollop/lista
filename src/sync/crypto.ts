@@ -1,5 +1,6 @@
 // Cifrado de extremo a extremo (ver docs/plan-cifrado.md). Solo Web Crypto, sin dependencias.
 import type { EncRow, RemoteItem, SyncKind } from '../types';
+import { tr } from '../i18n';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -174,7 +175,7 @@ export function parseRecoveryKey(s: string): Uint8Array<ArrayBuffer> {
   let value = 0;
   for (const ch of clean) {
     const idx = B32.indexOf(ch);
-    if (idx < 0) throw new Error('Clave de recuperación con caracteres no válidos');
+    if (idx < 0) throw new Error(tr('Clave de recuperación con caracteres no válidos', 'Recovery key has invalid characters'));
     value = ((value << 5) | idx) & 0xffff;
     bits += 5;
     if (bits >= 8) {
@@ -182,7 +183,7 @@ export function parseRecoveryKey(s: string): Uint8Array<ArrayBuffer> {
       bits -= 8;
     }
   }
-  if (out.length !== 32) throw new Error('Clave de recuperación con longitud incorrecta');
+  if (out.length !== 32) throw new Error(tr('Clave de recuperación con longitud incorrecta', 'Recovery key has the wrong length'));
   return Uint8Array.from(out);
 }
 
@@ -211,6 +212,6 @@ export async function unwrapWithRecovery(
     const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(rec.iv) }, key, fromB64(rec.wrapped));
     return await importRawDk(new Uint8Array(raw));
   } catch {
-    throw new Error('Clave de recuperación incorrecta');
+    throw new Error(tr('Clave de recuperación incorrecta', 'Wrong recovery key'));
   }
 }

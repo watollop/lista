@@ -12,7 +12,7 @@ import appSource from './App.tsx?raw';
 import { parseLine } from '../parser';
 import { addDays, todayISO } from '../lib/date';
 
-const keys = SHORTCUTS.flatMap(([ks]) => ks);
+const keys = SHORTCUTS().flatMap(([ks]) => ks);
 
 describe('lista compartida de atajos', () => {
   it('incluye ? para la hoja de atajos', () => {
@@ -104,7 +104,7 @@ describe('hoja de atajos con ?', () => {
     press(document.body, '?');
     await vi.waitFor(() => expect(sheet()).not.toBeNull());
     const text = sheet()!.textContent ?? '';
-    for (const [, what] of SHORTCUTS) expect(text).toContain(what);
+    for (const [, what] of SHORTCUTS()) expect(text).toContain(what);
     expect(sheet()!.querySelectorAll('kbd')).toHaveLength(keys.length);
   });
 });

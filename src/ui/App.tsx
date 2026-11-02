@@ -4,7 +4,7 @@ import { applyFilter, counts, dayLoad, emptyFilter, groupTasks, isEmptyFilter, t
 import { formatDue, parseBlock } from '../parser';
 import { toISODate } from '../lib/date';
 import { externalCapture, validateCapture } from '../lib/capture';
-import { DROP_LABEL, scheduleFor, type DropTarget } from '../lib/reschedule';
+import { dropLabel, scheduleFor, type DropTarget } from '../lib/reschedule';
 import { useData, useKeyboardInset, useSyncState, useToday, useWide } from './hooks';
 import { Capture } from './Capture';
 import { FilterBar } from './FilterBar';
@@ -16,9 +16,11 @@ import { UPDATE_READY_EVENT } from '../pwa/register';
 import { Critter } from './Critter';
 import { INTRO_KEY } from './intro';
 import { startAppearanceSync } from './appearanceSync';
+import { startLangSync } from './langSync';
 import { LazyLinkDialog, LazyLockedPanel, LazyOnboarding, LazySettings, LazyShortcutsSheet, preloadViews } from './lazyViews';
 import { whenIdle } from './lazy';
 import { Week } from './Week';
+import { tr } from '../i18n';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 
@@ -83,12 +85,13 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const enc = sync.encryption?.() ?? 'off'; // el sync de algunos tests no implementa el cifrado
   const prevEnc = useRef(enc);
   useEffect(() => {
-    if (prevEnc.current === 'locked' && (enc === 'on' || enc === 'migrating')) showToast('Dispositivo enlazado. Tus datos ya están al día.');
+    if (prevEnc.current === 'locked' && (enc === 'on' || enc === 'migrating')) showToast(tr('Dispositivo enlazado. Tus datos ya están al día.', 'Device linked. Your data is up to date.'));
     prevEnc.current = enc;
   }, [enc]);
 
+  useEffect(() => startLangSync(repo), [repo]);
   useEffect(() => startAppearanceSync(repo, (error) => {
-    showToast(error instanceof Error ? error.message : 'No se pudo cargar la apariencia.');
+    showToast(error instanceof Error ? error.message : tr('No se pudo cargar la apariencia.', 'Couldn’t load the appearance.'));
   }), [repo]);
 
   const names = useMemo(() => {
@@ -163,9 +166,9 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   // ---------- acciones ----------
   const add = async (lines: ParsedLine[]) => {
     const created = await repo.addParsed(lines, null);
-    if (created.length > 1) showToast(`${created.length} tareas añadidas`);
+    if (created.length > 1) showToast(tr(`${created.length} tareas añadidas`, `${created.length} tasks added`));
     else if (created[0] && !applyFilter([...data.tasks, created[0]], filter, today).some((t) => t.id === created[0].id)) {
-      showToast({ msg: 'Añadida (oculta por el filtro)', action: { label: 'Ver todo', run: () => setFilter(emptyFilter()) } });
+      showToast({ msg: tr('Añadida (oculta por el filtro)', 'Added (hidden by the filter)'), action: { label: tr('Ver todo', 'Show all'), run: () => setFilter(emptyFilter()) } });
     }
   };
 
@@ -179,10 +182,10 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       history.replaceState(null, '', location.pathname + location.hash);
       if (!created.length) return;
       showToast({
-        msg: created.length > 1 ? `${created.length} tareas apuntadas` : `Apuntada: ${created[0].title}`,
-        action: { label: 'Deshacer', run: () => { for (const t of created) void repo.deleteTask(t.id); } },
+        msg: created.length > 1 ? tr(`${created.length} tareas apuntadas`, `${created.length} tasks saved`) : tr('Apuntada: ', 'Saved: ') + created[0].title,
+        action: { label: tr('Deshacer', 'Undo'), run: () => { for (const t of created) void repo.deleteTask(t.id); } },
       });
-    })().catch((e) => showToast(e instanceof Error ? e.message : 'No se pudieron añadir las tareas.'));
+    })().catch((e) => showToast(e instanceof Error ? e.message : tr('No se pudieron añadir las tareas.', 'Couldn’t add the tasks.')));
   }, []);
 
   const toggle = async (id: ID) => {
@@ -190,14 +193,14 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       const { task, spawned, undo } = await repo.toggleDone(id);
       if (task.done && undo) {
         showToast({
-          msg: spawned?.due ? `Hecha · siguiente ${formatDue(spawned.due, today)}` : 'Hecha',
-          action: { label: 'Deshacer', run: () => {
-            void undo().catch((e) => showToast(e instanceof Error ? e.message : 'No se pudo deshacer la tarea.'));
+          msg: spawned?.due ? tr('Hecha · siguiente ', 'Done · next ') + formatDue(spawned.due, today) : tr('Hecha', 'Done'),
+          action: { label: tr('Deshacer', 'Undo'), run: () => {
+            void undo().catch((e) => showToast(e instanceof Error ? e.message : tr('No se pudo deshacer la tarea.', 'Couldn’t undo the task.')));
           } },
         });
       }
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo cambiar la tarea.');
+      showToast(e instanceof Error ? e.message : tr('No se pudo cambiar la tarea.', 'Couldn’t change the task.'));
     }
   };
 
@@ -210,7 +213,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     await repo.deleteTask(id);
     setEditing(null);
     setSelected(flat[idx + 1]?.id ?? flat[idx - 1]?.id ?? null);
-    showToast({ msg: 'Tarea borrada', action: { label: 'Deshacer', run: () => repo.restoreTask(id) } });
+    showToast({ msg: tr('Tarea borrada', 'Task deleted'), action: { label: tr('Deshacer', 'Undo'), run: () => repo.restoreTask(id) } });
   };
 
   // Tarea arrastrada a otro bloque (Hoy, Mañana, Esta semana, Próximas, Sin fecha): cambia su fecha.
@@ -221,7 +224,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     if (next.due === t.due && (next.period ?? null) === (t.period ?? null)) return;
     const before = { due: t.due, period: t.period ?? null };
     await repo.updateTask(id, next);
-    showToast({ msg: `Movida a ${DROP_LABEL[target]}`, action: { label: 'Deshacer', run: () => repo.updateTask(id, before) } });
+    showToast({ msg: tr('Movida a ', 'Moved to ') + dropLabel(target), action: { label: tr('Deshacer', 'Undo'), run: () => repo.updateTask(id, before) } });
   };
 
   // «Para mañana»: fecha de mañana sin periodo (botón del editor o «m»). Si había texto editado, se guarda con él.
@@ -237,13 +240,13 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       if (line) await repo.replaceParsed(id, { ...line, ...next });
       else await repo.updateTask(id, next);
       showToast({
-        msg: 'Para mañana',
-        action: { label: 'Deshacer', run: () => {
-          void repo.updateTask(id, before).catch((e) => showToast(e instanceof Error ? e.message : 'No se pudo deshacer la tarea.'));
+        msg: tr('Para mañana', 'Moved to tomorrow'),
+        action: { label: tr('Deshacer', 'Undo'), run: () => {
+          void repo.updateTask(id, before).catch((e) => showToast(e instanceof Error ? e.message : tr('No se pudo deshacer la tarea.', 'Couldn’t undo the task.')));
         } },
       });
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo cambiar la tarea.');
+      showToast(e instanceof Error ? e.message : tr('No se pudo cambiar la tarea.', 'Couldn’t change the task.'));
     }
   };
 
@@ -275,12 +278,12 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       if (r.key !== key) patchEntityKeys(kind, key, (keys) => [...new Set(keys.map((k) => (k === key ? r.key : k)))]);
       if (r.merged) {
         const target = listOf(kind).find((e) => e.key === r.key);
-        showToast(`Unido con ${sigil(kind)}${target?.name ?? newName}`);
+        showToast(tr('Unido con ', 'Merged with ') + sigil(kind) + (target?.name ?? newName));
       } else {
-        showToast(`Renombrado a ${sigil(kind)}${newName}`);
+        showToast(tr('Renombrado a ', 'Renamed to ') + sigil(kind) + newName);
       }
     } catch (e) {
-      showToast((e as Error).message || 'No se pudo renombrar');
+      showToast((e as Error).message || tr('No se pudo renombrar', 'Couldn’t rename'));
     }
   };
 
@@ -290,21 +293,21 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       const { undo } = await repo.deleteEntity(kind, key);
       patchEntityKeys(kind, key, (keys) => keys.filter((k) => k !== key));
       showToast({
-        msg: `${sigil(kind)}${name} borrado`,
+        msg: `${sigil(kind)}${name} ${tr('borrado', 'deleted')}`,
         action: {
-          label: 'Deshacer',
-          run: () => { undo().catch((e: Error) => showToast(e.message || 'No se pudo deshacer')); },
+          label: tr('Deshacer', 'Undo'),
+          run: () => { undo().catch((e: Error) => showToast(e.message || tr('No se pudo deshacer', 'Couldn’t undo'))); },
         },
       });
     } catch (e) {
-      showToast((e as Error).message || 'No se pudo borrar');
+      showToast((e as Error).message || tr('No se pudo borrar', 'Couldn’t delete'));
     }
   };
 
   const saveFilter = async (name: string) => {
     await repo.saveFilter(name, filter);
     setPanel(false);
-    showToast(`Filtro «${name}» guardado`);
+    showToast(tr(`Filtro «${name}» guardado`, `Filter “${name}” saved`));
   };
 
   // ---------- teclado (escritorio) ----------
@@ -364,10 +367,10 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
             {!wide && (
               <button class={`link ${panel ? 'on' : ''}`} aria-expanded={panel}
                 onClick={() => { const next = !panel; setPanel(next); if (next) setTimeout(() => searchRef.current?.focus(), 0); }}>
-                Buscar
+                {tr('Buscar', 'Search')}
               </button>
             )}
-            <button class="link" onClick={() => setSettings(true)} aria-label="Ajustes">Ajustes{syncDot}</button>
+            <button class="link" onClick={() => setSettings(true)} aria-label={tr('Ajustes', 'Settings')}>{tr('Ajustes', 'Settings')}{syncDot}</button>
           </span>
         </div>
         {!wide && (
@@ -399,9 +402,9 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         {data.ready && groups.length === 0 ? (
           <div class="empty">
             {isEmptyFilter(filter) ? (
-              <><p>Nada pendiente.</p><p class="label">Escribe una tarea para empezar</p></>
+              <><p>{tr('Nada pendiente.', 'Nothing to do.')}</p><p class="label">{tr('Escribe una tarea para empezar', 'Write a task to get started')}</p></>
             ) : (
-              <><p>Sin resultados.</p><button class="link" onClick={() => setFilter(emptyFilter())}>Quitar filtros</button></>
+              <><p>{tr('Sin resultados.', 'No results.')}</p><button class="link" onClick={() => setFilter(emptyFilter())}>{tr('Quitar filtros', 'Clear filters')}</button></>
             )}
           </div>
         ) : (
@@ -416,8 +419,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
       {updateReady && (
         <div class="toast toast-top" role="status">
-          <span>Hay una versión nueva de Lista</span>
-          <button class="link" onClick={() => window.location.reload()}>Recargar</button>
+          <span>{tr('Hay una versión nueva de Lista', 'A new version of Lista is available')}</span>
+          <button class="link" onClick={() => window.location.reload()}>{tr('Recargar', 'Reload')}</button>
         </div>
       )}
 

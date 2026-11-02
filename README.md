@@ -73,7 +73,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 - **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas. Las vencidas se ven siempre arriba, filtres por la fecha que filtres.
 - **Tu semana de un vistazo.** Arriba de los filtros (en el móvil, al tocar **Buscar**) verás cuántas tareas tienes hoy, las vencidas y cuántas tareas tienes cada uno de los próximos 7 días. Toca un día para ver solo sus tareas (y las vencidas); tócalo otra vez (o vuelve a abrir Lista) para verlas todas.
 - **Cambia de planes.** Toca una tarea para editarla: se guarda sola al pulsar Enter o al salir. Mientras la editas, la casilla se convierte en el asa ⠿: arrástrala a otro bloque (Hoy, Mañana, Esta semana…) para cambiarla de día. Debajo tienes **+ Subtarea**, **Calendario** y **Borrar**. Con teclado, **M** la pasa a mañana.
-- **Para mañana.** Desde el editor de una tarea, pulsa **Mañana** (en ordenador, también **m** con la tarea seleccionada) para pasarla a mañana; **Deshacer** la devuelve a su fecha anterior.
+- **Para mañana.** Arrastra la tarea al bloque **Mañana** (en ordenador, también **m** con la tarea seleccionada); **Deshacer** la devuelve a su fecha anterior.
 - **Abre los enlaces.** Una dirección web en una tarea se muestra corta; tócala para abrirla.
 
 ## A tu manera
@@ -84,7 +84,9 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 
 **Solo lo que seleccionas.** La línea izquierda marca únicamente la fila seleccionada. Clásico usa el color secundario para las tareas con subtareas y sus pasos; Industrial, su naranja.
 
-**Igual en todos tus dispositivos.** Con la misma cuenta, el tema, el estilo y el color se sincronizan. Si cambias algo sin conexión, se envía al volver; ante cambios simultáneos gana el más reciente.
+**En español o en inglés.** Lista sale en español si tu navegador lo tiene entre sus idiomas; si no, en inglés. Puedes cambiarlo en **Ajustes → Apariencia → Idioma · Language**. En inglés todo cambia: la bienvenida, los menús y también lo que escribes (`tomorrow`, `every 2 tuesdays`, `!high`, `due:2026-11-15`). El nombre, Lista, no se traduce.
+
+**Igual en todos tus dispositivos.** Con la misma cuenta, el tema, el estilo, el color y el idioma se sincronizan. Si cambias algo sin conexión, se envía al volver; ante cambios simultáneos gana el más reciente.
 
 ## Tus tareas, contigo
 

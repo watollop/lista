@@ -1,5 +1,6 @@
 import type { ISODate, Period } from '../types';
 import { addDays, fromISODate, toISODate } from './date';
+import { lang } from '../i18n';
 
 /**
  * Fechas "de periodo": vencen el último día del periodo (la semana es laboral: acaba el viernes;
@@ -66,7 +67,7 @@ export function periodToken(p: Period, due: ISODate): string {
     return `${w.year}-W${String(w.week).padStart(2, '0')}`;
   }
   if (p === 'month') return due.slice(0, 7);
-  if (p === 'quarter') return `${y}-T${quarterOf(due)}`;
+  if (p === 'quarter') return `${y}-${lang() === 'en' ? 'Q' : 'T'}${quarterOf(due)}`;
   return y;
 }
 
@@ -90,9 +91,26 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 const MES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 /** Texto del chip: "esta semana", "semana que viene", "sem. 13 nov", "octubre", "este trimestre", "T4", "T1 2027", "2026". */
+const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_SHORT_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 export function formatPeriod(p: Period, due: ISODate, today: ISODate): string {
   const d = fromISODate(due);
   const otherYear = d.getFullYear() !== fromISODate(today).getFullYear();
+  if (lang() === 'en') {
+    if (p === 'week') {
+      if (due === periodEnd('week', today)) return 'this week';
+      if (due === periodEnd('week', today, 1)) return 'next week';
+      return `wk of ${MONTH_SHORT_EN[d.getMonth()]} ${d.getDate()}`;
+    }
+    if (p === 'month') return MONTHS_EN[d.getMonth()] + (otherYear ? ` ${d.getFullYear()}` : '');
+    if (p === 'quarter') {
+      if (due === periodEnd('quarter', today)) return 'this quarter';
+      if (due === periodEnd('quarter', today, 1)) return 'next quarter';
+      return `Q${quarterOf(due)}` + (otherYear ? ` ${d.getFullYear()}` : '');
+    }
+    return String(d.getFullYear());
+  }
   if (p === 'week') {
     if (due === periodEnd('week', today)) return 'esta semana';
     if (due === periodEnd('week', today, 1)) return 'semana que viene';

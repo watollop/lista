@@ -10,7 +10,8 @@ import { addDays } from '../lib/date';
 import { useDrag, dragging } from './drag';
 import type { DropTarget } from '../lib/reschedule';
 import { SubtaskInputs } from './SubtaskInputs';
-import { TITLE_TOO_LONG, titleTooLong } from '../lib/capture';
+import { titleTooLong, titleTooLongMsg } from '../lib/capture';
+import { isEn, tr } from '../i18n';
 
 export interface Group { task: Task; children: Task[] }
 
@@ -34,11 +35,10 @@ interface Props {
 }
 
 type SectionKey = 'past' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'next' | 'nodate' | 'done';
-const SECTION_LABEL: Record<SectionKey, string> = {
-  past: 'Pasadas', overdue: 'Vencidas', today: 'Hoy', tomorrow: 'Mañana', week: 'Esta semana',
-  next: 'Próximas', nodate: 'Sin fecha', done: 'Completadas',
-};
-const SECTION_ORDER = Object.keys(SECTION_LABEL) as SectionKey[];
+const SECTION_ORDER: SectionKey[] = ['past', 'overdue', 'today', 'tomorrow', 'week', 'next', 'nodate', 'done'];
+const sectionLabel = (k: SectionKey) => (isEn()
+  ? { past: 'Earlier', overdue: 'Overdue', today: 'Today', tomorrow: 'Tomorrow', week: 'This week', next: 'Upcoming', nodate: 'No date', done: 'Completed' }
+  : { past: 'Pasadas', overdue: 'Vencidas', today: 'Hoy', tomorrow: 'Mañana', week: 'Esta semana', next: 'Próximas', nodate: 'Sin fecha', done: 'Completadas' })[k];
 /** Bloques donde se puede soltar una tarea arrastrada (mientras se arrastra se muestran aunque estén vacíos). */
 const DROP: SectionKey[] = ['today', 'tomorrow', 'week', 'next', 'nodate'];
 
@@ -107,7 +107,7 @@ export function TaskList(props: Props) {
   const render = (s: { key: SectionKey; items: Group[] }) => (
     <section key={s.key} class={`${s.key === 'past' ? 'past' : ''} ${drop(s.key) ? 'droppable' : ''}`} data-drop={drop(s.key)}>
       <h2 class={`section ${s.key === 'overdue' ? 'warn' : ''}`}>
-        <span>{SECTION_LABEL[s.key]}</span>
+        <span>{sectionLabel(s.key)}</span>
         <span>{s.items.length}</span>
       </h2>
       <ul class="list">
@@ -120,12 +120,12 @@ export function TaskList(props: Props) {
                 onExpand={() => expand(g.task.id)} onAddSubtask={() => addSubtask(g.task.id)} />
               {open && (
                 <li class="subtask-group">
-                  <ul id={`subtasks-${g.task.id}`} aria-label={`Subtareas de ${g.task.title}`}>
+                  <ul id={`subtasks-${g.task.id}`} aria-label={tr(`Subtareas de ${g.task.title}`, `Subtasks of ${g.task.title}`)}>
                     {g.children.map((c, i) => <Row key={c.id} task={c} sub section={s.key} {...rowProps}
                       onAddSubtask={i === g.children.length - 1 && adding !== g.task.id ? () => addSubtask(g.task.id) : undefined} />)}
                     {adding === g.task.id && (
                       <li class="subtask-composer">
-                        <SubtaskInputs label="Listo" onCancel={() => setAdding(null)}
+                        <SubtaskInputs label={tr('Listo', 'Done')} onCancel={() => setAdding(null)}
                           onEach={(lines) => props.onAddSubtasks(g.task.id, lines)}
                           onSubmit={async (lines) => { await props.onAddSubtasks(g.task.id, lines); setAdding(null); }} />
                       </li>
@@ -136,7 +136,7 @@ export function TaskList(props: Props) {
             </Fragment>
           );
         })}
-        {!s.items.length && <li class="drop-empty">Suelta aquí</li>}
+        {!s.items.length && <li class="drop-empty">{tr('Suelta aquí', 'Drop here')}</li>}
       </ul>
     </section>
   );
@@ -147,7 +147,7 @@ export function TaskList(props: Props) {
       <div ref={nowRef} class={pastSection ? 'now has-past' : 'now'}>
         {pastSection && (
           <button class="past-hint label" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            ↑ {pastSection.items.length} {pastSection.items.length === 1 ? 'pasada' : 'pasadas'}
+            ↑ {pastSection.items.length} {isEn() ? 'earlier' : pastSection.items.length === 1 ? 'pasada' : 'pasadas'}
           </button>
         )}
         {sections.map(render)}
@@ -180,8 +180,8 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       ref={ref}
       class={`row ${sub ? 'sub' : ''} ${childrenCount ? 'has-subtasks' : ''} ${childrenCount && !expanded ? 'subtasks-collapsed' : ''} ${task.done ? 'done' : ''} ${selected === task.id ? 'sel' : ''} ${swipe.active ? 'swiping' : ''} ${drag.active ? 'dragging' : ''}`}
       data-id={task.id}
-      data-swipe={task.done ? 'Pendiente' : 'Hecha'}
-      data-swipe-left="Borrar"
+      data-swipe={task.done ? tr('Pendiente', 'Undo') : tr('Hecha', 'Done')}
+      data-swipe-left={tr('Borrar', 'Delete')}
       style={{ ...swipe.style, ...drag.style }}
       {...swipe.handlers}
       onClickCapture={clickCapture}
@@ -189,7 +189,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       {sub && onAddSubtask && <AddSubtaskButton onClick={onAddSubtask} />}
       {isEditing && !task.done ? (
         // Editando, la casilla deja sitio al asa: se arrastra a otro bloque (Hoy, Mañana…) para cambiar de día.
-        <button class="check move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
+        <button class="check move" aria-label={tr('Mover a otro día', 'Move to another day')} title={tr('Arrastra para cambiar de día', 'Drag to change the day')}
           onMouseDown={(e) => e.preventDefault()} onTouchStart={(e) => e.preventDefault()} onPointerDown={drag.start}>
           <svg class="grip" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
             <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" /><circle cx="5.5" cy="8" r="1.4" />
@@ -198,8 +198,8 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
         </button>
       ) : (
         <button class="check" aria-pressed={!!task.done}
-          aria-label={childrenCount ? task.done ? 'Reabrir tarea y subtareas' : 'Completar tarea y subtareas' : task.done ? 'Marcar pendiente' : 'Completar'}
-          title={childrenCount ? 'Cambiar también todas sus subtareas' : undefined} onClick={() => onToggle(task.id)}>
+          aria-label={childrenCount ? task.done ? tr('Reabrir tarea y subtareas', 'Reopen task and subtasks') : tr('Completar tarea y subtareas', 'Complete task and subtasks') : task.done ? tr('Marcar pendiente', 'Mark as not done') : tr('Completar', 'Complete')}
+          title={childrenCount ? tr('Cambiar también todas sus subtareas', 'Also changes all its subtasks') : undefined} onClick={() => onToggle(task.id)}>
           <i />
         </button>
       )}
@@ -215,8 +215,8 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
               <span class={`title ${task.priority === 1 ? 'p1' : ''}`} role="button" tabIndex={0}
                 aria-expanded={childrenCount ? expanded : undefined}
                 aria-controls={childrenCount && expanded ? `subtasks-${task.id}` : undefined}
-                aria-label={childrenCount ? `${task.title}: ${completedCount} de ${childrenCount} subtareas completadas` : undefined}
-                title={childrenCount ? `${expanded ? 'Ocultar' : 'Mostrar'} subtareas` : undefined}
+                aria-label={childrenCount ? tr(`${task.title}: ${completedCount} de ${childrenCount} subtareas completadas`, `${task.title}: ${completedCount} of ${childrenCount} subtasks done`) : undefined}
+                title={childrenCount ? (expanded ? tr('Ocultar subtareas', 'Hide subtasks') : tr('Mostrar subtareas', 'Show subtasks')) : undefined}
                 onKeyDown={(e) => {
                   // Enter y Espacio activan el título; si el foco está en un enlace dentro, lo activa el enlace.
                   if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
@@ -227,7 +227,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
                 <TitleText text={task.title} onChip={onChip} />
               </span>
               {childrenCount > 0 && (
-                <button class="edit-task" aria-label="Editar tarea" title="Editar tarea"
+                <button class="edit-task" aria-label={tr('Editar tarea', 'Edit task')} title={tr('Editar tarea', 'Edit task')}
                   onClick={() => { onSelect(task.id); onEdit(task.id); }}>
                   <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
                     stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
@@ -245,12 +245,12 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
         )}
       </div>
       {!isEditing && task.due && !task.done && (
-        <button class="trash cal" aria-label="Añadir al calendario" title="Añadir al calendario" onClick={() => addToCalendar(task)}>
+        <button class="trash cal" aria-label={tr('Añadir al calendario', 'Add to calendar')} title={tr('Añadir al calendario', 'Add to calendar')} onClick={() => addToCalendar(task)}>
           <CalendarIcon />
         </button>
       )}
       {!isEditing && (
-        <button class="trash" aria-label="Borrar tarea" title="Borrar" onClick={() => onDelete(task.id)}>
+        <button class="trash" aria-label={tr('Borrar tarea', 'Delete task')} title={tr('Borrar', 'Delete')} onClick={() => onDelete(task.id)}>
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
             stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M2.5 4.5h11M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4 4.5l.7 8.6a1 1 0 0 0 1 .9h4.6a1 1 0 0 0 1-.9l.7-8.6M6.7 7v4.5M9.3 7v4.5" />
@@ -344,9 +344,9 @@ export function TitleText({ text, onChip }: { text: string; onChip: ChipTap }) {
 
 function AddSubtaskButton({ onClick, inline = false }: { onClick: () => void; inline?: boolean }) {
   // En el editor es texto, como el resto de acciones; en la subtarea, el «+» de la izquierda.
-  if (inline) return <button class="link" aria-label="Añadir subtarea" onMouseDown={(e) => e.preventDefault()} onClick={onClick}>+ Subtarea</button>;
+  if (inline) return <button class="link" aria-label={tr('Añadir subtarea', 'Add subtask')} onMouseDown={(e) => e.preventDefault()} onClick={onClick}>{tr('+ Subtarea', '+ Subtask')}</button>;
   return (
-    <button class="add-subtask-action add-subtask-icon" aria-label="Añadir subtarea" title="Añadir subtarea" onClick={onClick}>
+    <button class="add-subtask-action add-subtask-icon" aria-label={tr('Añadir subtarea', 'Add subtask')} title={tr('Añadir subtarea', 'Add subtask')} onClick={onClick}>
       <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none"
         stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <path d="M10 4v12M4 10h12" />
@@ -380,7 +380,7 @@ function Editor({ task, names, onSave, onCancel, onDelete, onAddSubtask }: {
     const line = parseLine(v);
     if (v === initial || !line.title) { done.current = true; onCancel(); return; }
     // Con error no se cierra la edición: el texto sigue ahí para recortarlo.
-    if (titleTooLong([line])) { setError(TITLE_TOO_LONG); return; }
+    if (titleTooLong([line])) { setError(titleTooLongMsg()); return; }
     done.current = true;
     onSave(line);
   };
@@ -393,7 +393,7 @@ function Editor({ task, names, onSave, onCancel, onDelete, onAddSubtask }: {
           ref={ref}
           class="edit"
           value={v}
-          aria-label="Editar tarea"
+          aria-label={tr('Editar tarea', 'Edit task')}
           autocomplete="off"
           enterkeyhint="done"
           onInput={(e) => { setV(e.currentTarget.value); setError(''); }}
@@ -413,13 +413,13 @@ function Editor({ task, names, onSave, onCancel, onDelete, onAddSubtask }: {
             <button class="link" onMouseDown={keep} onClick={() => { addToGoogleCalendar(task); setCal(false); }}>Google</button>
           </>
         ) : (
-          <button class="link" title="Añadir a tu calendario" onMouseDown={keep}
+          <button class="link" title={tr('Añadir a tu calendario', 'Add to your calendar')} onMouseDown={keep}
             onClick={() => (both ? setCal(true) : prefersApple() ? addToAppleCalendar(task) : addToGoogleCalendar(task))}>
-            Calendario
+            {tr('Calendario', 'Calendar')}
           </button>
         ))}
         <button class="link danger" onMouseDown={(e) => { e.preventDefault(); done.current = true; }} onClick={onDelete}>
-          Borrar
+          {tr('Borrar', 'Delete')}
         </button>
       </div>
       {error && <p class="err" role="alert">{error}</p>}

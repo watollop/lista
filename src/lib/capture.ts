@@ -1,4 +1,5 @@
 import type { ParsedLine } from '../types';
+import { tr } from '../i18n';
 
 /**
  * Longitud máxima del título de una tarea o subtarea, en caracteres. El servidor rechaza registros de más de
@@ -6,7 +7,7 @@ import type { ParsedLine } from '../types';
  * de 1000 caracteres ocupa unos pocos KiB cifrados en base64, muy por debajo de ese límite.
  */
 export const MAX_TITLE = 1000;
-export const TITLE_TOO_LONG = `Una tarea admite hasta ${MAX_TITLE} caracteres.`;
+export const titleTooLongMsg = () => tr(`Una tarea admite hasta ${MAX_TITLE} caracteres.`, `A task can have up to ${MAX_TITLE} characters.`);
 
 /** Algún título (tarea o subtarea) supera MAX_TITLE. Se cuentan caracteres, no unidades UTF-16. */
 export function titleTooLong(lines: ParsedLine[]): boolean {
@@ -14,9 +15,9 @@ export function titleTooLong(lines: ParsedLine[]): boolean {
 }
 
 export function validateCapture(lines: ParsedLine[]): ParsedLine[] {
-  if (!lines[0]?.title) throw new Error('Escribe un título para la tarea.');
-  if (lines.some((line) => !line.title)) throw new Error('Escribe un título para cada tarea y subtarea, además de sus etiquetas.');
-  if (titleTooLong(lines)) throw new Error(TITLE_TOO_LONG);
+  if (!lines[0]?.title) throw new Error(tr('Escribe un título para la tarea.', 'Write a title for the task.'));
+  if (lines.some((line) => !line.title)) throw new Error(tr('Escribe un título para cada tarea y subtarea, además de sus etiquetas.', 'Write a title for each task and subtask, not just its tags.'));
+  if (titleTooLong(lines)) throw new Error(titleTooLongMsg());
   return [{ ...lines[0], isSubtask: false }, ...lines.slice(1)];
 }
 
