@@ -67,7 +67,7 @@ describe('fila con enlace en el título', () => {
   const list = (groups: Group[], onEdit = vi.fn(), onSelect = vi.fn()) =>
     act(() => render(h(TaskList, {
       groups, names: new Map(), today: '2026-11-01', selected: null, editing: null,
-      onSelect, onEdit, onToggle: vi.fn(), onSave: vi.fn(), onDelete: vi.fn(),
+      onSelect, onEdit, onToggle: vi.fn(), onSave: vi.fn(), onTomorrow: vi.fn(), onDelete: vi.fn(),
       onChip: vi.fn(), doneToday: new Set<string>(), pastMode: false, anchorKey: 'k', onMove: vi.fn(), onAddSubtasks: vi.fn(async () => {}),
     }), root));
 

@@ -9,7 +9,7 @@ import { parseLine } from '../parser';
 import { App } from './App';
 import { Capture } from './Capture';
 import { SubtaskInputs } from './SubtaskInputs';
-import { INTRO_KEY } from './Onboarding';
+import { INTRO_KEY } from './intro';
 import { DEFAULT_SUBTASK_COLOR, applyTheme, getSubtaskColor, setSubtaskColor } from './theme';
 import type { Entity, ParsedLine, Repo } from '../types';
 
@@ -77,6 +77,12 @@ function capture(onAdd = vi.fn<(lines: ParsedLine[]) => Promise<void>>().mockRes
     inputRef: { current: null }, onAdd,
   }), root));
   return onAdd;
+}
+
+/** Abre Ajustes y espera a que su hoja aparezca (se carga en diferido). */
+async function openAjustes() {
+  click(root.querySelector('[aria-label="Ajustes"]'));
+  await vi.waitFor(() => expect(root.querySelector('[role="dialog"][aria-label="Ajustes"]')).not.toBeNull());
 }
 
 async function app(repo: Repo) {
@@ -510,7 +516,7 @@ describe('lista de subtareas', () => {
     const field = parentId ? 'Subtarea 1' : 'Nueva tarea';
     const draft = parentId ? 'Borrador conservado' : 'Proyecto <Borrador conservado';
     type(input(field), draft);
-    click(root.querySelector('[aria-label="Ajustes"]'));
+    await openAjustes();
     const focus = vi.spyOn(input(field), 'focus');
     for (const name of ['Oscuro', 'Clásico', 'Claro', 'Industrial', 'Sistema']) {
       const control = button(name);
@@ -542,7 +548,7 @@ describe('color secundario', () => {
   it.each(['input', 'change'])('guarda el selector nativo al recibir %s y conserva la última selección rápida', async (eventName) => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
-    click(root.querySelector('[aria-label="Ajustes"]'));
+    await openAjustes();
     click(button('Clásico'));
     const picker = input('Color secundario personalizado');
     act(() => {
@@ -561,7 +567,7 @@ describe('color secundario', () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await repo.setSetting('appearance', { theme: 'system', look: 'industrial', subtaskColor: '#7849ce' });
     await app(repo);
-    click(root.querySelector('[aria-label="Ajustes"]'));
+    await openAjustes();
     expect(root.querySelector('.subtask-colors')).toBeNull();
     expect(root.querySelector('#subtask-color-label')).toBeNull();
     click(button('Clásico'));
@@ -576,7 +582,7 @@ describe('color secundario', () => {
   it('refleja la apariencia remota con Ajustes abierto y oculta la paleta si llega Industrial', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
-    click(root.querySelector('[aria-label="Ajustes"]'));
+    await openAjustes();
     click(button('Clásico'));
     click(button('Oscuro'));
     await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toMatchObject({ value: { theme: 'dark', look: 'classic' } }));
@@ -604,7 +610,7 @@ describe('color secundario', () => {
   it('aplica la elección local y avisa si no puede guardarla para sincronizar', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
-    click(root.querySelector('[aria-label="Ajustes"]'));
+    await openAjustes();
     click(button('Clásico'));
     await vi.waitFor(async () => expect(await repo.getSetting('appearance')).toBeDefined());
     vi.spyOn(repo, 'setSetting').mockRejectedValue(new Error('Sin espacio'));
@@ -617,7 +623,7 @@ describe('color secundario', () => {
   it('ofrece cuatro círculos de colores y uno personalizado sin texto y conserva la elección', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     await app(repo);
-    click(root.querySelector('[aria-label="Ajustes"]'));
+    await openAjustes();
     click(button('Clásico'));
     let color = root.querySelector<HTMLInputElement>('#subtask-color')!;
     expect(root.querySelector('#subtask-color-label')?.textContent).toBe('Color secundario');
@@ -645,7 +651,7 @@ describe('color secundario', () => {
     applyTheme('dark', 'industrial');
     expect(document.documentElement.style.getPropertyValue('--subtask-color')).toBe('#7849ce');
     click(button('Cerrar'));
-    click(root.querySelector('[aria-label="Ajustes"]'));
+    await openAjustes();
     color = root.querySelector<HTMLInputElement>('#subtask-color')!;
     expect(color.value).toBe('#7849ce');
     expect(color.closest('label')?.classList.contains('selected')).toBe(true);

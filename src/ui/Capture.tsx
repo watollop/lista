@@ -3,7 +3,8 @@ import type { Entity, ISODate, ParsedLine } from '../types';
 import { activeToken, normalizeKey, parseBlock } from '../parser';
 import { validateCapture } from '../lib/capture';
 import { TaskChips } from './Chips';
-import { Dictation, canDictate } from './Dictation';
+import { canDictate } from './recognition';
+import { LazyDictation } from './lazyViews';
 
 interface Props {
   topics: Entity[];
@@ -190,7 +191,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           )}
         </div>
       </div>
-      {dictating && <Dictation names={names} today={today} onAdd={onAdd} onClose={() => setDictating(false)} />}
+      {dictating && <LazyDictation names={names} today={today} onAdd={onAdd} onClose={() => setDictating(false)} />}
     </div>
   );
 }

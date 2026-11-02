@@ -32,25 +32,37 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <span class="label">Ajustes</span>
           <button class="link on" onClick={onClose}>Cerrar</button>
         </div>
-        <Account sync={sync} state={state} />
-        <EncryptionSection sync={sync} state={state} toast={toast} />
-        <Appearance repo={repo} toast={toast} />
-        <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
-        {editing && editEnt && (
-          <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
-            pending={pending} variant="sheet" onCancel={() => setEditing(null)}
-            onSave={(name) => { setEditing(null); onRename(editing.kind, editing.key, name); }}
-            onDelete={() => { setEditing(null); onDelete(editing.kind, editing.key); }} />
-        )}
-        <section>
-          <span class="label">Ayuda</span>
-          <p>Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.</p>
-          <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
-          <p class="kbd-only">Pulsa <kbd>?</kbd> para ver los atajos de teclado.</p>
-          <CaptureFold />
+        <section class="group" aria-labelledby="ajustes-cuenta">
+          <h2 class="group-title" id="ajustes-cuenta">Cuenta</h2>
+          <Account sync={sync} state={state} />
+          <EncryptionSection sync={sync} state={state} toast={toast} />
         </section>
-        <BackupSection repo={repo} />
-        <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
+        <section class="group" aria-labelledby="ajustes-apariencia">
+          <h2 class="group-title" id="ajustes-apariencia">Apariencia</h2>
+          <Appearance repo={repo} toast={toast} />
+        </section>
+        <section class="group" aria-labelledby="ajustes-datos">
+          <h2 class="group-title" id="ajustes-datos">Tus datos</h2>
+          <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
+          {editing && editEnt && (
+            <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
+              pending={pending} variant="sheet" onCancel={() => setEditing(null)}
+              onSave={(name) => { setEditing(null); onRename(editing.kind, editing.key, name); }}
+              onDelete={() => { setEditing(null); onDelete(editing.kind, editing.key); }} />
+          )}
+          <BackupSection repo={repo} />
+          <DangerSection repo={repo} sync={sync} state={state} toast={toast} />
+        </section>
+        <section class="group" aria-labelledby="ajustes-ayuda">
+          <h2 class="group-title" id="ajustes-ayuda">Ayuda</h2>
+          <section>
+            <p>Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.</p>
+            <div class="row-btns"><button class="btn" onClick={onIntro}>Cómo funciona</button></div>
+            <p>Para pasar una tarea a mañana, abre su editor y pulsa <strong>Mañana</strong> (en ordenador, también <kbd>m</kbd>).</p>
+            <p class="kbd-only">Pulsa <kbd>?</kbd> para ver los atajos de teclado.</p>
+            <CaptureFold />
+          </section>
+        </section>
         <footer class="credit">
           <span>Código Do Norte <span class="heart" aria-label="con cariño">♥</span> Coruña</span>
           <a href="https://github.com/watollop/lista" target="_blank" rel="noopener noreferrer" aria-label="Código en GitHub" title="Código en GitHub">
@@ -139,7 +151,6 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
   };
   return (
     <section>
-      <span class="label">Apariencia</span>
       <div class="row-btns" role="radiogroup" aria-label="Tema">
         {THEMES.map(([t, l]) => (
           <button key={t} role="radio" aria-checked={theme === t} class={`btn ${theme === t ? 'solid' : ''}`}

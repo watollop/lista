@@ -12,13 +12,12 @@ import { Sidebar } from './Sidebar';
 import { TaskList } from './TaskList';
 import type { ChipTap } from './Chips';
 import { EntityEditor } from './EntityEditor';
-import { Settings } from './Settings';
-import { LinkDialog, LockedPanel } from './Encryption';
 import { UPDATE_READY_EVENT } from '../pwa/register';
 import { Critter } from './Critter';
-import { INTRO_KEY, Onboarding } from './Onboarding';
+import { INTRO_KEY } from './intro';
 import { startAppearanceSync } from './appearanceSync';
-import { ShortcutsSheet } from './ShortcutsSheet';
+import { LazyLinkDialog, LazyLockedPanel, LazyOnboarding, LazySettings, LazyShortcutsSheet, preloadViews } from './lazyViews';
+import { whenIdle } from './lazy';
 import { Week } from './Week';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
@@ -52,6 +51,9 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     try { localStorage.setItem(INTRO_KEY, '1'); } catch { /* modo privado */ }
   };
   const [toast, setToast] = useState<Toast | null>(null);
+
+  // Tras el primer pintado, bajar los chunks de las vistas diferidas (Ajustes, bienvenida, cifrado, atajos, dictado).
+  useEffect(() => whenIdle(preloadViews), []);
 
   const captureRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -221,6 +223,29 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     showToast({ msg: `Movida a ${DROP_LABEL[target]}`, action: { label: 'Deshacer', run: () => repo.updateTask(id, before) } });
   };
 
+  // «Para mañana»: fecha de mañana sin periodo (botón del editor o «m»). Si había texto editado, se guarda con él.
+  // Deshacer restaura solo la fecha anterior.
+  const tomorrow = async (id: ID, line: ParsedLine | null = null) => {
+    setEditing(null);
+    const t = data.tasks.find((x) => x.id === id);
+    if (!t || t.done) return; // una hecha no se pospone
+    const next = scheduleFor('tomorrow', today);
+    const before = { due: t.due, period: t.period ?? null };
+    if (!line && next.due === t.due && next.period === before.period) return;
+    try {
+      if (line) await repo.replaceParsed(id, { ...line, ...next });
+      else await repo.updateTask(id, next);
+      showToast({
+        msg: 'Para mañana',
+        action: { label: 'Deshacer', run: () => {
+          void repo.updateTask(id, before).catch((e) => showToast(e instanceof Error ? e.message : 'No se pudo deshacer la tarea.'));
+        } },
+      });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo cambiar la tarea.');
+    }
+  };
+
   const save = async (id: ID, line: ParsedLine) => {
     setEditing(null);
     await repo.replaceParsed(id, line);
@@ -308,6 +333,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       else if (key === 'k' || key === 'ArrowUp') run(() => go(-1));
       else if ((key === 'x' || key === ' ') && selected) run(() => toggle(selected));
       else if ((key === 'e' || key === 'Enter') && selected) run(() => setEditing(selected));
+      else if (key === 'm' && selected) run(() => void tomorrow(selected));
       else if ((key === 'Backspace' || key === 'Delete') && selected) run(() => remove(selected));
       else if (key === '?') run(() => setShortcuts(true));
       else if (key === 'h') run(() => setFilter({ ...emptyFilter(), dates: ['today'] }));
@@ -368,7 +394,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       />
 
       <main>
-        {enc === 'locked' && <LockedPanel sync={sync} onRecovery={() => setSettings(true)} />}
+        {enc === 'locked' && <LazyLockedPanel sync={sync} onRecovery={() => setSettings(true)} />}
         {data.ready && groups.length === 0 ? (
           <div class="empty">
             {isEmptyFilter(filter) ? (
@@ -380,7 +406,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         ) : (
           <TaskList
             groups={groups} names={names} today={today} selected={selected} editing={editing}
-            onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onDelete={remove} onChip={chipTap}
+            onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onTomorrow={tomorrow} onDelete={remove} onChip={chipTap}
             doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)} onMove={move}
             onAddSubtasks={addSubtasks}
           />
@@ -415,16 +441,16 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       })()}
 
       {settings && (
-        <Settings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
+        <LazySettings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
           topics={data.topics} people={data.people} pending={pending}
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }} />
       )}
-      {shortcuts && <ShortcutsSheet onClose={() => setShortcuts(false)} />}
-      {link?.role === 'active' && <LinkDialog sync={sync} link={link} toast={showToast} />}
+      {shortcuts && <LazyShortcutsSheet onClose={() => setShortcuts(false)} />}
+      {link?.role === 'active' && <LazyLinkDialog sync={sync} link={link} toast={showToast} />}
       <Critter enabled={wide} />
       {intro && (
-        <Onboarding onClose={closeIntro} extended={intro === 'full'}
+        <LazyOnboarding onClose={closeIntro} extended={intro === 'full'}
           signIn={googleOk && syncState.status === 'signedOut' ? () => sync.signInWithGoogle() : undefined} />
       )}
     </div>
