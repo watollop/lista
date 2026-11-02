@@ -1,8 +1,9 @@
 import type { DateFilter, Entity, ISODate, Period, Priority, Recurrence } from '../types';
 import { formatDue, formatRecurrence, inlineTags, normalizeKey } from '../parser';
-import { PRIORITY_LABEL, PriorityIcon, RepeatIcon } from './Priority';
+import { priorityLabel, PriorityIcon, RepeatIcon } from './Priority';
 import { dateFilterFor } from '../filters';
 import { formatPeriod, isCurrentPeriod } from '../lib/period';
+import { tr } from '../i18n';
 
 export type ChipTap = (type: 'topic' | 'person' | 'priority' | 'date', key: string | Priority | DateFilter) => void;
 
@@ -34,9 +35,9 @@ export function TaskChips({ due, period, done, priority, recurrence, topics, peo
       {due && !hideDue && tag(overdue ? 'warn' : '', period ? formatPeriod(period, due, today) : formatDue(due, today),
         // Tocar la fecha filtra por su bloque: el del periodo en curso o el más estrecho que la contiene.
         onTap && (() => onTap('date', period && isCurrentPeriod(period, due, today) ? period : dateFilterFor(due, today))))}
-      {recurrence && tag('', <><RepeatIcon /> {formatRecurrence(recurrence)}</>, undefined, 'Se repite')}
+      {recurrence && tag('', <><RepeatIcon /> {formatRecurrence(recurrence)}</>, undefined, tr('Se repite', 'Repeats'))}
       {priority && tag(`prio ${priority === 1 ? 'warn' : ''}`, <PriorityIcon p={priority} />,
-        onTap && (() => onTap('priority', priority)), `Prioridad ${PRIORITY_LABEL[priority].toLowerCase()}`)}
+        onTap && (() => onTap('priority', priority)), tr(`Prioridad ${priorityLabel(priority).toLowerCase()}`, `${priorityLabel(priority)} priority`))}
       {topics.filter((k) => !inline.has('#' + k)).map((k) => tag('', `#${names.get('#' + k)?.name ?? k}`, onTap && (() => onTap('topic', k))))}
       {people.filter((k) => !inline.has('@' + k)).map((k) => tag('', `@${names.get('@' + k)?.name ?? k}`, onTap && (() => onTap('person', k))))}
     </>

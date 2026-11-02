@@ -1,13 +1,14 @@
 import type { ISODate, Period } from '../types';
 import { addDays } from './date';
 import { periodEnd } from './period';
+import { lang } from '../i18n';
 
 /** Bloques de la lista donde se puede soltar una tarea arrastrada (Vencidas no: no se mueve al pasado). */
 export type DropTarget = 'today' | 'tomorrow' | 'week' | 'next' | 'nodate';
 
-export const DROP_LABEL: Record<DropTarget, string> = {
-  today: 'Hoy', tomorrow: 'Mañana', week: 'Esta semana', next: 'Próximas', nodate: 'Sin fecha',
-};
+export const dropLabel = (t: DropTarget) => (lang() === 'en'
+  ? { today: 'Today', tomorrow: 'Tomorrow', week: 'This week', next: 'Upcoming', nodate: 'No date' }
+  : { today: 'Hoy', tomorrow: 'Mañana', week: 'Esta semana', next: 'Próximas', nodate: 'Sin fecha' })[t];
 
 /** Nueva fecha al soltar en un bloque: Hoy/Mañana son días; Esta semana y Próximas, periodos de semana. */
 export function scheduleFor(target: DropTarget, today: ISODate): { due: ISODate | null; period: Period | null } {

@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Entity, EntityKind } from '../types';
 import { normalizeKey } from '../parser';
+import { tr } from '../i18n';
 
 interface Props {
   kind: EntityKind;
@@ -26,8 +27,8 @@ export function EntityEditor({ kind, entity, entities, pending, variant, onSave,
   const n = target ? pending.get(sym + target.key) ?? 0 : 0;
   const invalid = clean !== '' && !VALID.test(clean);
   const valid = clean !== '' && !invalid && clean !== entity.name;
-  const hint = invalid ? 'Sin espacios: usa letras, números, _ o -'
-    : target ? `Se unirá con ${sym}${target.name} (${n} ${n === 1 ? 'tarea' : 'tareas'})`
+  const hint = invalid ? tr('Sin espacios: usa letras, números, _ o -', 'No spaces: use letters, numbers, _ or -')
+    : target ? tr(`Se unirá con ${sym}${target.name} (${n} ${n === 1 ? 'tarea' : 'tareas'})`, `Will merge with ${sym}${target.name} (${n} ${n === 1 ? 'task' : 'tasks'})`)
     : '';
 
   const save = () => { if (valid) onSave(clean); };
@@ -40,7 +41,7 @@ export function EntityEditor({ kind, entity, entities, pending, variant, onSave,
   };
 
   const input = (
-    <input autoFocus value={name} aria-label={kind === 'topic' ? 'Nombre del tema' : 'Nombre de la persona'}
+    <input autoFocus value={name} aria-label={kind === 'topic' ? tr('Nombre del tema', 'Topic name') : tr('Nombre de la persona', 'Person name')}
       autocomplete="off" autocapitalize="off" spellcheck={false} maxLength={60}
       onInput={(e) => setName(e.currentTarget.value)} onKeyDown={onEnter}
       onBlur={variant === 'inline' ? onCancel : undefined} />
@@ -58,18 +59,18 @@ export function EntityEditor({ kind, entity, entities, pending, variant, onSave,
 
   return (
     <div class="ent-back" onClick={onCancel}>
-      <div class="ent-sheet" role="dialog" aria-modal="true" aria-label={kind === 'topic' ? 'Editar tema' : 'Editar persona'}
+      <div class="ent-sheet" role="dialog" aria-modal="true" aria-label={kind === 'topic' ? tr('Editar tema', 'Edit topic') : tr('Editar persona', 'Edit person')}
         onClick={(e) => e.stopPropagation()} onKeyDown={onEsc}>
-        <span class="label">{kind === 'topic' ? 'Tema' : 'Persona'}</span>
+        <span class="label">{kind === 'topic' ? tr('Tema', 'Topic') : tr('Persona', 'Person')}</span>
         <div class="ent-field">
           <span class="ent-sym">{sym}</span>
           {input}
         </div>
         {hint && <p class="ent-hint">{hint}</p>}
         <div class="ent-actions">
-          <button class="btn solid" disabled={!valid} onClick={save}>{target ? 'Unir' : 'Guardar'}</button>
-          {onDelete && <button class="link danger" onClick={onDelete}>Borrar</button>}
-          <button class="link" onClick={onCancel}>Cancelar</button>
+          <button class="btn solid" disabled={!valid} onClick={save}>{target ? tr('Unir', 'Merge') : tr('Guardar', 'Save')}</button>
+          {onDelete && <button class="link danger" onClick={onDelete}>{tr('Borrar', 'Delete')}</button>}
+          <button class="link" onClick={onCancel}>{tr('Cancelar', 'Cancel')}</button>
         </div>
       </div>
     </div>

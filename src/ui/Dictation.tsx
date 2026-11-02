@@ -5,11 +5,12 @@ import { collapseResults, dictationItems } from '../lib/speech';
 import { micSteps, type Blocked } from '../lib/mic';
 import { TaskChips } from './Chips';
 import { Ctor, type Recognition } from './recognition';
+import { isEn, tr } from '../i18n';
 
-const ERRORS: Record<string, string> = {
-  'no-speech': 'No te he oído. Toca «Seguir hablando».',
-  network: 'Sin conexión: el dictado necesita internet.',
-};
+const ERRORS = (): Record<string, string> => ({
+  'no-speech': tr('No te he oído. Toca «Seguir hablando».', 'I didn’t hear you. Tap “Keep talking”.'),
+  network: tr('Sin conexión: el dictado necesita internet.', 'Offline: dictation needs an internet connection.'),
+});
 
 /** Errores que significan «sin permiso»: se muestran los pasos para darlo en lugar de un aviso. */
 const BLOCKED: Record<string, Blocked> = { 'not-allowed': 'mic', 'service-not-allowed': 'service' };
@@ -53,7 +54,8 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
     const C = Ctor();
     if (!C) return;
     const r = new C();
-    r.lang = 'es-ES';
+    // Inglés: la variante del navegador si es inglesa (en-GB, en-US…); si no, en-US.
+    r.lang = isEn() ? (navigator.language?.toLowerCase().startsWith('en') ? navigator.language : 'en-US') : 'es-ES';
     r.continuous = true;
     r.interimResults = true;
     // Cortes por pausa, en nº de palabras: si pasa PAUSE_MS sin resultados, lo siguiente es otra tarea.
@@ -74,7 +76,7 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
       if (e.error === 'aborted') return;
       const b = BLOCKED[e.error];
       if (b) { blockedThisSession = b; setBlocked(b); return; }
-      setError(ERRORS[e.error] ?? 'No se ha podido dictar.');
+      setError(ERRORS()[e.error] ?? tr('No se ha podido dictar.', 'Dictation failed.'));
     };
     r.onend = () => {
       // Lo de esta sesión pasa a fijo; «Seguir hablando» empieza una sesión nueva.
@@ -115,21 +117,21 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
 
   return (
     <div class="ent-back" onClick={onClose}>
-      <div class="ent-sheet dict" role="dialog" aria-modal="true" aria-label="Dictar tareas" onClick={(e) => e.stopPropagation()}
+      <div class="ent-sheet dict" role="dialog" aria-modal="true" aria-label={tr('Dictar tareas', 'Dictate tasks')} onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
         <div class="dict-head">
           <span class={`dict-dot ${listening ? 'on' : ''}`} aria-hidden="true" />
-          <span class="label">{blocked ? 'Sin acceso al micrófono' : listening ? 'Escuchando…' : 'Dictado en pausa'}</span>
+          <span class="label">{blocked ? tr('Sin acceso al micrófono', 'No microphone access') : listening ? tr('Escuchando…', 'Listening…') : tr('Dictado en pausa', 'Dictation paused')}</span>
         </div>
         {blocked ? (
           <div class="dict-blocked" role="alert">
             <p>{blocked === 'service'
-              ? 'El dictado está desactivado en este dispositivo. Para usarlo:'
-              : 'Lista no tiene permiso para usar el micrófono. Para dictar:'}</p>
+              ? tr('El dictado está desactivado en este dispositivo. Para usarlo:', 'Dictation is turned off on this device. To use it:')
+              : tr('Lista no tiene permiso para usar el micrófono. Para dictar:', 'Lista isn’t allowed to use the microphone. To dictate:')}</p>
             <ol>{micSteps(blocked, navigator.userAgent, isStandalone(), navigator.maxTouchPoints).map((s) => <li key={s}>{s}</li>)}</ol>
-            {blocked === 'mic' && <p class="dict-note">Mientras tanto, puedes usar el micrófono del teclado en la caja de texto.</p>}
+            {blocked === 'mic' && <p class="dict-note">{tr('Mientras tanto, puedes usar el micrófono del teclado en la caja de texto.', 'Meanwhile, you can use your keyboard’s microphone in the text box.')}</p>}
           </div>
-        ) : <p class="dict-hint">Di una tarea, haz una pausa y di la siguiente. «Prioridad alta», «tema trabajo» y «persona Ana» también valen.</p>}
+        ) : <p class="dict-hint">{tr('Di una tarea, haz una pausa y di la siguiente. «Prioridad alta», «tema trabajo» y «persona Ana» también valen.', 'Say a task, pause, then say the next one. “High priority”, “tag work” and “person Ana” work too.')}</p>}
         <ul class="dict-list">
           {items.map((t, i) => {
             const p = parseLine(t);
@@ -143,7 +145,7 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
                       today={today} title={p.title} />
                   </span>
                 </div>
-                <button class="dict-x" aria-label={`Quitar «${p.title}»`} onClick={() => setRemoved((r) => new Set(r).add(t))}>×</button>
+                <button class="dict-x" aria-label={tr(`Quitar «${p.title}»`, `Remove “${p.title}”`)} onClick={() => setRemoved((r) => new Set(r).add(t))}>×</button>
               </li>
             );
           })}
@@ -151,17 +153,17 @@ export function Dictation({ names, today, onAdd, onClose }: Props) {
         {error && <p class="err">{error}</p>}
         {blocked ? (
           <div class="ent-actions">
-            <button class="btn solid" onClick={retry}>Reintentar</button>
-            <button class="link" onClick={onClose}>Cerrar</button>
+            <button class="btn solid" onClick={retry}>{tr('Reintentar', 'Try again')}</button>
+            <button class="link" onClick={onClose}>{tr('Cerrar', 'Close')}</button>
           </div>
         ) : <div class="ent-actions">
           <button class="btn solid" disabled={!items.length} onClick={add}>
-            {items.length ? `Añadir ${items.length} ${items.length === 1 ? 'tarea' : 'tareas'}` : 'Añadir'}
+            {items.length ? tr(`Añadir ${items.length} ${items.length === 1 ? 'tarea' : 'tareas'}`, `Add ${items.length} ${items.length === 1 ? 'task' : 'tasks'}`) : tr('Añadir', 'Add')}
           </button>
           {listening
-            ? <button class="link" onClick={stop}>Parar</button>
-            : <button class="link" onClick={start}>Seguir hablando</button>}
-          <button class="link" onClick={onClose}>Cancelar</button>
+            ? <button class="link" onClick={stop}>{tr('Parar', 'Stop')}</button>
+            : <button class="link" onClick={start}>{tr('Seguir hablando', 'Keep talking')}</button>}
+          <button class="link" onClick={onClose}>{tr('Cancelar', 'Cancel')}</button>
         </div>}
       </div>
     </div>

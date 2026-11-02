@@ -7,6 +7,7 @@ import { firstOccurrence } from '../lib/recurrence';
 import { parsePeriodToken, periodToken } from '../lib/period';
 import { MASK, foldText, parseSpanishDate } from './dates';
 import { formatRecurrence, matchRecurrence } from './recurrence';
+import { lang } from '../i18n';
 
 export { normalizeKey, formatRecurrence };
 
@@ -67,8 +68,9 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
   }
 
   let priority: Priority | null = null;
-  const PRIO_WORDS: Record<string, Priority> = { alta: 1, media: 2, baja: 3 };
-  for (const m of w.matchAll(/(?<!\S)!([123]|alta|media|baja)(?![\p{L}\p{N}_])/giu)) {
+  const PRIO_WORDS: Record<string, Priority> = lang() === 'en' ? { high: 1, medium: 2, med: 2, low: 3 } : { alta: 1, media: 2, baja: 3 };
+  const PRIO = new RegExp(`(?<!\\S)!([123]|${Object.keys(PRIO_WORDS).join('|')})(?![\\p{L}\\p{N}_])`, 'giu');
+  for (const m of w.matchAll(PRIO)) {
     priority = (PRIO_WORDS[m[1].toLowerCase()] ?? Number(m[1])) as Priority;
     take('priority', m.index!, m.index! + m[0].length);
   }
@@ -76,7 +78,7 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
   // vence:YYYY-MM-DD | DD/MM[/YYYY] | periodo: YYYY-Www, YYYY-MM, YYYY-Qn, YYYY
   let explicit: ISODate | null = null;
   let explicitPeriod: Period | null = null;
-  const VENCE = /(?<!\S)vence:(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/\d{4})?|\d{4}-W\d{2}|\d{4}-[QT][1-4]|\d{4}-\d{2}|\d{4})(?![\p{L}\p{N}_-])/giu;
+  const VENCE = /(?<!\S)(?:vence|due):(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/\d{4})?|\d{4}-W\d{2}|\d{4}-[QT][1-4]|\d{4}-\d{2}|\d{4})(?![\p{L}\p{N}_-])/giu;
   for (const m of w.matchAll(VENCE)) {
     const per = parsePeriodToken(m[1]);
     const due = per ? per.date : explicitDue(m[1], today);
@@ -173,18 +175,29 @@ export function formatLine(t: {
     t.title,
     ...missing('#', t.topicNames),
     ...missing('@', t.peopleNames),
-    t.priority ? `!${['alta', 'media', 'baja'][t.priority - 1]}` : '',
+    t.priority ? `!${(lang() === 'en' ? ['high', 'medium', 'low'] : ['alta', 'media', 'baja'])[t.priority - 1]}` : '',
     t.recurrence ? formatRecurrence(t.recurrence) : '',
-    t.due ? `vence:${t.period ? periodToken(t.period, t.due) : t.due}` : '',
+    t.due ? `${lang() === 'en' ? 'due' : 'vence'}:${t.period ? periodToken(t.period, t.due) : t.due}` : '',
   ].filter(Boolean).join(' ');
 }
 
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** Fecha relativa a hoy para mostrar: hoy, mañana, ayer, nombre de día (2-6 días) o "2 nov". */
 export function formatDue(due: ISODate, today: ISODate): string {
   const diff = diffDays(today, due);
+  if (lang() === 'en') {
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'tomorrow';
+    if (diff === -1) return 'yesterday';
+    const d = fromISODate(due);
+    if (diff >= 2 && diff <= 6) return DAYS_EN[d.getDay()];
+    const base = `${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
+    return d.getFullYear() === fromISODate(today).getFullYear() ? base : `${base} ${d.getFullYear()}`;
+  }
   if (diff === 0) return 'hoy';
   if (diff === 1) return 'mañana';
   if (diff === -1) return 'ayer';

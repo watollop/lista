@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ParsedLine } from '../types';
 import { parseBlock } from '../parser';
-import { TITLE_TOO_LONG, titleTooLong } from '../lib/capture';
+import { titleTooLong, titleTooLongMsg } from '../lib/capture';
+import { tr } from '../i18n';
 
-export function SubtaskInputs({ onSubmit, onCancel, onEach, label = 'Guardar tarea' }: {
+export function SubtaskInputs({ onSubmit, onCancel, onEach, label = tr('Guardar tarea', 'Save task') }: {
   onSubmit: (lines: ParsedLine[]) => Promise<void>;
   onCancel: () => void;
   /** Tarea ya existente: cada Enter guarda esa subtarea al momento y deja el campo listo para la siguiente. */
@@ -30,10 +31,10 @@ export function SubtaskInputs({ onSubmit, onCancel, onEach, label = 'Guardar tar
     if (saving.current) return false;
     const lines = texts.filter((v) => v.trim()).flatMap((v) => parseBlock(v).map((line) => ({ ...line, isSubtask: true })));
     if (lines.some((l) => !l.title)) {
-      setError('Escribe un título para cada subtarea, además de sus etiquetas.');
+      setError(tr('Escribe un título para cada subtarea, además de sus etiquetas.', 'Write a title for each subtask, not just its tags.'));
       return false;
     }
-    if (titleTooLong(lines)) { setError(TITLE_TOO_LONG); return false; }
+    if (titleTooLong(lines)) { setError(titleTooLongMsg()); return false; }
     saving.current = true;
     setBusy(true);
     setError('');
@@ -41,7 +42,7 @@ export function SubtaskInputs({ onSubmit, onCancel, onEach, label = 'Guardar tar
       await save(lines);
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudieron guardar las subtareas.');
+      setError(e instanceof Error ? e.message : tr('No se pudieron guardar las subtareas.', 'Couldn’t save the subtasks.'));
       return false;
     } finally {
       saving.current = false;
@@ -62,14 +63,14 @@ export function SubtaskInputs({ onSubmit, onCancel, onEach, label = 'Guardar tar
         {values.map((v, i) => (
           <div class="subtask-field" key={i}>
             <input ref={(el) => { inputs.current[i] = el; }} value={v} disabled={busy}
-              aria-label={`Subtarea ${i + 1}`} placeholder="Nueva subtarea…"
+              aria-label={tr(`Subtarea ${i + 1}`, `Subtask ${i + 1}`)} placeholder={tr('Nueva subtarea…', 'New subtask…')}
               autocomplete="off" enterkeyhint={v.trim() ? 'next' : 'done'}
               onInput={(e) => { setValues(values.map((s, j) => j === i ? e.currentTarget.value : s)); setError(''); }}
               onKeyDown={(e) => {
                 if (e.isComposing || e.key !== 'Enter') return;
                 e.preventDefault();
                 if (!v.trim()) { void submit(); return; }
-                if (parseBlock(v).some((line) => !line.title)) { setError('Escribe un título para cada subtarea.'); return; }
+                if (parseBlock(v).some((line) => !line.title)) { setError(tr('Escribe un título para cada subtarea.', 'Write a title for each subtask.')); return; }
                 if (onEach) { void saveOne(i); return; }
                 if (i < values.length - 1) inputs.current[i + 1]?.focus();
                 else {
@@ -77,7 +78,7 @@ export function SubtaskInputs({ onSubmit, onCancel, onEach, label = 'Guardar tar
                   setValues([...values, '']);
                 }
               }} />
-            <button class="remove-subtask" disabled={busy} aria-label={`Quitar subtarea ${i + 1}`}
+            <button class="remove-subtask" disabled={busy} aria-label={tr(`Quitar subtarea ${i + 1}`, `Remove subtask ${i + 1}`)}
               onClick={() => {
                 focus.current = Math.max(0, i - 1);
                 setValues(values.length === 1 ? [''] : values.filter((_, j) => j !== i));
@@ -85,10 +86,10 @@ export function SubtaskInputs({ onSubmit, onCancel, onEach, label = 'Guardar tar
           </div>
         ))}
       </div>
-      <p class="subtask-help">{onEach ? 'Enter: guardar y escribir otra · Enter en vacío: cerrar' : 'Enter: siguiente · Enter en vacío: guardar'}</p>
+      <p class="subtask-help">{onEach ? tr('Enter: guardar y escribir otra · Enter en vacío: cerrar', 'Enter: save and write another · Enter on empty: close') : tr('Enter: siguiente · Enter en vacío: guardar', 'Enter: next · Enter on empty: save')}</p>
       <div class="subtask-actions">
-        <button class="link" disabled={busy} onClick={() => void submit()}>{busy ? 'Guardando…' : label}</button>
-        <button class="link" disabled={busy} onClick={onCancel}>Cancelar</button>
+        <button class="link" disabled={busy} onClick={() => void submit()}>{busy ? tr('Guardando…', 'Saving…') : label}</button>
+        <button class="link" disabled={busy} onClick={onCancel}>{tr('Cancelar', 'Cancel')}</button>
       </div>
       {error && <p class="err" role="alert">{error}</p>}
     </div>

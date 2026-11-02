@@ -6,9 +6,21 @@
  * - "siguiente", "nueva tarea", "otra tarea" o un punto separan tareas.
  */
 
+import { lang } from '../i18n';
+
 const W = '[\\p{L}\\p{N}_-]+';
 
 export function spokenToSyntax(text: string): string {
+  if (lang() === 'en') {
+    // "priority high", "high priority", "urgent" -> !high; "tag work" / "topic work" / "hashtag work" -> #work; "person Ana" -> @ana
+    return text
+      .replace(/\b(?:with\s+)?(?:priority\s+(high|medium|low)|(high|medium|low)\s+priority)\b/giu, (_, a?: string, b?: string) => `!${(a ?? b ?? '').toLowerCase()}`)
+      .replace(/\b(?:it'?s\s+)?urgent\b/giu, '!high')
+      .replace(new RegExp(`\\b(?:tag|topic|hashtag)\\s+(${W})`, 'giu'), (_, t: string) => `#${t.toLowerCase()}`)
+      .replace(new RegExp(`\\bperson\\s+(${W})`, 'giu'), (_, p: string) => `@${p.toLowerCase()}`)
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   return text
     .replace(/\b(?:con\s+)?prioridad\s+(alta|media|baja)\b/giu, (_, p: string) => `!${p.toLowerCase()}`)
     .replace(/\b(?:es\s+)?urgente\b/giu, '!alta')
@@ -20,8 +32,12 @@ export function spokenToSyntax(text: string): string {
 
 /** Parte un dictado en tareas y las limpia: sin punto final, primera letra en mayúscula. */
 export function splitDictation(text: string): string[] {
+  // En inglés no vale «next» suelto: «next monday» es una fecha.
+  const sep = lang() === 'en'
+    ? /\s*(?:[.;]\s+|[.;]$|\b(?:next task|new task|another task)\b[,.]?)\s*/iu
+    : /\s*(?:[.;]\s+|[.;]$|\b(?:siguiente|nueva tarea|otra tarea)\b[,.]?)\s*/iu;
   return text
-    .split(/\s*(?:[.;]\s+|[.;]$|\b(?:siguiente|nueva tarea|otra tarea)\b[,.]?)\s*/iu)
+    .split(sep)
     .map((t) => spokenToSyntax(t.replace(/[.,;]+$/, '')))
     .filter((t) => t.length > 1)
     .map((t) => t[0].toUpperCase() + t.slice(1));

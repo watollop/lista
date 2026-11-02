@@ -1,4 +1,5 @@
 import { DEFAULT_SECONDARY_COLOR, isSecondaryColor } from '../lib/preferences';
+import { tr } from '../i18n';
 
 /** Tema y estilo elegidos en Ajustes. 'system' sigue a prefers-color-scheme. index.html los aplica antes de pintar. */
 export type Theme = 'system' | 'light' | 'dark';
@@ -20,7 +21,7 @@ export function getSubtaskColor(): string {
 }
 
 export function setSubtaskColor(color: string): void {
-  if (!isSecondaryColor(color)) throw new Error('Elige un color válido.');
+  if (!isSecondaryColor(color)) throw new Error(tr('Elige un color válido.', 'Choose a valid color.'));
   const changed = getSubtaskColor() !== color;
   localStorage.setItem(SUBTASK_COLOR_KEY, color);
   document.documentElement.style.setProperty('--subtask-color', color);

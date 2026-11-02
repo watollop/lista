@@ -1,5 +1,6 @@
 // Sesión contra la API de Auth (GoTrue) de Supabase, con fetch directo.
 import { HttpError, parseBody } from './api';
+import { tr } from '../i18n';
 
 export interface SyncConfig {
   url: string;
@@ -34,7 +35,7 @@ interface AuthBody {
 function authMessage(status: number, body: AuthBody): string {
   const raw = String(body.error_description || body.msg || body.message || body.error || '');
   if (/rate limit|too many|security purposes/i.test(raw)) return 'Demasiados intentos: espera unos minutos';
-  return raw || `No se pudo completar la operación (${status})`;
+  return raw || tr(`No se pudo completar la operación (${status})`, `Couldn’t complete the operation (${status})`);
 }
 
 async function authPost(
@@ -55,7 +56,7 @@ async function authPost(
 
 function toSession(body: AuthBody, now: number): Session {
   if (!body.access_token || !body.refresh_token || !body.user?.id) {
-    throw new Error('Respuesta de autenticación inesperada');
+    throw new Error(tr('Respuesta de autenticación inesperada', 'Unexpected sign-in response'));
   }
   return {
     accessToken: body.access_token,
@@ -100,7 +101,7 @@ export async function sessionFromRedirect(
     headers: { apikey: cfg.anonKey, Authorization: `Bearer ${accessToken}` },
   });
   const user = (await parseBody(res)) as { id?: string; email?: string };
-  if (!res.ok || !user.id) throw new HttpError(res.status, 'No se pudo completar el acceso con Google');
+  if (!res.ok || !user.id) throw new HttpError(res.status, tr('No se pudo completar el acceso con Google', 'Couldn’t complete Google sign-in'));
   return {
     accessToken,
     refreshToken,

@@ -52,6 +52,7 @@ import {
   unwrapWithRecovery,
   wrapWithRecovery,
 } from './crypto';
+import { tr } from '../i18n';
 
 export type { SyncConfig } from './auth';
 
@@ -132,7 +133,7 @@ function isOffline(e: unknown): boolean {
 
 /** Errores de red se presentan como mensaje claro; el resto se conserva. */
 function friendly(e: unknown): Error {
-  if (e instanceof TypeError) return new Error('Sin conexión con el servidor');
+  if (e instanceof TypeError) return new Error(tr('Sin conexión con el servidor', 'Can’t reach the server'));
   return e instanceof Error ? e : new Error(String(e));
 }
 
@@ -207,7 +208,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   /** Refresca la sesión. Lanza SessionLost si el refresh token ya no sirve (400/401). */
   async function refreshSession(c: SyncConfig): Promise<void> {
     const current = session;
-    if (!current) throw new SessionLost('Sesión cerrada');
+    if (!current) throw new SessionLost(tr('Sesión cerrada', 'Signed out'));
     const myEpoch = epoch;
     try {
       const fresh = await auth.refresh(c, current.refreshToken, fetchImpl, now);
@@ -220,7 +221,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
           session = null;
           auth.clearSession(storage);
         }
-        throw new SessionLost('Sesión caducada');
+        throw new SessionLost(tr('Sesión caducada', 'Session expired'));
       }
       throw e;
     }
@@ -367,7 +368,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
 
   async function doSync(c: SyncConfig): Promise<'ok' | 'locked'> {
     const s = session;
-    if (!s) throw new SessionLost('Sesión cerrada');
+    if (!s) throw new SessionLost(tr('Sesión cerrada', 'Signed out'));
 
     // Lecturas en paralelo: fila key, DK local, pendientes y cursor.
     const [row, rawDk, all, stored] = await Promise.all([
@@ -526,7 +527,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
 
   /** Guarda la DK de la cuenta tras comprobar que es la de la fila key, y sincroniza con bajada completa. */
   async function installDk(s: Session, row: KeyRowData, dk: CryptoKey): Promise<void> {
-    if ((await keyIdOf(dk)) !== row.keyId) throw new Error('La clave no corresponde a esta cuenta');
+    if ((await keyIdOf(dk)) !== row.keyId) throw new Error(tr('La clave no corresponde a esta cuenta', 'That key doesn’t belong to this account'));
     await repo.setMeta(dkKey(s.userId), await exportDk(dk));
     await repo.setMeta(CURSOR_KEY, null); // pull completo
     await runSyncLoop();
@@ -535,9 +536,9 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   async function unlockFn(recoveryKey: string): Promise<void> {
     const c = cfg;
     const s = session;
-    if (!c || !s) throw new Error('Inicia sesión primero');
+    if (!c || !s) throw new Error(tr('Inicia sesión primero', 'Sign in first'));
     const row = await readKeyRow(c, s);
-    if (!row || !row.recovery) throw new Error('Esta cuenta no tiene clave de recuperación');
+    if (!row || !row.recovery) throw new Error(tr('Esta cuenta no tiene clave de recuperación', 'This account has no recovery key'));
     const dk = await unwrapWithRecovery(row.recovery, recoveryKey);
     await installDk(s, row, dk);
   }
@@ -545,9 +546,9 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   async function adoptFn(dk: CryptoKey): Promise<void> {
     const c = cfg;
     const s = session;
-    if (!c || !s) throw new Error('Inicia sesión primero');
+    if (!c || !s) throw new Error(tr('Inicia sesión primero', 'Sign in first'));
     const row = await readKeyRow(c, s);
-    if (!row) throw new Error('Esta cuenta no tiene cifrado activado');
+    if (!row) throw new Error(tr('Esta cuenta no tiene cifrado activado', 'This account doesn’t have encryption on'));
     await installDk(s, row, dk);
   }
 
@@ -558,8 +559,8 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   async function resetFn(): Promise<void> {
     const c = cfg;
     const s = session;
-    if (!c || !s) throw new Error('Inicia sesión primero');
-    if (encState !== 'locked' && encState !== 'on') throw new Error('El cifrado no está activo en esta cuenta.');
+    if (!c || !s) throw new Error(tr('Inicia sesión primero', 'Sign in first'));
+    if (encState !== 'locked' && encState !== 'on') throw new Error(tr('El cifrado no está activo en esta cuenta.', 'Encryption isn’t on for this account.'));
 
     // Nueva DK. Al cambiar la fila key, los demás dispositivos pasan a 'locked'.
     const dk = await generateDk();
@@ -577,11 +578,11 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   async function createRecoveryKey(): Promise<string> {
     const c = cfg;
     const s = session;
-    if (!c || !s) throw new Error('Inicia sesión primero');
+    if (!c || !s) throw new Error(tr('Inicia sesión primero', 'Sign in first'));
     const row = await readKeyRow(c, s);
-    if (!row) throw new Error('Activa primero el cifrado');
+    if (!row) throw new Error(tr('Activa primero el cifrado', 'Turn on encryption first'));
     const dk = await loadDk(s.userId, row);
-    if (!dk) throw new Error('Este dispositivo no tiene la clave de cifrado. Enlázalo primero.');
+    if (!dk) throw new Error(tr('Este dispositivo no tiene la clave de cifrado. Enlázalo primero.', 'This device doesn’t have the encryption key. Link it first.'));
     const key = generateRecoveryKey();
     const recovery = await wrapWithRecovery(dk, key);
     await updateKeyRow(c, s, { v: 1, keyId: row.keyId, recovery }, fetchImpl);
@@ -695,7 +696,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   /** Transporte de pairings sobre la sesión actual. Una petición caducada según now() cuenta como ausente. */
   function pairingTransport(c: SyncConfig): PairingTransport {
     const current = (): Session => {
-      if (!session) throw new SessionLost('Sesión cerrada');
+      if (!session) throw new SessionLost(tr('Sesión cerrada', 'Signed out'));
       return session;
     };
     return {
@@ -731,8 +732,8 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
         if (r.status === 'gone') {
           // Con el código ya a la vista, lo normal es que el otro dispositivo lo haya rechazado.
           failLink('new', ctx.st.revealed
-            ? 'El otro dispositivo rechazó el enlace o la petición caducó.'
-            : 'Nadie respondió a tiempo: la petición caducó. Vuelve a intentarlo con el otro dispositivo abierto.');
+            ? tr('El otro dispositivo rechazó el enlace o la petición caducó.', 'The other device rejected the link or the request expired.')
+            : tr('Nadie respondió a tiempo: la petición caducó. Vuelve a intentarlo con el otro dispositivo abierto.', 'Nobody answered in time: the request expired. Try again with the other device open.'));
           return;
         }
         // 'done': la DK ya está descifrada. adoptKey verifica el keyId y hace la bajada completa.
@@ -811,7 +812,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
   async function startLinkFn(): Promise<void> {
     const c = cfg;
     const s = session;
-    if (!c || !s) throw new Error('Inicia sesión primero');
+    if (!c || !s) throw new Error(tr('Inicia sesión primero', 'Sign in first'));
     if (encState !== 'locked') throw new Error('Solo un dispositivo bloqueado puede pedir el enlace');
     if (linkCtx) throw new Error('Ya hay un enlace en curso');
     const myEpoch = epoch;
@@ -850,7 +851,7 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     if (!ctx || ctx.role !== 'active' || linkSt?.role !== 'active' || linkSt.status !== 'code') {
       throw new Error('No hay ningún código que confirmar');
     }
-    if (!c || !s) throw new Error('Inicia sesión primero');
+    if (!c || !s) throw new Error(tr('Inicia sesión primero', 'Sign in first'));
     const myEpoch = epoch;
     try {
       const row = await readKeyRow(c, s);

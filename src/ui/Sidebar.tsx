@@ -6,6 +6,7 @@ import { PriorityName } from './Priority';
 import { EntityEditor } from './EntityEditor';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
+import { tr } from '../i18n';
 
 interface Props {
   filter: Filter;
@@ -25,9 +26,9 @@ interface Props {
   onDelete: (kind: EntityKind, key: string) => void;
 }
 
-const DATES: Array<[DateFilter, string]> = [
-  ['today', 'Hoy'], ['week', 'Semana'], ['month', 'Mes'],
-  ['overdue', 'Vencidas'], ['nodate', 'Sin fecha'],
+const DATES = (): Array<[DateFilter, string]> => [
+  ['today', tr('Hoy', 'Today')], ['week', tr('Semana', 'Week')], ['month', tr('Mes', 'Month')],
+  ['overdue', tr('Vencidas', 'Overdue')], ['nodate', tr('Sin fecha', 'No date')],
 ];
 
 /** Pantallas anchas: todos los filtros a la vista, con recuento de pendientes. Misma lógica que FilterBar. */
@@ -45,26 +46,26 @@ export function Sidebar(p: Props) {
   };
 
   return (
-    <aside class="side" aria-label="Filtros">
+    <aside class="side" aria-label={tr('Filtros', 'Filters')}>
       {p.week}
-      <input ref={p.searchRef} class="side-search" type="search" placeholder="Buscar" value={f.text} aria-label="Buscar"
+      <input ref={p.searchRef} class="side-search" type="search" placeholder={tr('Buscar', 'Search')} value={f.text} aria-label={tr('Buscar', 'Search')}
         onInput={(e) => set({ text: e.currentTarget.value })}
         onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }} />
 
       <ul class="side-list">
-        <Item on={isEmptyFilter(f)} count={p.counts.open} onClick={() => setFilter(emptyFilter())}>Todas</Item>
+        <Item on={isEmptyFilter(f)} count={p.counts.open} onClick={() => setFilter(emptyFilter())}>{tr('Todas', 'All')}</Item>
       </ul>
 
-      <Group title="Fecha">
-        {DATES.map(([d, l]) => (
+      <Group title={tr('Fecha', 'Date')}>
+        {DATES().map(([d, l]) => (
           <Item key={d} on={f.dates.includes(d)} count={p.counts[d]} warn={d === 'overdue' && p.counts.overdue > 0}
             drop={d === 'today' ? 'today' : d === 'week' ? 'week' : d === 'nodate' ? 'nodate' : undefined}
             onClick={() => set({ dates: toggleIn(f.dates, d), day: undefined })}>{l}</Item>
         ))}
-        <Item on={f.status === 'done'} onClick={() => set({ status: f.status === 'done' ? 'open' : 'done' })}>Hechas</Item>
+        <Item on={f.status === 'done'} onClick={() => set({ status: f.status === 'done' ? 'open' : 'done' })}>{tr('Hechas', 'Done')}</Item>
       </Group>
 
-      <Group title="Prioridad">
+      <Group title={tr('Prioridad', 'Priority')}>
         {([1, 2, 3] as Priority[]).map((n) => (
           <Item key={n} on={f.priorities.includes(n)} count={p.pending.get('!' + n)}
             onClick={() => set({ priorities: toggleIn(f.priorities, n) })}><PriorityName p={n} /></Item>
@@ -72,36 +73,36 @@ export function Sidebar(p: Props) {
       </Group>
 
       {p.topics.length > 0 && (
-        <EntityGroup title="Temas" kind="topic" items={p.topics} all={p.allTopics} pending={p.pending}
+        <EntityGroup title={tr('Temas', 'Topics')} kind="topic" items={p.topics} all={p.allTopics} pending={p.pending}
           selected={f.topics} onToggle={(k) => set({ topics: toggleIn(f.topics, k) })}
           onRename={p.onRename} onDelete={p.onDelete} />
       )}
 
       {p.people.length > 0 && (
-        <EntityGroup title="Personas" kind="person" items={p.people} all={p.allPeople} pending={p.pending}
+        <EntityGroup title={tr('Personas', 'People')} kind="person" items={p.people} all={p.allPeople} pending={p.pending}
           selected={f.people} onToggle={(k) => set({ people: toggleIn(f.people, k) })}
           onRename={p.onRename} onDelete={p.onDelete} />
       )}
 
       {(p.saved.length > 0 || (!isEmptyFilter(f) && !current && !f.day)) && (
-        <Group title="Guardados">
+        <Group title={tr('Guardados', 'Saved')}>
           {p.saved.map((s, i) => (
             <li key={s.id} class="side-pair">
               <button class={`side-item ${current?.id === s.id ? 'on' : ''}`} aria-pressed={current?.id === s.id}
                 onClick={() => setFilter(current?.id === s.id ? emptyFilter() : s.filter)}>
                 <span>{s.name}</span>{i < 9 && <kbd>{i + 1}</kbd>}
               </button>
-              <button class="side-x" aria-label={`Borrar filtro ${s.name}`} onClick={() => p.onDeleteSaved(s.id)}>×</button>
+              <button class="side-x" aria-label={tr(`Borrar filtro ${s.name}`, `Delete filter ${s.name}`)} onClick={() => p.onDeleteSaved(s.id)}>×</button>
             </li>
           ))}
           {!isEmptyFilter(f) && !current && !f.day && ( /* un día concreto no se guarda: mañana ya no sería el mismo */
             <li>
               {naming ? (
-                <input autoFocus class="side-search" placeholder="Nombre del filtro" value={name} aria-label="Nombre del filtro"
+                <input autoFocus class="side-search" placeholder={tr('Nombre del filtro', 'Filter name')} value={name} aria-label={tr('Nombre del filtro', 'Filter name')}
                   onInput={(e) => setName(e.currentTarget.value)} onBlur={save}
                   onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setNaming(false); }} />
               ) : (
-                <button class="side-item side-add" onClick={() => setNaming(true)}>+ Guardar filtro actual</button>
+                <button class="side-item side-add" onClick={() => setNaming(true)}>{tr('+ Guardar filtro actual', '+ Save current filter')}</button>
               )}
             </li>
           )}
@@ -148,7 +149,7 @@ function EntityGroup({ title, kind, items, all, pending, selected, onToggle, onR
       {open && items.length > SEARCH_FROM && (
         <li>
           <input class="side-search side-filter" type="search" placeholder={`Buscar ${title.toLowerCase()}`} value={q}
-            aria-label={`Buscar ${title.toLowerCase()}`} onInput={(e) => setQ(e.currentTarget.value)}
+            aria-label={tr(`Buscar ${title.toLowerCase()}`, `Search ${title.toLowerCase()}`)} onInput={(e) => setQ(e.currentTarget.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setQ(''); e.currentTarget.blur(); } }} />
         </li>
       )}
@@ -156,11 +157,11 @@ function EntityGroup({ title, kind, items, all, pending, selected, onToggle, onR
         <EntityItem key={t.key} kind={kind} ent={t} all={all} pending={pending} on={selected.includes(t.key)}
           onToggle={() => onToggle(t.key)} onRename={onRename} onDelete={onDelete} />
       ))}
-      {open && q && !shown.length && <li class="side-empty">Sin resultados</li>}
+      {open && q && !shown.length && <li class="side-empty">{tr('Sin resultados', 'No results')}</li>}
       {foldable && (
         <li>
           <button class="side-item side-more" aria-expanded={open} onClick={toggle}>
-            {open ? 'Ver menos' : `Ver todos (${items.length})`}
+            {open ? tr('Ver menos', 'Show less') : tr(`Ver todos (${items.length})`, `Show all (${items.length})`)}
           </button>
         </li>
       )}
@@ -198,12 +199,12 @@ function EntityItem({ kind, ent, all, pending, on, onToggle, onRename, onDelete 
         {count ? <span class="side-count">{count}</span> : null}
       </button>
       <span class="side-acts">
-        <button class="side-act" aria-label={`Editar ${sym}${ent.name}`} title="Editar" onClick={() => setEditing(true)}>
+        <button class="side-act" aria-label={tr(`Editar ${sym}${ent.name}`, `Edit ${sym}${ent.name}`)} title={tr('Editar', 'Edit')} onClick={() => setEditing(true)}>
           <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
             <path d="M3 13l.6-2.6 7.4-7.4 2 2-7.4 7.4z" /><path d="M9.5 4.5l2 2" />
           </svg>
         </button>
-        <button class="side-act del" aria-label={`Borrar ${sym}${ent.name}`} title="Borrar" onClick={() => onDelete(kind, ent.key)}>
+        <button class="side-act del" aria-label={tr(`Borrar ${sym}${ent.name}`, `Delete ${sym}${ent.name}`)} title={tr('Borrar', 'Delete')} onClick={() => onDelete(kind, ent.key)}>
           <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
             <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" />
           </svg>
