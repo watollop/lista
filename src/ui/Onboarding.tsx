@@ -339,7 +339,7 @@ function PrioRepeatDemo() {
       <div class="ref-group">
         <span class="label">Repetir</span>
         <span class="ref-chips">
-          {['cada día', 'cada lunes', 'cada mes', 'cada año'].map((c) => <span key={c} class="chip"><RepeatIcon /> {c}</span>)}
+          {['cada día', 'cada lunes', 'cada 2 martes', 'cada mes', 'cada año'].map((c) => <span key={c} class="chip"><RepeatIcon /> {c}</span>)}
         </span>
       </div>
     </div>

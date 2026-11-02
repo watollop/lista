@@ -37,7 +37,7 @@ Llamar mañana #trabajo @ana !alta
 | Un periodo | `esta semana`, `este mes`, `este trimestre` |
 | Un tema o una persona | `#trabajo`, `@ana` |
 | Una prioridad | `!alta`, `!media`, `!baja` |
-| Una repetición | `cada lunes`, `cada mes`, `a diario` |
+| Una repetición | `cada lunes`, `cada 2 martes`, `cada dos semanas`, `quincenal`, `cada mes`, `a diario` |
 | Una subtarea | `<Reservar alojamiento` |
 
 Pulsa **Enter** para guardarla. También puedes dictar con el micrófono, una tarea tras otra.
