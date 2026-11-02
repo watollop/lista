@@ -91,6 +91,9 @@ describe('recurrencias y fechas por defecto', () => {
   });
   it('cada 3 días, cada año, a diario, miercoles con y sin acento', () => {
     expect(parseLine('x cada 3 días', now).recurrence).toEqual({ unit: 'day', every: 3 });
+    expect(parseLine('x cada dos semanas', now).recurrence).toEqual({ unit: 'week', every: 2 });
+    expect(parseLine('x quincenal', now).recurrence).toEqual({ unit: 'week', every: 2 });
+    expect(parseLine('x cada 2 sábados', now).recurrence).toEqual({ unit: 'week', every: 2, weekday: 6 });
     expect(parseLine('x cada año', now).recurrence).toEqual({ unit: 'year', every: 1 });
     expect(parseLine('x a diario', now).recurrence).toEqual({ unit: 'day', every: 1 });
     expect(parseLine('x todos los miercoles', now).recurrence).toEqual({ unit: 'week', every: 1, weekday: 3 });
@@ -468,6 +471,8 @@ describe('formatRecurrence', () => {
     expect(formatRecurrence({ unit: 'week', every: 2 })).toBe('cada 2 semanas');
     expect(formatRecurrence({ unit: 'week', every: 1, weekday: 1 })).toBe('cada lunes');
     expect(formatRecurrence({ unit: 'week', every: 1, weekday: 6 })).toBe('cada sábado');
+    expect(formatRecurrence({ unit: 'week', every: 2, weekday: 2 })).toBe('cada 2 martes');
+    expect(formatRecurrence({ unit: 'week', every: 2, weekday: 6 })).toBe('cada 2 sábados');
     expect(formatRecurrence({ unit: 'month', every: 1 })).toBe('cada mes');
     expect(formatRecurrence({ unit: 'month', every: 2 })).toBe('cada 2 meses');
     expect(formatRecurrence({ unit: 'year', every: 1 })).toBe('cada año');

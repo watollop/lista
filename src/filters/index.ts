@@ -54,7 +54,9 @@ export function matches(task: Task, f: Filter, today: ISODate, parent?: Task): b
   if (task.deleted) return false;
   if (f.topics.length && !f.topics.some((k) => [...task.topics, ...(parent?.topics ?? [])].includes(k))) return false;
   if (f.people.length && !f.people.some((k) => [...task.people, ...(parent?.people ?? [])].includes(k))) return false;
-  if (f.dates.length) {
+  // Las vencidas siguen pendientes: se ven con cualquier filtro de fecha (o día del calendario).
+  const late = isOverdue(task, today);
+  if (f.dates.length && !late) {
     const ok = f.dates.some((d) => {
       switch (d) {
         case 'today': return task.due === today;
@@ -68,7 +70,7 @@ export function matches(task: Task, f: Filter, today: ISODate, parent?: Task): b
     });
     if (!ok) return false;
   }
-  if (f.day && task.due !== f.day) return false;
+  if (f.day && task.due !== f.day && !late) return false;
   if (f.priorities.length && (task.priority === null || !f.priorities.includes(task.priority))) return false;
   if (f.status === 'open' && task.done !== 0) return false;
   if (f.status === 'done' && task.done !== 1) return false;

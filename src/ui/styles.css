@@ -622,10 +622,11 @@ kbd {
 .app.wide .body { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; }
 .app.wide .title { flex: 1; width: auto; }
 .app.wide .meta { margin-top: 0; flex: 0 1 auto; max-width: 55%; justify-content: flex-end; }
-.app.wide .edit { flex: 1; }
-.app.wide .edit-actions { margin-top: 0; }
+.app.wide .edit { flex: 1 1 100%; }
+/* Editando: el texto ocupa toda la fila y las acciones van debajo, con Borrar al otro extremo. */
+.app.wide .edit-actions { margin-top: -4px; flex: 1 1 100%; }
+.app.wide .edit-actions .danger { margin-left: auto; }
 .app.wide .title-line { flex: 1 1 180px; }
-.app.wide .edit-actions { flex: 1 1 auto; }
 /* Solo vertical: el padding-left lo usa .row.sel para compensar la barra de selección. */
 .app.wide .row { padding-top: 12px; padding-bottom: 12px; }
 .app.wide .add-subtask-icon { top: 0; }

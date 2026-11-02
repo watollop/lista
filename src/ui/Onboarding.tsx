@@ -25,7 +25,7 @@ const SLIDES = [
     Demo: CoverDemo,
   },
   { title: 'Escribe en una línea', text: () => 'Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', Demo: TypingDemo },
-  { title: 'Completa y filtra', text: () => 'Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas.', Demo: SwipeDemo },
+  { title: 'Completa y filtra', text: () => 'Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas. Las vencidas siempre están arriba.', Demo: SwipeDemo },
   {
     title: 'Tus datos, contigo',
     text: () => `Todo se guarda solo en este ${device()} y funciona sin conexión, sin cuenta. Si quieres tenerlo también en otros dispositivos, entra con Google para sincronizar.`,
@@ -40,7 +40,7 @@ const hasKeyboard = () => typeof matchMedia !== 'undefined' && matchMedia('(hove
 /** Referencia de todo lo que se puede escribir (al final de la bienvenida). */
 const EXTRA = [
   { title: 'Fechas como las dirías', text: () => 'Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', Demo: DatesDemo },
-  { title: 'Prioridad y repetición', text: () => 'Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla.', Demo: PrioRepeatDemo },
+  { title: 'Prioridad y repetición', text: () => 'Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla; «cada 2 martes» empieza el próximo martes y sigue cada dos semanas.', Demo: PrioRepeatDemo },
   { title: 'Atajos de teclado', text: () => 'Sin soltar el teclado: escribe, muévete por la lista, completa, pasa a mañana y filtra.', Demo: KeysDemo, keyboard: true },
 ];
 
@@ -339,7 +339,7 @@ function PrioRepeatDemo() {
       <div class="ref-group">
         <span class="label">Repetir</span>
         <span class="ref-chips">
-          {['cada día', 'cada lunes', 'cada mes', 'cada año'].map((c) => <span key={c} class="chip"><RepeatIcon /> {c}</span>)}
+          {['cada día', 'cada lunes', 'cada 2 martes', 'cada mes', 'cada año'].map((c) => <span key={c} class="chip"><RepeatIcon /> {c}</span>)}
         </span>
       </div>
     </div>

@@ -508,7 +508,7 @@ describe('7. filtros', () => {
       mk('fuera', '2026-11-04'),
     ];
     const shown = applyFilter(tasks, f({ dates: ['week'] }), '2026-10-28').map((t) => t.title);
-    expect(shown.sort()).toEqual(['fin-semana', 'hoy']);
+    expect(shown.sort()).toEqual(['ayer', 'fin-semana', 'hoy']); // la vencida se ve con cualquier filtro de fecha
   });
 
   it('búsqueda de texto ignora espacios repetidos y en los extremos', async () => {
