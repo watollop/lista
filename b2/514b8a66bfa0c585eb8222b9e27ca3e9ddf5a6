@@ -1,0 +1,19 @@
+src/ui/look.css
+  s_e71eef5e88d64e::t_b48f222a400c45 180-185,190,195-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "b2514b8a66bfa0c585eb8222b9e27ca3e9ddf5a6",
+  "prompts": {},
+  "sessions": {
+    "s_e71eef5e88d64e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb7c439a-50e6-49e1-97d7-12b3b69c19dc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
