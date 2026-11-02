@@ -1,0 +1,23 @@
+src/pwa/sw.js
+  s_e71eef5e88d64e::t_9109d7001a61b8 26-30,78,81,85-90
+src/ui/lazy.ts
+  s_e71eef5e88d64e::t_56ed69a74e2bea 18-34,43,60
+src/ui/lazy.test.ts
+  s_e71eef5e88d64e::t_ca015a0a412888 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "3863c45e7d607ad107a3580c774f717785c196db",
+  "prompts": {},
+  "sessions": {
+    "s_e71eef5e88d64e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb7c439a-50e6-49e1-97d7-12b3b69c19dc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
