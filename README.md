@@ -57,8 +57,8 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 <details>
 <summary>Más sobre las subtareas</summary>
 
-- Para añadir pasos a una tarea existente, pulsa **+** en su editor o junto a la casilla de la última subtarea del grupo desplegado.
-- En esos campos, **Enter** con texto abre el siguiente; **Enter** en uno vacío guarda los pasos. También puedes pulsar **Añadir subtareas**.
+- Para añadir pasos a una tarea existente, pulsa **+ Subtarea** en su editor o el **+** junto a la casilla de la última subtarea del grupo desplegado.
+- Ahí cada **Enter** guarda ese paso al momento y deja el campo listo para el siguiente; **Enter** en vacío o **Listo** cierra. **Cancelar** solo descarta lo que estés escribiendo.
 - Completar la principal cierra todos sus pasos; completar el último paso cierra la principal.
 - Reabrir un paso reabre la principal. Reabrir la principal reabre todos sus pasos.
 - **Deshacer** recupera el estado anterior, sin reabrir pasos que ya estaban hechos.

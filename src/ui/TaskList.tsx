@@ -126,7 +126,8 @@ export function TaskList(props: Props) {
                       onAddSubtask={i === g.children.length - 1 && adding !== g.task.id ? () => addSubtask(g.task.id) : undefined} />)}
                     {adding === g.task.id && (
                       <li class="subtask-composer">
-                        <SubtaskInputs label="Añadir subtareas" onCancel={() => setAdding(null)}
+                        <SubtaskInputs label="Listo" onCancel={() => setAdding(null)}
+                          onEach={(lines) => props.onAddSubtasks(g.task.id, lines)}
                           onSubmit={async (lines) => { await props.onAddSubtasks(g.task.id, lines); setAdding(null); }} />
                       </li>
                     )}
