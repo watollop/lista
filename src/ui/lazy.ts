@@ -15,6 +15,23 @@ export function whenIdle(fn: () => void): () => void {
   return () => clearTimeout(id);
 }
 
+const RELOAD_KEY = 'lista.chunkReload';
+
+/**
+ * No se pudo bajar una vista que el usuario acaba de pedir: casi siempre es una pestaña con una versión anterior
+ * cuyo chunk ya no está en el servidor. Recargar trae la versión nueva (los datos están en IndexedDB).
+ * Como mucho una vez por minuto, para no entrar en bucle si el fallo es otro (sin conexión, por ejemplo).
+ */
+function reloadForNewVersion() {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return; // sin red recargar no arregla nada
+  try {
+    const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+    if (Date.now() - last < 60_000) return;
+    sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+  } catch { return; }
+  location.reload();
+}
+
 export interface Lazy<P> {
   (props: P): ComponentChild;
   /** Empieza la carga del chunk (sin renderizar). Idempotente. */
@@ -23,7 +40,7 @@ export interface Lazy<P> {
 
 /**
  * Componente con carga diferida (Preact sin compat no trae lazy). Mientras el chunk no ha llegado no pinta nada;
- * al llegar se renderiza. Si la carga falla, se reintenta la próxima vez que se pida.
+ * al llegar se renderiza. Si la carga falla al pedir la vista, se recarga la página (ver reloadForNewVersion).
  */
 export function lazy<P extends object>(load: () => Promise<ComponentType<P>>): Lazy<P> {
   let ready: ComponentType<P> | null = null;
@@ -40,7 +57,7 @@ export function lazy<P extends object>(load: () => Promise<ComponentType<P>>): L
     useEffect(() => {
       if (loaded) return;
       let alive = true;
-      get().then((c) => { if (alive) setLoaded(() => c); }, () => { /* sin vista; se reintenta al volver a pedirla */ });
+      get().then((c) => { if (alive) setLoaded(() => c); }, () => { if (alive) reloadForNewVersion(); });
       return () => { alive = false; };
     }, []);
     return loaded ? h(loaded, props) : null;

@@ -23,12 +23,11 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(
-      keys
-        .filter((key) => key.startsWith('lista-') && key !== CACHE)
-        .map((key) => caches.delete(key)),
-    );
+    // Se conserva la caché de la versión anterior (la última que hubo) para las pestañas que siguen abiertas
+    // con ella: si piden un chunk diferido (dictado, Ajustes…) lo encuentran aunque ya no esté en el servidor.
+    const keys = (await caches.keys()).filter((key) => key.startsWith('lista-') && key !== CACHE);
+    const previous = keys[keys.length - 1]; // caches.keys() devuelve el orden de creación
+    await Promise.all(keys.filter((key) => key !== previous).map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
 });
@@ -76,14 +75,19 @@ async function handleNavigation(event) {
 }
 
 // Caché primero; si no está, red. Solo se guardan assets/ e icons/.
+// Se busca en todas las cachés de Lista: una pestaña abierta con la versión anterior aún puede pedir sus chunks.
 async function handleCacheFirst(event, url) {
   const cache = await caches.open(CACHE);
-  const cached = await cache.match(event.request);
+  const cached = await caches.match(event.request);
   if (cached) return cached;
 
   const response = await fetch(event.request);
-  const cacheable = ASSET_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
-  if (cacheable && response.ok && response.type === 'basic') {
+  const asset = ASSET_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
+  // Un asset que ya no existe (otro despliegue) le llega como la página HTML de reserva: ni se guarda ni se da por bueno.
+  if (asset && (response.headers.get('content-type') || '').includes('text/html')) {
+    return new Response('', { status: 404, statusText: 'Not Found' });
+  }
+  if (asset && response.ok && response.type === 'basic') {
     event.waitUntil(cache.put(event.request, response.clone()));
   }
   return response;
