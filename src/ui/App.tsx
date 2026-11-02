@@ -20,6 +20,7 @@ import { startLangSync } from './langSync';
 import { LazyLinkDialog, LazyLockedPanel, LazyOnboarding, LazySettings, LazyShortcutsSheet, preloadViews } from './lazyViews';
 import { whenIdle } from './lazy';
 import { Week } from './Week';
+import { byUse } from './byUse';
 import { tr } from '../i18n';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
@@ -114,11 +115,14 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     return m;
   }, [data.tasks]);
 
-  // Lo que se muestra en filtros y captura: solo con pendientes, o los que el filtro activo usa (para no perderlos).
+  // Lo que se muestra en filtros: solo con pendientes, o los que el filtro activo usa (para no perderlos).
   const shownTopics = useMemo(() => data.topics.filter((e) => pending.has('#' + e.key) || filter.topics.includes(e.key)),
     [data.topics, pending, filter.topics]);
   const shownPeople = useMemo(() => data.people.filter((e) => pending.has('@' + e.key) || filter.people.includes(e.key)),
     [data.people, pending, filter.people]);
+  // Al escribir se sugiere todo lo conocido (también lo que solo sale en tareas hechas), con pendientes primero.
+  const captureTopics = useMemo(() => byUse(data.topics, '#', pending), [data.topics, pending]);
+  const capturePeople = useMemo(() => byUse(data.people, '@', pending), [data.people, pending]);
 
   // Completadas hoy: siguen visibles (tachadas, en su sitio) hasta que cambia el día.
   const doneToday = useMemo(() => new Set(data.tasks
@@ -393,7 +397,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       )}
 
       <Capture
-        topics={shownTopics} people={shownPeople} names={names} today={today} kbOpen={kbOpen}
+        topics={captureTopics} people={capturePeople} names={names} today={today} kbOpen={kbOpen}
         inputRef={captureRef} onAdd={add}
       />
 
