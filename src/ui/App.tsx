@@ -407,7 +407,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         ) : (
           <TaskList
             groups={groups} names={names} today={today} selected={selected} editing={editing}
-            onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onTomorrow={tomorrow} onDelete={remove} onChip={chipTap}
+            onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onDelete={remove} onChip={chipTap}
             doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)} onMove={move}
             onAddSubtasks={addSubtasks}
           />

@@ -24,7 +24,6 @@ interface Props {
   onEdit: (id: ID | null) => void;
   onToggle: (id: ID) => void;
   onSave: (id: ID, line: ParsedLine) => void;
-  onTomorrow: (id: ID, line: ParsedLine | null) => void; // botón «Mañana» del editor; line = texto editado, si lo hay
   onDelete: (id: ID) => void;
   onChip: ChipTap;
   doneToday: Set<ID>; // completadas hoy: se quedan en su sitio hasta que cambia el día
@@ -157,7 +156,7 @@ export function TaskList(props: Props) {
   );
 }
 
-function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onTomorrow, onDelete, onChip, onMove, onDragStart, onDragEnd,
+function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd,
   childrenCount = 0, completedCount = 0, expanded = false, onExpand, onAddSubtask }:
   Props & { task: Task; sub?: boolean; section: SectionKey; onDragStart: (id: ID) => void; onDragEnd: () => void;
     childrenCount?: number; completedCount?: number; expanded?: boolean; onExpand?: () => void; onAddSubtask?: () => void }) {
@@ -188,16 +187,26 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       onClickCapture={clickCapture}
     >
       {sub && onAddSubtask && <AddSubtaskButton onClick={onAddSubtask} />}
-      <button class="check" aria-pressed={!!task.done}
-        aria-label={childrenCount ? task.done ? 'Reabrir tarea y subtareas' : 'Completar tarea y subtareas' : task.done ? 'Marcar pendiente' : 'Completar'}
-        title={childrenCount ? 'Cambiar también todas sus subtareas' : undefined} onClick={() => onToggle(task.id)}>
-        <i />
-      </button>
+      {isEditing && !task.done ? (
+        // Editando, la casilla deja sitio al asa: se arrastra a otro bloque (Hoy, Mañana…) para cambiar de día.
+        <button class="check move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
+          onMouseDown={(e) => e.preventDefault()} onTouchStart={(e) => e.preventDefault()} onPointerDown={drag.start}>
+          <svg class="grip" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
+            <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" /><circle cx="5.5" cy="8" r="1.4" />
+            <circle cx="10.5" cy="8" r="1.4" /><circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
+          </svg>
+        </button>
+      ) : (
+        <button class="check" aria-pressed={!!task.done}
+          aria-label={childrenCount ? task.done ? 'Reabrir tarea y subtareas' : 'Completar tarea y subtareas' : task.done ? 'Marcar pendiente' : 'Completar'}
+          title={childrenCount ? 'Cambiar también todas sus subtareas' : undefined} onClick={() => onToggle(task.id)}>
+          <i />
+        </button>
+      )}
       <div class="body">
         {isEditing ? (
           <Editor task={task} names={names} onSave={(l) => onSave(task.id, l)} onCancel={() => onEdit(null)}
-            onTomorrow={task.done ? undefined : (l) => onTomorrow(task.id, l)}
-            onDelete={() => onDelete(task.id)} onDragStart={task.done ? undefined : drag.start}
+            onDelete={() => onDelete(task.id)}
             onAddSubtask={sub ? undefined : onAddSubtask} />
         ) : (
           <>
@@ -348,10 +357,9 @@ function AddSubtaskButton({ onClick, inline = false }: { onClick: () => void; in
 
 /** Edición en línea con la misma sintaxis que la captura. Las fechas se muestran como vence:AAAA-MM-DD
  *  para que una relativa ("mañana") no se recalcule al guardar. */
-function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragStart, onAddSubtask }: {
+function Editor({ task, names, onSave, onCancel, onDelete, onAddSubtask }: {
   task: Task; names: Map<string, Entity>;
-  onSave: (l: ParsedLine) => void; onCancel: () => void; onTomorrow?: (l: ParsedLine | null) => void; onDelete: () => void; // sin onTomorrow (tarea hecha) no hay botón «Mañana»
-  onDragStart?: (e: PointerEvent) => void; // asa «Mover»: arrastrar la tarea a otro día
+  onSave: (l: ParsedLine) => void; onCancel: () => void; onDelete: () => void;
   onAddSubtask?: () => void;
 }) {
   const initial = formatLine({
@@ -376,14 +384,6 @@ function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragSta
     done.current = true;
     onSave(line);
   };
-  // Mismo criterio que Guardar: el texto editado se conserva; la fecha pasa a mañana tanto si hay texto nuevo como si no.
-  const tomorrow = () => {
-    if (done.current) return;
-    const line = v === initial ? null : parseLine(v);
-    if (line?.title && titleTooLong([line])) { setError(TITLE_TOO_LONG); return; }
-    done.current = true;
-    onTomorrow?.(line?.title ? line : null);
-  };
   const keep = (e: Event) => e.preventDefault(); // que el clic no quite el foco (blur = guardar)
   const both = task.due && prefersApple() && !touch(); // en Mac se elige Apple o Google; si no, va directo
   return (
@@ -403,19 +403,9 @@ function Editor({ task, names, onSave, onCancel, onTomorrow, onDelete, onDragSta
           }}
           onBlur={save}
         />
-        {onDragStart && (
-          <button class="move" aria-label="Mover a otro día" title="Arrastra para cambiar de día"
-            onMouseDown={keep} onTouchStart={keep} onPointerDown={onDragStart}>
-            <svg class="grip" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
-              <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" /><circle cx="5.5" cy="8" r="1.4" />
-              <circle cx="10.5" cy="8" r="1.4" /><circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
-            </svg>
-          </button>
-        )}
       </div>
       {/* Se guarda con Enter o al salir: no hace falta botón «Guardar». */}
       <div class="edit-actions">
-        {onTomorrow && <button class="link" title="Pasa la tarea a mañana" onMouseDown={keep} onClick={tomorrow}>Mañana</button>}
         {onAddSubtask && <AddSubtaskButton inline onClick={() => { save(); onAddSubtask(); }} />}
         {task.due && (cal && both ? (
           <>
