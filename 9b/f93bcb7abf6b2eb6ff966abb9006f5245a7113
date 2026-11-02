@@ -1,0 +1,31 @@
+README.md
+  s_e71eef5e88d64e::t_f067e1aee7e289 74
+src/pwa/register.test.ts
+  s_e71eef5e88d64e::t_bf71ed26b09d61 1-20
+src/pwa/register.ts
+  s_e71eef5e88d64e::t_987727500ea127 8-27,45,47-50
+src/pwa/sw.js
+  s_e71eef5e88d64e::t_5c3b66c3354a60 38-39
+src/ui/Week.tsx
+  s_e71eef5e88d64e::t_7961984eb64ebe 18
+src/ui/look.css
+  s_e71eef5e88d64e::t_be5932ba452210 203,205
+src/ui/styles.css
+  s_e71eef5e88d64e::t_f769b12640cd94 1133,1137,1140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9bf93bcb7abf6b2eb6ff966abb9006f5245a7113",
+  "prompts": {},
+  "sessions": {
+    "s_e71eef5e88d64e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb7c439a-50e6-49e1-97d7-12b3b69c19dc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
