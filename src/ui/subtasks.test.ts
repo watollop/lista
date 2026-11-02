@@ -216,10 +216,13 @@ describe('captura con subtareas', () => {
 
   it('conserva el acceso al dictado sin mostrar controles de subtareas en la captura', async () => {
     const abort = vi.fn();
-    vi.stubGlobal('SpeechRecognition', class { start() {} stop() {} abort = abort; });
+    const start = vi.fn();
+    vi.stubGlobal('SpeechRecognition', class { start = start; stop() {} abort = abort; });
     capture();
     click(root.querySelector('[aria-label="Dictar tareas"]'));
     await vi.waitFor(() => expect(root.querySelector('.dict-list')).not.toBeNull());
+    // El micrófono arranca tras comprobar el permiso (asíncrono): esperar a que arranque antes de cancelar.
+    await vi.waitFor(() => expect(start).toHaveBeenCalled());
     expect(root.querySelector('.capture .add-subtask-action')).toBeNull();
     click(button('Cancelar'));
     await vi.waitFor(() => expect(root.querySelector('.dict-list')).toBeNull());
