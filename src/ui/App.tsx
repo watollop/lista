@@ -68,8 +68,17 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     try { localStorage.setItem(FILTER_KEY, JSON.stringify({ ...f, day: undefined })); } catch { /* modo privado */ }
   };
 
+  // Pila de «Deshacer»: cada aviso con ese botón apunta aquí su acción y ⌘Z / Ctrl+Z las ejecuta, la última primero.
+  const undoStack = useRef<Array<() => unknown>>([]);
   const showToast = (t: Toast | string) => {
     clearTimeout(toastTimer.current);
+    if (typeof t !== 'string' && t.action?.label === tr('Deshacer', 'Undo')) {
+      const run = t.action.run;
+      const entry = () => run();
+      undoStack.current = [...undoStack.current.slice(-19), entry];
+      // Si se pulsa el botón del aviso, esa acción sale de la pila para que ⌘Z no la repita.
+      t = { ...t, action: { ...t.action, run: () => { undoStack.current = undoStack.current.filter((x) => x !== entry); run(); } } };
+    }
     setToast(typeof t === 'string' ? { msg: t } : t);
     toastTimer.current = setTimeout(() => setToast(null), 4000);
   };
@@ -324,6 +333,17 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         captureRef.current?.focus();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && !typing && !settings) {
+        // Fuera de un campo de texto (ahí ⌘Z deshace lo escrito), deshace el último cambio hecho en la lista.
+        const undo = undoStack.current[undoStack.current.length - 1];
+        if (!undo) return;
+        e.preventDefault();
+        undoStack.current = undoStack.current.slice(0, -1);
+        Promise.resolve().then(undo)
+          .then(() => showToast(tr('Deshecho', 'Undone')))
+          .catch((err) => showToast(err instanceof Error ? err.message : tr('No se pudo deshacer', 'Couldn’t undo')));
         return;
       }
       if (typing || settings || e.metaKey || e.ctrlKey || e.altKey) return;

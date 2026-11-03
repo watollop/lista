@@ -53,10 +53,22 @@ function sectionOf(t: Task, today: ISODate, doneToday: Set<ID>, pastMode: boolea
   return t.due <= periodEnd('week', today) ? 'week' : 'next';
 }
 
+const EXPANDED_KEY = 'lista.expanded';
+/** Grupos de subtareas abiertos: se recuerdan en este dispositivo para que sigan abiertos al volver. */
+const loadExpanded = (): Set<ID> => {
+  try {
+    const v = JSON.parse(localStorage.getItem(EXPANDED_KEY) || '[]');
+    return new Set(Array.isArray(v) ? v.filter((x): x is ID => typeof x === 'string') : []);
+  } catch { return new Set(); }
+};
+
 export function TaskList(props: Props) {
   const { groups, today } = props;
   const [dragId, setDragId] = useState<ID | null>(null);
-  const [expanded, setExpanded] = useState<Set<ID>>(new Set());
+  const [expanded, setExpanded] = useState<Set<ID>>(loadExpanded);
+  useEffect(() => {
+    try { localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded])); } catch { /* modo privado */ }
+  }, [expanded]);
   const [adding, setAdding] = useState<ID | null>(null);
   const expand = (id: ID) => setExpanded((old) => {
     const next = new Set(old);
@@ -173,7 +185,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   useEffect(() => {
     if (selected === task.id) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
-  const activate = () => { onSelect(task.id); if (childrenCount) onExpand?.(); else onEdit(task.id); };
+  const activate = () => { onSelect(task.id); onEdit(task.id); };
 
   return (
     <li
@@ -213,26 +225,31 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
             <div class="title-line">
               {/* No es un <button>: dentro puede ir un enlace, y un enlace no puede estar dentro de un botón. */}
               <span class={`title ${task.priority === 1 ? 'p1' : ''}`} role="button" tabIndex={0}
-                aria-expanded={childrenCount ? expanded : undefined}
-                aria-controls={childrenCount && expanded ? `subtasks-${task.id}` : undefined}
-                aria-label={childrenCount ? tr(`${task.title}: ${completedCount} de ${childrenCount} subtareas completadas`, `${task.title}: ${completedCount} of ${childrenCount} subtasks done`) : undefined}
-                title={childrenCount ? (expanded ? tr('Ocultar subtareas', 'Hide subtasks') : tr('Mostrar subtareas', 'Show subtasks')) : undefined}
                 onKeyDown={(e) => {
                   // Enter y Espacio activan el título; si el foco está en un enlace dentro, lo activa el enlace.
                   if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
                   e.preventDefault();
                   activate();
                 }}
-                onClick={activate}>
+                onClick={(e) => {
+                  activate();
+                  // Con el ratón no debe quedar el aro de foco sobre el título (con el teclado sí).
+                  if (e.detail > 0) (e.currentTarget as HTMLElement).blur();
+                }}>
                 <TitleText text={task.title} onChip={onChip} />
               </span>
               {childrenCount > 0 && (
-                <button class="edit-task" aria-label={tr('Editar tarea', 'Edit task')} title={tr('Editar tarea', 'Edit task')}
-                  onClick={() => { onSelect(task.id); onEdit(task.id); }}>
+                <button class="fold-task" aria-expanded={expanded}
+                  aria-controls={expanded ? `subtasks-${task.id}` : undefined}
+                  aria-label={tr(`Subtareas: ${completedCount} de ${childrenCount} completadas`, `Subtasks: ${completedCount} of ${childrenCount} done`)}
+                  title={expanded ? tr('Ocultar subtareas', 'Hide subtasks') : tr('Mostrar subtareas', 'Show subtasks')}
+                  onClick={() => { onSelect(task.id); onExpand?.(); }}>
                   <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"
                     stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m3 10 7-7 3 3-7 7-4 1 1-4ZM9 4l3 3" />
+                    <circle cx="4" cy="3.5" r="1.6" /><circle cx="4" cy="12.5" r="1.6" /><circle cx="12" cy="5.5" r="1.6" />
+                    <path d="M4 5.1v5.8M12 7.1c0 2.4-2.2 3-6.4 3.6" />
                   </svg>
+                  <span class="fold-count">{completedCount}/{childrenCount}</span>
                 </button>
               )}
             </div>

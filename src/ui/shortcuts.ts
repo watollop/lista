@@ -7,6 +7,7 @@ export const SHORTCUTS = (): Array<[string[], string]> => [
   [['x'], tr('completar', 'complete')],
   [['e'], tr('editar', 'edit')],
   [['m'], tr('para mañana', 'move to tomorrow')],
+  [['⌘Z'], tr('deshacer lo último', 'undo the last change')],
   [['⌫'], tr('borrar', 'delete')],
   [['h', 's', 'v'], tr('hoy · semana · vencidas', 'today · week · overdue')],
   [['1–9'], tr('filtros guardados', 'saved filters')],
