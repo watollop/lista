@@ -52,7 +52,7 @@ Viaje <Billetes mañana !alta <Mochila
 ```
 
 Una tarea principal, dos subtareas. Cada paso puede tener su propia fecha, prioridad y etiquetas.
-La principal lleva un icono de ramas con los pasos hechos (`1/2`): púlsalo para desplegarlos y plegarlos. Cada grupo se queda como lo dejaste, también al volver, y **los pasos siguen en su sitio aunque los marques**. Tocar el título edita la tarea, como en cualquier otra.
+La principal lleva un icono de ramas con los pasos hechos (`1/2`): púlsalo para desplegarlos y plegarlos. Cada grupo se queda como lo dejaste, también al volver, y **los pasos siguen en su sitio aunque los marques**. Tocar la tarea la abre entera —sus pasos y su editor—; plegar es cosa del icono.
 
 <details>
 <summary>Más sobre las subtareas</summary>
