@@ -1,0 +1,25 @@
+README.md
+  s_6653508701b7b6::t_42764509fb53a7 61
+src/ui/SubtaskInputs.tsx
+  s_6653508701b7b6::t_85f4cda3929c42 70-72,92-93,95
+src/ui/styles.css
+  s_6653508701b7b6::t_f9229d448f723e 380-381
+src/ui/subtasks.test.ts
+  s_6653508701b7b6::t_2e27a3b4f7c6fc 508-510
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "18f806338e567ef4a9edb0fea974fb7c859ecab3",
+  "prompts": {},
+  "sessions": {
+    "s_6653508701b7b6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e82cc62-ee99-4076-928c-8ad8c57c7821",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
