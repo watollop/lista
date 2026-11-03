@@ -71,6 +71,7 @@ La principal lleva un icono de ramas con los pasos hechos (`1/2`): púlsalo para
 - **Completa o borra.** Desliza a la derecha para tachar; a la izquierda para borrar.
 - **Encuentra lo importante.** Toca un tema, una persona o una fecha para filtrar.
 - **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas. Las vencidas se ven siempre arriba, filtres por la fecha que filtres.
+- **Si el filtro esconde lo que acabas de añadir, te avisa.** Vale para una tarea, para varias (con subtareas o pegadas) y para lo que llega con «Compartir con Lista»: el aviso lo dice y **Ver todo** quita el filtro.
 - **Tu semana de un vistazo.** Arriba de los filtros (en el móvil, al tocar **Buscar**) verás cuántas tareas tienes hoy, las vencidas y cuántas tareas tienes cada uno de los próximos 7 días. Toca un día para ver solo sus tareas (y las vencidas); tócalo otra vez (o vuelve a abrir Lista) para verlas todas.
 - **Cambia de planes.** Toca una tarea para editarla: se guarda sola al pulsar Enter o al salir. Mientras la editas, la casilla se convierte en el asa ⠿: arrástrala a otro bloque (Hoy, Mañana, Esta semana…) para cambiarla de día. Debajo tienes **+ Subtarea**, **Calendario** y **Borrar**. Con teclado, **M** la pasa a mañana.
 - **Deshacer con el teclado.** **⌘Z** (Ctrl+Z en Windows) deshace el último cambio de la lista —completar, borrar, mover—, y repetido, los anteriores. Dentro de un campo de texto sigue deshaciendo lo escrito.
