@@ -85,6 +85,8 @@ La principal lleva un icono de ramas con los pasos hechos (`1/2`): púlsalo para
 
 **Solo lo que seleccionas.** La línea izquierda marca únicamente la fila seleccionada. Clásico usa el color secundario para las tareas con subtareas y sus pasos; Industrial, su naranja.
 
+**Qué versión llevas.** Al pie de **Ajustes**, junto a la firma, aparecen la versión, el día y la hora en que se compiló y el commit. Sirve para comprobar que tienes lo último tras una actualización.
+
 **En español o en inglés.** Lista sale en español si tu navegador lo tiene entre sus idiomas; si no, en inglés. Puedes cambiarlo en **Ajustes → Apariencia → Idioma · Language**. En inglés todo cambia: la bienvenida, los menús y también lo que escribes (`tomorrow`, `every 2 tuesdays`, `!high`, `due:2026-11-15`). El nombre, Lista, no se traduce.
 
 **Igual en todos tus dispositivos.** Con la misma cuenta, el tema, el estilo, el color y el idioma se sincronizan. Si cambias algo sin conexión, se envía al volver; ante cambios simultáneos gana el más reciente.
