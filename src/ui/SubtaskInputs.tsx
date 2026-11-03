@@ -67,7 +67,9 @@ export function SubtaskInputs({ onSubmit, onCancel, onEach, label = tr('Guardar 
               autocomplete="off" enterkeyhint={v.trim() ? 'next' : 'done'}
               onInput={(e) => { setValues(values.map((s, j) => j === i ? e.currentTarget.value : s)); setError(''); }}
               onKeyDown={(e) => {
-                if (e.isComposing || e.key !== 'Enter') return;
+                if (e.isComposing) return;
+                if (e.key === 'Escape') { e.preventDefault(); onCancel(); return; }
+                if (e.key !== 'Enter') return;
                 e.preventDefault();
                 if (!v.trim()) { void submit(); return; }
                 if (parseBlock(v).some((line) => !line.title)) { setError(tr('Escribe un título para cada subtarea.', 'Write a title for each subtask.')); return; }
@@ -86,10 +88,11 @@ export function SubtaskInputs({ onSubmit, onCancel, onEach, label = tr('Guardar 
           </div>
         ))}
       </div>
-      <p class="subtask-help">{onEach ? tr('Enter: guardar y escribir otra · Enter en vacío: cerrar', 'Enter: save and write another · Enter on empty: close') : tr('Enter: siguiente · Enter en vacío: guardar', 'Enter: next · Enter on empty: save')}</p>
       <div class="subtask-actions">
+        {/* Con la tarea ya creada, los botones dicen lo que pasa sin necesidad de explicarlo con texto. */}
+        {onEach && <button class="link add" disabled={busy || !values[0].trim()} onClick={() => void saveOne(0)}>{tr('Añadir', 'Add')}</button>}
         <button class="link" disabled={busy} onClick={() => void submit()}>{busy ? tr('Guardando…', 'Saving…') : label}</button>
-        <button class="link" disabled={busy} onClick={onCancel}>{tr('Cancelar', 'Cancel')}</button>
+        {!onEach && <button class="link" disabled={busy} onClick={onCancel}>{tr('Cancelar', 'Cancel')}</button>}
       </div>
       {error && <p class="err" role="alert">{error}</p>}
     </div>

@@ -377,7 +377,8 @@ button.chip { min-height: 22px; }
 :where(html:not([data-look="industrial"])) .subtask-field:focus-within { border-bottom-color: var(--subtask-color); }
 .subtask-field input { min-width: 0; width: 100%; font-size: 16px; min-height: 44px; }
 .remove-subtask { flex: none; width: 44px; height: 44px; color: var(--muted); font-size: 22px; }
-.subtask-help { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.subtask-actions { margin-top: 4px; }
+.subtask-actions .add { color: var(--fg); }
 .subtask-actions { display: flex; flex-wrap: wrap; gap: 16px; }
 .subtask-actions button:disabled { opacity: .5; cursor: wait; }
 .capture .err { padding-bottom: 10px; }

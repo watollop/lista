@@ -505,7 +505,9 @@ describe('lista de subtareas', () => {
     expect(editorMouseDown.defaultPrevented).toBe(true);
     click(action);
     type(input('Subtarea 1'), 'Borrador cancelado');
-    click(button('Cancelar'));
+    expect(root.querySelector('.subtask-help')).toBeNull();
+    expect([...root.querySelectorAll('.subtask-actions button')].map((b) => b.textContent)).toEqual(['Añadir', 'Listo']);
+    act(() => { input('Subtarea 1').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
     expect(root.querySelector('.subtask-inputs')).toBeNull();
     await vi.waitFor(async () => expect((await repo.listTasks())[0].title).toBe('Proyecto editado'));
     click(root.querySelector(`[data-id="${parent.id}"] .title`));
