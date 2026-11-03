@@ -577,7 +577,9 @@ kbd {
   --side-top: calc(79px + var(--sat));
   top: var(--side-top);
   align-self: start;
-  max-height: calc(100dvh - var(--side-top));
+  /* Sin desplazar, la barra empieza donde acaba la cabecera (88 px + 8 px de margen): si su altura máxima se
+     midiera desde --side-top, su borde inferior pasaría de la ventana y la página tendría un scroll vacío. */
+  max-height: calc(100dvh - 96px - var(--sat));
   overflow-x: hidden;
   overflow-y: auto;
   /* Si los filtros no caben, se desplazan con la rueda o el trackpad, sin barra visible; abajo se desvanecen. */
@@ -855,6 +857,8 @@ kbd {
   color: var(--muted);
 }
 .credit .heart { color: var(--warn); }
+.credit-text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.credit .build { font-size: 10px; letter-spacing: .04em; text-transform: none; color: var(--faint); font-variant-numeric: tabular-nums; }
 .credit a { display: grid; place-items: center; width: 44px; height: 44px; color: var(--muted); }
 @media (hover: hover) { .credit a:hover { color: var(--fg); } }
 
