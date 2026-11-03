@@ -1,0 +1,23 @@
+README.md
+  s_6653508701b7b6::t_d61239a8e303cc 55
+src/ui/TaskList.tsx
+  s_6653508701b7b6::t_524bbe81980c87 188-189
+src/ui/titleLinks.test.ts
+  s_6653508701b7b6::t_59cf251a78d8df 92,99-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9db78fd200b04f943e381851e31028e3b3c161e7",
+  "prompts": {},
+  "sessions": {
+    "s_6653508701b7b6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e82cc62-ee99-4076-928c-8ad8c57c7821",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
