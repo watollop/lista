@@ -272,6 +272,10 @@ button.chip { min-height: 22px; }
   .row:has(> .trash):is(:hover, .sel, :focus-within) > .body { padding-right: 34px; }
   .row:has(> .cal):is(:hover, .sel, :focus-within) > .body { padding-right: 64px; }
   .app.wide .row > .trash { top: 8px; }
+  /* Con subtareas, el botón de ramas queda a la izquierda de la papelera desde el principio: si la fila se
+     ensanchara al pasar el ratón, el botón se movería bajo el cursor y el clic caería en la papelera. */
+  .row.has-subtasks:has(> .trash) > .body { padding-right: 34px; }
+  .row.has-subtasks:has(> .cal) > .body { padding-right: 64px; }
 }
 .row.sel { box-shadow: inset 2px 0 0 var(--fg); padding-left: 10px; margin-left: -10px; }
 .row.sub.sel { padding-left: 58px; }
@@ -395,7 +399,7 @@ button.chip { min-height: 22px; }
 .subtask-composer .subtask-inputs { padding: 10px 0; }
 .title-line { display: flex; flex: 1; align-items: flex-start; min-width: 0; }
 .title-line .title { flex: 1; min-width: 0; }
-.fold-task { flex: none; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; margin: -12px -8px -12px 0; padding: 0 8px; color: var(--muted); }
+.fold-task { flex: none; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; margin: -12px 0; padding: 0 8px; color: var(--muted); }
 .fold-task[aria-expanded="true"] { color: var(--accent); }
 :where(html:not([data-look="industrial"])) .fold-task[aria-expanded="true"] { color: var(--subtask-color); }
 .fold-count { font-size: 11px; font-variant-numeric: tabular-nums; }
