@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { DateFilter, Entity, EntityKind, Filter, ID, ParsedLine, Priority, Repo, Sync } from '../types';
+import type { DateFilter, Entity, EntityKind, Filter, ID, ParsedLine, Priority, Repo, Sync, Task } from '../types';
 import { applyFilter, counts, dayLoad, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
 import { formatDue, parseBlock } from '../parser';
 import { toISODate } from '../lib/date';
@@ -177,11 +177,26 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
 
   // ---------- acciones ----------
+  // Tareas recién creadas que el filtro activo no deja ver. Una subtarea se ve si se ve su principal.
+  const hiddenByFilter = (created: Task[]) => {
+    const shown = new Set(applyFilter([...data.tasks, ...created], filter, today).map((t) => t.id));
+    return created.filter((t) => !shown.has(t.id) && !(t.parentId && shown.has(t.parentId))).length;
+  };
+  const showAllAction = () => ({ label: tr('Ver todo', 'Show all'), run: () => setFilter(emptyFilter()) });
   const add = async (lines: ParsedLine[]) => {
     const created = await repo.addParsed(lines, null);
-    if (created.length > 1) showToast(tr(`${created.length} tareas añadidas`, `${created.length} tasks added`));
-    else if (created[0] && !applyFilter([...data.tasks, created[0]], filter, today).some((t) => t.id === created[0].id)) {
-      showToast({ msg: tr('Añadida (oculta por el filtro)', 'Added (hidden by the filter)'), action: { label: tr('Ver todo', 'Show all'), run: () => setFilter(emptyFilter()) } });
+    if (!created.length) return;
+    const hidden = hiddenByFilter(created);
+    const n = created.length;
+    if (!hidden) {
+      if (n > 1) showToast(tr(`${n} tareas añadidas`, `${n} tasks added`));
+    } else if (n === 1) {
+      showToast({ msg: tr('Añadida (oculta por el filtro)', 'Added (hidden by the filter)'), action: showAllAction() });
+    } else {
+      const msg = hidden === n
+        ? tr(`${n} tareas añadidas (ocultas por el filtro)`, `${n} tasks added (hidden by the filter)`)
+        : tr(`${n} tareas añadidas (${hidden} ocultas por el filtro)`, `${n} tasks added (${hidden} hidden by the filter)`);
+      showToast({ msg, action: showAllAction() });
     }
   };
 
@@ -194,6 +209,11 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       const created = await repo.addParsed(validateCapture(parseBlock(text)), null);
       history.replaceState(null, '', location.pathname + location.hash);
       if (!created.length) return;
+      // Si el filtro la esconde, avisar pesa más que ofrecer deshacer: el aviso admite una sola acción.
+      if (hiddenByFilter(created)) {
+        showToast({ msg: tr('Apuntada (oculta por el filtro)', 'Saved (hidden by the filter)'), action: showAllAction() });
+        return;
+      }
       showToast({
         msg: created.length > 1 ? tr(`${created.length} tareas apuntadas`, `${created.length} tasks saved`) : tr('Apuntada: ', 'Saved: ') + created[0].title,
         action: { label: tr('Deshacer', 'Undo'), run: () => { for (const t of created) void repo.deleteTask(t.id); } },

@@ -436,6 +436,33 @@ describe('lista de subtareas', () => {
     expect(root.querySelector('.toast')?.textContent).toContain('Deshecho');
   });
 
+  describe('aviso cuando el filtro esconde lo añadido', () => {
+    const hide = async (action: (cap: HTMLInputElement) => void | Promise<void>) => {
+      localStorage.setItem('lista.filter', JSON.stringify({ topics: ['zzz'] }));
+      const repo = createRepo('ui-' + crypto.randomUUID());
+      await app(repo);
+      await action(root.querySelector<HTMLInputElement>('.capture input')!);
+      await vi.waitFor(() => expect(root.querySelector('.toast')).not.toBeNull());
+      return root.querySelector('.toast')!.textContent!;
+    };
+    it('una tarea', async () => {
+      expect(await hide((c) => { type(c, 'Suelta'); enter(c); })).toContain('oculta por el filtro');
+    });
+    it('una tarea con subtareas: todas ocultas', async () => {
+      expect(await hide((c) => { type(c, 'Viaje <Billetes <Mochila'); enter(c); })).toContain('3 tareas añadidas (ocultas por el filtro)');
+    });
+    it('varias líneas pegadas: todas ocultas', async () => {
+      expect(await hide((c) => { paste(c, 'Una\nOtra'); })).toContain('2 tareas añadidas (ocultas por el filtro)');
+    });
+    it('solo algunas ocultas', async () => {
+      expect(await hide((c) => { type(c, 'Viaje #zzz <Billetes'); enter(c); })).not.toContain('oculta');
+    });
+    it('compartida desde fuera', async () => {
+      history.replaceState(null, '', '/?text=' + encodeURIComponent('Compartida'));
+      expect(await hide(() => {})).toContain('oculta por el filtro');
+    });
+  });
+
   it('el Deshacer real del padre conserva el estado y la fecha de subtareas hechas anteriormente', async () => {
     const repo = createRepo('ui-' + crypto.randomUUID());
     const [parent, a, b] = await repo.addParsed([
