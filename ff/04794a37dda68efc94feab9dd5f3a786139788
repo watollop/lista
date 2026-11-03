@@ -1,0 +1,31 @@
+README.md
+  s_6653508701b7b6::t_1e648d3dd431cf 88-89
+src/env.d.ts
+  s_6653508701b7b6::t_589421796cd6a9 1-2
+src/lib/build.test.ts
+  s_6653508701b7b6::t_6b1ae58b42e525 1-13
+src/lib/build.ts
+  s_6653508701b7b6::t_1849b5189c827a 1-15
+src/ui/Settings.tsx
+  s_6653508701b7b6::t_fccaca54e9379b 8,77-80
+src/ui/styles.css
+  s_6653508701b7b6::t_086855ffdce2a4 580-582,860-861
+vite.config.ts
+  s_6653508701b7b6::t_13e5f5ab4eda73 2,7-11,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ff04794a37dda68efc94feab9dd5f3a786139788",
+  "prompts": {},
+  "sessions": {
+    "s_6653508701b7b6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e82cc62-ee99-4076-928c-8ad8c57c7821",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
