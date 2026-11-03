@@ -52,7 +52,7 @@ Viaje <Billetes mañana !alta <Mochila
 ```
 
 Una tarea principal, dos subtareas. Cada paso puede tener su propia fecha, prioridad y etiquetas.
-Toca el título de la principal para desplegarlos: **se quedan en su sitio aunque los marques**.
+La principal lleva un icono de ramas con los pasos hechos (`1/2`): púlsalo para desplegarlos y plegarlos. Cada grupo se queda como lo dejaste, también al volver, y **los pasos siguen en su sitio aunque los marques**. Tocar el título edita la tarea, como en cualquier otra.
 
 <details>
 <summary>Más sobre las subtareas</summary>
@@ -73,6 +73,7 @@ Toca el título de la principal para desplegarlos: **se quedan en su sitio aunqu
 - **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas. Las vencidas se ven siempre arriba, filtres por la fecha que filtres.
 - **Tu semana de un vistazo.** Arriba de los filtros (en el móvil, al tocar **Buscar**) verás cuántas tareas tienes hoy, las vencidas y cuántas tareas tienes cada uno de los próximos 7 días. Toca un día para ver solo sus tareas (y las vencidas); tócalo otra vez (o vuelve a abrir Lista) para verlas todas.
 - **Cambia de planes.** Toca una tarea para editarla: se guarda sola al pulsar Enter o al salir. Mientras la editas, la casilla se convierte en el asa ⠿: arrástrala a otro bloque (Hoy, Mañana, Esta semana…) para cambiarla de día. Debajo tienes **+ Subtarea**, **Calendario** y **Borrar**. Con teclado, **M** la pasa a mañana.
+- **Deshacer con el teclado.** **⌘Z** (Ctrl+Z en Windows) deshace el último cambio de la lista —completar, borrar, mover—, y repetido, los anteriores. Dentro de un campo de texto sigue deshaciendo lo escrito.
 - **Para mañana.** Arrastra la tarea al bloque **Mañana** (en ordenador, también **m** con la tarea seleccionada); **Deshacer** la devuelve a su fecha anterior.
 - **Abre los enlaces.** Una dirección web en una tarea se muestra corta; tócala para abrirla.
 

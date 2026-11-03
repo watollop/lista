@@ -335,7 +335,7 @@ describe('lista de subtareas', () => {
     act(() => render(null, root));
     await app(repo);
     expect(root.querySelector('.row.sub')).toBeNull();
-    click(root.querySelector('.row.has-subtasks .title'));
+    click(root.querySelector('.row.has-subtasks .fold-task'));
     expect(root.querySelector('.row.sub .title')?.textContent).toBe('Comprar billetes');
   });
 
@@ -355,14 +355,17 @@ describe('lista de subtareas', () => {
     expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(true);
     expect(root.querySelector(`[data-id="${plain.id}"] .title`)?.hasAttribute('aria-expanded')).toBe(false);
     expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
-    const toggle = root.querySelector('.row.has-subtasks .title');
+    const toggle = root.querySelector('.row.has-subtasks .fold-task');
+    expect(root.querySelector(`[data-id="${parent.id}"] .title`)?.hasAttribute('aria-expanded')).toBe(false);
+    expect(root.querySelector(`[data-id="${parent.id}"] .fold-task .fold-count`)?.textContent).toBe('0/2');
+    expect(root.querySelector(`[data-id="${plain.id}"] .fold-task`)).toBeNull();
     expect(root.querySelector('.subtask-toggle')).toBeNull();
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     click(toggle);
     expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(false);
     expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
     expect(root.querySelector('.subtask-group')).not.toBeNull();
-    expect(root.querySelector('.row.has-subtasks .title')?.getAttribute('aria-label')).toContain('0 de 2 subtareas');
+    expect(root.querySelector('.row.has-subtasks .fold-task')?.getAttribute('aria-label')).toContain('0 de 2');
     expect(root.querySelector<HTMLButtonElement>(`[data-id="${parent.id}"] .check`)?.disabled).toBe(false);
     click(root.querySelector(`[data-id="${a.id}"] .check`));
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${a.id}"]`)?.classList.contains('done')).toBe(true));
@@ -376,24 +379,21 @@ describe('lista de subtareas', () => {
     click(root.querySelector(`[data-id="${a.id}"] .check`));
     await vi.waitFor(() => expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('done')).toBe(false));
     expect([...root.querySelectorAll('.row.sub')].map((row) => row.getAttribute('data-id'))).toEqual([a.id, b.id]);
-    click(root.querySelector(`[data-id="${parent.id}"] .title`));
+    click(root.querySelector(`[data-id="${parent.id}"] .fold-task`));
     expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
     expect(root.querySelector('.row.has-subtasks')).not.toBeNull();
     expect(root.querySelector('.subtask-group')).toBeNull();
     expect(root.querySelector(`[data-id="${parent.id}"]`)?.classList.contains('subtasks-collapsed')).toBe(true);
-    click(root.querySelector(`[data-id="${parent.id}"] .title`));
-    const title = root.querySelector<HTMLElement>(`[data-id="${parent.id}"] .title`)!;
-    act(() => {
-      title.focus();
-      title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    });
-    // Enter sobre el título lo activa como un clic: pliega (en el navegador, un botón lo hacía con su clic).
-    expect(root.querySelector('input[aria-label="Editar tarea"]')).toBeNull();
-    expect(root.querySelectorAll('.row.sub')).toHaveLength(0);
-    click(title);
+    click(root.querySelector(`[data-id="${parent.id}"] .fold-task`));
     expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
-    click(root.querySelector(`[data-id="${parent.id}"] .edit-task`));
+    // El grupo abierto se recuerda: tras recargar sigue abierto.
+    act(() => render(null, root));
+    await app(repo);
+    expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
+    // Tocar el título edita la tarea (como cualquier otra) sin plegar el grupo.
+    click(root.querySelector(`[data-id="${parent.id}"] .title`));
     expect(input('Editar tarea')).not.toBeNull();
+    expect(root.querySelectorAll('.row.sub')).toHaveLength(2);
   });
 
   it.each([false, true])('cerrar el padre por casilla o teclado cierra todas las subtareas y permite deshacer; ancho=%s', async (wide) => {
@@ -420,6 +420,20 @@ describe('lista de subtareas', () => {
     expect((await repo.listTasks()).every((t) => t.done)).toBe(true);
     click(check);
     await vi.waitFor(async () => expect((await repo.listTasks()).every((t) => !t.done)).toBe(true));
+  });
+
+  it('⌘Z deshace el último cambio, pero no dentro de un campo de texto', async () => {
+    const repo = createRepo('ui-' + crypto.randomUUID());
+    const [task] = await repo.addParsed([parseLine('Tarea')]);
+    await app(repo);
+    click(root.querySelector(`[data-id="${task.id}"] .check`));
+    await vi.waitFor(async () => expect((await repo.listTasks())[0].done).toBe(1));
+    const field = root.querySelector<HTMLInputElement>('.capture input')!;
+    act(() => { field.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true })); });
+    expect((await repo.listTasks())[0].done).toBe(1);
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true })); });
+    await vi.waitFor(async () => expect((await repo.listTasks())[0].done).toBe(0));
+    expect(root.querySelector('.toast')?.textContent).toContain('Deshecho');
   });
 
   it('el Deshacer real del padre conserva el estado y la fecha de subtareas hechas anteriormente', async () => {
@@ -505,7 +519,7 @@ describe('lista de subtareas', () => {
     await repo.addParsed([parseLine('Proyecto'), { ...parseLine('Paso'), isSubtask: true }]);
     localStorage.setItem('lista.filter', JSON.stringify({ text: 'Proyecto' }));
     await app(repo);
-    click(root.querySelector('.row.has-subtasks .title'));
+    click(root.querySelector('.row.has-subtasks .fold-task'));
     expect(root.querySelector('.row.sub .title')?.textContent).toBe('Paso');
   });
 
@@ -539,7 +553,7 @@ describe('lista de subtareas', () => {
     else enter(input('Nueva tarea'));
     if (!parentId) {
       await vi.waitFor(() => expect(root.querySelector('.row.has-subtasks')).not.toBeNull());
-      click(root.querySelector('.row.has-subtasks .title'));
+      click(root.querySelector('.row.has-subtasks .fold-task'));
     }
     await vi.waitFor(() => expect(root.querySelector('.row.sub .title')?.textContent).toBe('Borrador conservado'));
   });

@@ -395,8 +395,10 @@ button.chip { min-height: 22px; }
 .subtask-composer .subtask-inputs { padding: 10px 0; }
 .title-line { display: flex; flex: 1; align-items: flex-start; min-width: 0; }
 .title-line .title { flex: 1; min-width: 0; }
-.title[aria-expanded] { cursor: pointer; }
-.edit-task { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -12px -8px; color: var(--muted); }
+.fold-task { flex: none; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; margin: -12px -8px -12px 0; padding: 0 8px; color: var(--muted); }
+.fold-task[aria-expanded="true"] { color: var(--accent); }
+:where(html:not([data-look="industrial"])) .fold-task[aria-expanded="true"] { color: var(--subtask-color); }
+.fold-count { font-size: 11px; font-variant-numeric: tabular-nums; }
 .row-btns.subtask-colors { gap: 0; }
 .color-option { display: grid; place-items: center; width: 44px; height: 44px; }
 .color-picker { position: relative; cursor: pointer; }
