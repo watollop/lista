@@ -1,0 +1,19 @@
+src/ui/styles.css
+  s_6653508701b7b6::t_1549daf311cf4b 275-278,402
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "b58c0dc61ac779fd67a4cda595da48a486c536b3",
+  "prompts": {},
+  "sessions": {
+    "s_6653508701b7b6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e82cc62-ee99-4076-928c-8ad8c57c7821",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
