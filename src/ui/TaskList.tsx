@@ -185,7 +185,8 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   useEffect(() => {
     if (selected === task.id) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
-  const activate = () => { onSelect(task.id); onEdit(task.id); };
+  // Tocar una tarea con subtareas la abre entera: se despliegan sus pasos y se abre su editor. Plegar es cosa del botón de ramas.
+  const activate = () => { onSelect(task.id); if (childrenCount && !expanded) onExpand?.(); onEdit(task.id); };
 
   return (
     <li

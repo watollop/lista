@@ -89,15 +89,15 @@ describe('fila con enlace en el título', () => {
     expect(onEdit.mock.calls).toEqual([['t1'], ['t1']]);
   });
 
-  it('con subtareas, Enter en el título edita y el botón de ramas las expande', () => {
+  it('con subtareas, Enter en el título edita y abre todo y el botón de ramas las pliega', () => {
     const onEdit = vi.fn();
     list([{ task: task('p', 'Proyecto'), children: [task('c', 'Paso', 'p')] }], onEdit);
     expect(root.querySelector('.fold-task')?.getAttribute('aria-expanded')).toBe('false');
     key(root.querySelector('.title')!, 'Enter');
     expect(onEdit).toHaveBeenCalledWith('p');
-    expect(root.querySelector('.fold-task')?.getAttribute('aria-expanded')).toBe('false');
-    act(() => (root.querySelector('.fold-task') as HTMLElement).click());
     expect(root.querySelector('.fold-task')?.getAttribute('aria-expanded')).toBe('true');
+    act(() => (root.querySelector('.fold-task') as HTMLElement).click());
+    expect(root.querySelector('.fold-task')?.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('Enter y Espacio dentro del enlace no activan el título', () => {
