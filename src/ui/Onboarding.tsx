@@ -34,8 +34,8 @@ const SLIDES = (): Slide[] => [
   { title: tr('Completa y filtra', 'Complete and filter'), text: () => tr('Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas. Las vencidas siempre están arriba.', 'Swipe right to complete. Tap a person or a topic to see only their tasks. Overdue tasks are always at the top.'), Demo: SwipeDemo },
   {
     title: tr('Más listas, si las necesitas', 'More lists, if you need them'),
-    text: () => tr(`Empiezas con una: Personal. Crea otra para la compra o el trabajo ${createHow()}. Y escribe /compra para apuntar en ella sin cambiar de lista.`,
-      `You start with one: Personal. Create another for shopping or work ${createHow()}. And type /shopping to add to it without switching lists.`),
+    text: () => tr(`Empiezas con una: Personal. Crea otra para la compra o el trabajo ${createHow()} y compártela si quieres editarla con alguien. Y escribe /compra para apuntar en ella sin cambiar de lista.`,
+      `You start with one: Personal. Create another for shopping or work ${createHow()} and share it if you want to edit it with someone. And type /shopping to add to it without switching lists.`),
     Demo: ListsDemo,
   },
   {
@@ -54,6 +54,7 @@ const hasKeyboard = () => typeof matchMedia !== 'undefined' && matchMedia('(hove
 const EXTRA = (): Slide[] => [
   { title: tr('Fechas como las dirías', 'Dates the way you’d say them'), text: () => tr('Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', 'Write the day in words or numbers. Periods are due at their end: a week, on Friday.'), Demo: DatesDemo },
   { title: tr('Prioridad y repetición', 'Priority and repeat'), text: () => tr('Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla; «cada 2 martes» empieza el próximo martes y sigue cada dos semanas.', 'Mark what matters with !high, !medium or !low. With “every” the task comes back when you complete it; “every 2 tuesdays” starts next Tuesday and repeats every two weeks.'), Demo: PrioRepeatDemo },
+  { title: tr('Compartir una lista', 'Share a list'), text: () => tr('Invita a quien quieras con un enlace: uno por persona, caduca en 7 días. La editáis juntos, cada uno desde sus dispositivos, y todo va cifrado. Hace falta entrar con Google.', 'Invite anyone you like with a link: one per person, it expires in 7 days. You edit it together, each from your own devices, and everything is encrypted. You need to sign in with Google.'), Demo: ShareDemo },
   { title: tr('Atajos de teclado', 'Keyboard shortcuts'), text: () => tr('Sin soltar el teclado: escribe, muévete por la lista, completa, pasa a mañana y filtra.', 'Without leaving the keyboard: write, move through the list, complete, move to tomorrow and filter.'), Demo: KeysDemo, keyboard: true },
 ];
 
@@ -357,6 +358,31 @@ function ListsDemo() {
         </span>
       </div>
       <p class={`lists-note ${sent ? 'on' : ''}`}>{NOTE}</p>
+    </div>
+  );
+}
+
+/** Compartir: una lista con otra persona. Las dos tienen sus tareas y el icono de personas indica que está compartida. */
+function ShareDemo() {
+  return (
+    <div class={`lists share ${reduced() ? 'still' : ''}`}>
+      <div class="lists-head">
+        {tr('Compra', 'Shopping')}
+        <svg class="share-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="8" r="3" /><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+          <circle cx="17" cy="9" r="2.4" /><path d="M16.5 14.2c2.6.2 4.5 1.8 4.5 4.8" />
+        </svg>
+      </div>
+      <div class="lists-rows">
+        <span class="lists-line"><i /><b /></span>
+        <span class="lists-line l1"><i /><b /></span>
+      </div>
+      <div class="share-people">
+        <span class="share-av">{tr('Tú', 'You')}</span>
+        <span class="share-av b">Ana</span>
+      </div>
+      <p class="lists-note on">{tr('Compartida. Todo va cifrado.', 'Shared. Everything is encrypted.')}</p>
     </div>
   );
 }

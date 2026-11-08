@@ -1257,3 +1257,56 @@ section.droppable.drop-on .section { color: var(--fg); }
 /* Barra lateral: grupo Listas arriba del todo, con sus errores en línea */
 .side-group.side-lists { margin-top: 0; margin-bottom: 26px; }
 .side-err { font-size: 12px; color: var(--warn); margin: 0 0 10px; }
+
+/* ---------- Compartir listas (Share.tsx) ---------- */
+.shared-ico { display: inline-block; flex: none; width: 14px; height: 14px; margin-left: 6px; vertical-align: -2px; opacity: .65; color: currentColor; }
+.share-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.share-dialog .share-title {
+  display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 12px;
+  font-size: 17px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg);
+}
+.share-dialog .share-title .shared-ico { width: 16px; height: 16px; }
+.share-dialog .share-sub { display: block; margin: 4px 0 8px; }
+.share-dialog .share-hint { font-size: 13px; color: var(--faint); margin: 12px 0 0; }
+.share-dialog .share-error { font-size: 14px; color: var(--warn); margin: 12px 0 0; }
+.share-dialog .share-error .link { color: var(--fg); }
+.share-url {
+  display: block; width: 100%; min-height: 44px; margin: 0 0 12px;
+  font: 15px/1.3 ui-monospace, Menlo, monospace; color: var(--fg); text-overflow: ellipsis;
+}
+.share-members { list-style: none; border-top: 1px solid var(--line); margin: 0 0 16px; }
+.share-member { display: flex; align-items: center; gap: 10px; min-height: 48px; border-bottom: 1px solid var(--line); }
+.share-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.share-name, .share-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-name { font-size: 16px; color: var(--fg); }
+.share-email { font-size: 13px; color: var(--muted); }
+.share-tag {
+  flex: none; padding: 2px 6px; border: 1px solid var(--line); border-radius: var(--radius);
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.share-member .link.danger { flex: none; }
+.share-confirm { padding: 4px 0 0; }
+.share-confirm p { color: var(--fg); }
+.share-foot { display: flex; flex-wrap: wrap; gap: 0 18px; margin-top: 14px; padding-top: 6px; border-top: 1px solid var(--line); }
+.share-dialog .row-btns + .share-hint { margin-top: 14px; }
+.share-foot.row-btns { border-top: 0; padding-top: 0; margin-top: 16px; }
+@media (max-width: 480px) {
+  .share-dialog .row-btns:not(.share-foot) { flex-direction: column; align-items: stretch; }
+}
+/* Ajustes → Listas: los botones, separados de la última lista. Barra lateral: el icono pegado al nombre. */
+.lists-btns { margin-top: 16px; }
+.side-item .shared-ico { margin-right: auto; margin-left: -6px; align-self: center; }
+/* «Mover a…»: aviso de que lo movido a una lista compartida lo ven sus miembros. */
+.list-sheet .look-hint { font-size: 13px; color: var(--faint); margin: -4px 0 12px; }
+/* Bienvenida: demo de compartir (Onboarding.tsx, ShareDemo) sobre las clases .lists*. */
+.share-icon { color: var(--muted); margin-left: 4px; }
+.share-people { display: flex; gap: 8px; }
+.share-av {
+  display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px;
+  border: 1px solid var(--fg); border-radius: 15px; background: var(--bg); color: var(--fg); font-size: 12px;
+  opacity: 0; animation: share-in 7.5s ease infinite;
+}
+.share-av.b { animation-delay: 1.2s; }
+.share.still .share-av { opacity: 1; animation: none; }
+@keyframes share-in { 0%, 8% { opacity: 0; transform: translateY(4px); } 16%, 86% { opacity: 1; transform: none; } 94%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .share-av { opacity: 1; animation: none; } }

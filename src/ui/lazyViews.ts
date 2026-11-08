@@ -8,8 +8,10 @@ export const LazyShortcutsSheet = lazy(() => import('./ShortcutsSheet').then((m)
 export const LazyLinkDialog = lazy(() => import('./Encryption').then((m) => m.LinkDialog));
 export const LazyLockedPanel = lazy(() => import('./Encryption').then((m) => m.LockedPanel));
 export const LazyDictation = lazy(() => import('./Dictation').then((m) => m.Dictation));
+export const LazyShareDialog = lazy(() => import('./Share').then((m) => m.ShareDialog));
+export const LazyJoinDialog = lazy(() => import('./Share').then((m) => m.JoinDialog));
 
-const VIEWS = [LazySettings, LazyOnboarding, LazyShortcutsSheet, LazyLinkDialog, LazyLockedPanel, LazyDictation];
+const VIEWS = [LazySettings, LazyOnboarding, LazyShortcutsSheet, LazyLinkDialog, LazyLockedPanel, LazyDictation, LazyShareDialog, LazyJoinDialog];
 
 /** Empieza a bajar los chunks de todas las vistas diferidas. */
 export const preloadViews = () => VIEWS.forEach((view) => view.preload());

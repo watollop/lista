@@ -48,6 +48,26 @@
 - No se muestra quién añadió o completó cada tarea (se puede añadir más adelante).
 - **Mover** una tarea entre una lista compartida y otra cambia quién la ve: el editor lo avisa.
 
+### Interfaz de compartir (fase 2D)
+- **Dónde está.** Igual en escritorio y en móvil:
+  - **Barra lateral (escritorio):** al pasar el ratón sobre una lista propia (no Personal) aparece el icono de personas, junto al lápiz.
+  - **Hoja de listas (móvil):** al editar una lista con el lápiz, botón **Compartir**.
+  - **Ajustes → Listas:** botón **Compartir**.
+  - En las tres, una lista ya compartida lleva el icono de personas fijo y su botón dice **Compartida**. Todos abren el mismo diálogo.
+- **Diálogo «Compartir «Compra»».**
+  - **Si falta algo:** sin sesión, explica y ofrece **Entrar con Google**; con el dispositivo bloqueado, remite a enlazarlo.
+  - **Si no está compartida:** explica qué pasa (todos ven y editan sus tareas, todo va cifrado) y ofrece **Compartir**.
+  - **Al compartir o al invitar:** muestra el enlace con **Enviar** (menú de compartir del sistema) y **Copiar**, y avisa de que sirve para una persona y caduca en 7 días.
+  - **Si ya está compartida:** muestra los miembros (nombre o email, «tú», quién la administra) y **Invitar a alguien**. Quien administra puede **Quitar** a cada persona y **Borrar para todos**. Todos pueden **Salir**; si sale quien administra, dice a quién pasa.
+- **Unirse.**
+  - **Al abrir el enlace:** Lista guarda `#unirse=…` en `sessionStorage` y lo quita de la barra antes de nada, porque el regreso de Google también usa el fragmento. Luego muestra «Te han invitado a una lista compartida» con **Unirme**; sin sesión, **Entrar con Google** primero.
+  - **Al terminar:** cambia a esa lista y avisa «Te has unido a «Compra»».
+  - **En iPhone, en Safari y sin sesión:** ofrece **Copiar enlace** para pegarlo en la app.
+  - **Pegar el enlace a mano:** **Unirse con un enlace**, en la hoja de listas, la barra lateral y Ajustes → Listas.
+- **Al mover una tarea:** en **Mover a…**, las listas compartidas llevan el icono y una línea avisa de que lo que muevas ahí lo verán sus miembros.
+- **Avisos.** «Ya no formas parte de «Compra»» cuando el sync quita una lista. Al borrar la cuenta, Ajustes avisa de que tus listas compartidas pasan a la persona más antigua de cada una.
+- **Sin sincronización configurada** (`status: 'disabled'`): no aparece nada de compartir.
+
 ## 3. Modelo de datos (fase 1)
 
 | Pieza | Cambio |
@@ -206,7 +226,7 @@ Si la app se cierra a medias, el siguiente sync retoma desde `pendingShare`. `cr
 | 2A ✅ | Cripto de listas e invitaciones (`src/sync/listcrypto.ts`) + tests de ataque | Sin tocar nada más. |
 | 2B ✅ | Servidor (migración SQL) y capa de API (`src/sync/listapi.ts`) | Suite intacta. Hay que ejecutar la migración en Supabase. |
 | 2C ✅ | Sync multiespacio (`src/sync/shared.ts`): cursores por lista, reparto, membresía perdida, compartir, unirse, salir, quitar y borrar | Dos usuarios simulados comparten una lista (`src/sync/shared.test.ts`, contra `src/sync/fakeSupabase.ts`). |
-| 2D | Interfaz de compartir, unirse, miembros, salir y quitar; Novedades y bienvenida | Flujos de §4.5 en escritorio y móvil. |
+| 2D ✅ | Interfaz de compartir, unirse, miembros, salir y quitar (`Share.tsx`, `sharing.ts`); Novedades, bienvenida, Ajustes y README | Flujos de §4.5 en escritorio y móvil. |
 | 2E | Validación real con dos cuentas de Google, en iPhone, Android y ordenador | Sin pérdida de datos. |
 
 ## 6. Tests

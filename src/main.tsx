@@ -8,11 +8,15 @@ import { registerSW, requestPersistence } from './pwa/register';
 import { applyTheme } from './ui/theme';
 import { App } from './ui/App';
 import { whenIdle } from './ui/lazy';
+import { captureJoinLink } from './ui/sharing';
 
 /** Tombstones sincronizados que se conservan en local antes de purgarlos (el servidor los guarda siempre). */
 const TOMBSTONE_RETENTION_MS = 60 * 24 * 60 * 60 * 1000;
 
 initLang(); // antes de pintar nada: idioma del navegador o el elegido en Ajustes
+// Enlace de invitación (#unirse=…): se guarda y se quita de la URL antes de nada, porque el regreso de Google
+// también usa el fragmento (docs/plan-listas.md §4.5). App abre el diálogo de unirse.
+captureJoinLink();
 const repo = createRepo();
 const sync = createSync(repo, syncConfigFromEnv());
 

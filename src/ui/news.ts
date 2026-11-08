@@ -6,6 +6,14 @@ export interface NewsItem { id: string; title: () => string; text: () => string 
 /** Novedades, la más reciente primero. */
 export const NEWS: NewsItem[] = [
   {
+    id: '2026-11-listas-compartidas',
+    title: () => tr('Nuevo: listas compartidas', 'New: shared lists'),
+    text: () => tr(
+      'Comparte una lista, la compra con tu pareja o las tareas de casa, y editadla juntos desde cada móvil u ordenador. Todo va cifrado. En el móvil, toca el nombre de arriba, el lápiz de una lista y Compartir; en el ordenador, el icono de personas de la barra lateral.',
+      'Share a list, the shopping with your partner or the housework, and edit it together from each phone or computer. Everything is encrypted. On the phone, tap the name at the top, the pencil on a list and Share; on the computer, the people icon in the sidebar.',
+    ),
+  },
+  {
     id: '2026-11-listas',
     title: () => tr('Nuevo: listas', 'New: lists'),
     text: () => tr(

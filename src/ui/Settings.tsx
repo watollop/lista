@@ -10,6 +10,7 @@ import { BUILD, buildLabel } from '../lib/build';
 import { EntityEditor } from './EntityEditor';
 import { isEn, langPref, tr, type LangPref } from '../i18n';
 import { chooseLang } from './langSync';
+import { PeopleIcon } from './PeopleIcon';
 
 interface Props {
   repo: Repo;
@@ -28,12 +29,15 @@ interface Props {
   onCreateList: (name: string) => Promise<void>; // lanza Error con mensaje si el nombre no vale
   onRenameList: (id: ID, name: string) => Promise<void>;
   onDeleteList: (id: ID) => void; // App pide confirmación y ofrece Deshacer
+  onShareList?: (id: ID) => void; // abre el diálogo de compartir de esa lista (App)
+  onJoinList?: () => void; // «Unirse con un enlace» (App)
 }
 
 export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, people, pending, onRename, onDelete,
-  lists, listPending, onCreateList, onRenameList, onDeleteList }: Props) {
+  lists, listPending, onCreateList, onRenameList, onDeleteList, onShareList, onJoinList }: Props) {
   const [editing, setEditing] = useState<{ kind: EntityKind; key: string } | null>(null);
   const [news, setNews] = useState(false);
+  const sharing = state.status !== 'disabled'; // sin sincronización no hay listas compartidas
   const editEnt = editing && (editing.kind === 'topic' ? topics : people).find((e) => e.key === editing.key);
   return (<>
     <div class="sheet" role="dialog" aria-modal="true" aria-label={tr('Ajustes', 'Settings')}
@@ -55,7 +59,8 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
         </section>
         <section class="group" aria-labelledby="ajustes-datos">
           <h2 class="group-title" id="ajustes-datos">{tr('Tus datos', 'Your data')}</h2>
-          <ListsSection lists={lists} listPending={listPending} onCreate={onCreateList} onRename={onRenameList} onDelete={onDeleteList} />
+          <ListsSection lists={lists} listPending={listPending} onCreate={onCreateList} onRename={onRenameList} onDelete={onDeleteList}
+            sharing={sharing} onShare={onShareList} onJoin={onJoinList} />
           <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
           {editing && editEnt && (
             <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
@@ -86,6 +91,9 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
             {isEn()
               ? <p class="kbd-only">Press <kbd>?</kbd> to see the keyboard shortcuts.</p>
               : <p class="kbd-only">Pulsa <kbd>?</kbd> para ver los atajos de teclado.</p>}
+            {sharing && (isEn()
+              ? <p>To share a list, tap its pencil and then <strong>Share</strong> on the phone, the people icon on a computer, or Settings → Lists. The link is for one person and expires in 7 days. Everything is end-to-end encrypted. Whoever manages it (at first, whoever created it) can remove people or delete it for everyone; anyone can leave.</p>
+              : <p>Para compartir una lista, pulsa su lápiz y luego <strong>Compartir</strong> en el móvil, el icono de personas en el ordenador, o Ajustes → Listas. El enlace es para una sola persona y caduca en 7 días. Todo va cifrado de extremo a extremo. Quien la administra (al principio, quien la creó) puede quitar a alguien o borrarla para todos; cualquiera puede salir.</p>)}
             <CaptureFold />
           </section>
         </section>
@@ -218,10 +226,12 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
 }
 
 /** Listas (docs/plan-listas.md): una fila por lista con sus pendientes, renombrar en línea y borrar (salvo la principal).
- *  Al final, alta en línea. Los errores de App (nombre no válido) se muestran bajo el campo y la edición sigue abierta. */
-function ListsSection({ lists, listPending, onCreate, onRename, onDelete }: {
+ *  Con sharing: icono y «Compartir» / «Compartida» por lista; una compartida no se borra desde aquí. Al final, alta en línea
+ *  y «Unirse con un enlace». Los errores de App (nombre no válido) se muestran bajo el campo y la edición sigue abierta. */
+function ListsSection({ lists, listPending, onCreate, onRename, onDelete, sharing, onShare, onJoin }: {
   lists: TodoList[]; listPending: Map<ID, number>;
   onCreate: (name: string) => Promise<void>; onRename: (id: ID, name: string) => Promise<void>; onDelete: (id: ID) => void;
+  sharing: boolean; onShare?: (id: ID) => void; onJoin?: () => void;
 }) {
   const [renaming, setRenaming] = useState<ID | null>(null);
   const [adding, setAdding] = useState(false);
@@ -261,20 +271,31 @@ function ListsSection({ lists, listPending, onCreate, onRename, onDelete }: {
       <span class="label">{tr('Listas', 'Lists')}</span>
       <p class="look-hint">{tr(
         'Cada tarea está en una lista. Escribe /nombre para apuntar en otra sin cambiar de lista. La principal no se puede borrar; al borrar otra, se borran sus tareas.',
-        'Each task is in a list. Type /name to add to another list without switching lists. The main list can’t be deleted; deleting another one deletes its tasks.')}</p>
+        'Each task is in a list. Type /name to add to another list without switching lists. The main list can’t be deleted; deleting another one deletes its tasks.')}
+        {sharing && tr(
+          ' Puedes compartir una lista con otras personas: la veréis y editaréis todos, cifrada.',
+          ' You can share a list with other people: you’ll all see and edit it, encrypted.')}</p>
       <ul class="ent-list">
         {lists.map((l) => {
           if (renaming === l.id) return <li key={l.id}>{field(l.id)}</li>;
           const n = listPending.get(l.id) ?? 0;
+          const shared = sharing && !!l.shared;
           return (
             <li key={l.id}>
               <div class={`ent-row ${n ? '' : 'zero'}`}>
-                <span class="ent-name">{l.name}</span>
+                <span class="ent-name">
+                  {l.name}
+                  {shared && <> <PeopleIcon title={tr('Compartida', 'Shared')} /> <small>{tr('compartida', 'shared')}</small></>}
+                </span>
                 <span class="ent-count">{n ? (isEn() ? `${n} ${n === 1 ? 'task' : 'tasks'}` : `${n} ${n === 1 ? 'tarea' : 'tareas'}`) : tr('sin tareas', 'no tasks')}</span>
               </div>
               <div class="edit-actions">
                 <button class="link" onClick={() => startRename(l)}>{tr('Renombrar', 'Rename')}</button>
-                {l.id !== MAIN_LIST && <button class="link danger" onClick={() => onDelete(l.id)}>{tr('Borrar', 'Delete')}</button>}
+                {sharing && onShare && l.id !== MAIN_LIST && (
+                  <button class="link" aria-label={`${shared ? tr('Compartida', 'Shared') : tr('Compartir', 'Share')} ${l.name}`}
+                    onClick={() => onShare(l.id)}>{shared ? tr('Compartida', 'Shared') : tr('Compartir', 'Share')}</button>
+                )}
+                {l.id !== MAIN_LIST && !shared && <button class="link danger" onClick={() => onDelete(l.id)}>{tr('Borrar', 'Delete')}</button>}
               </div>
             </li>
           );
@@ -282,7 +303,12 @@ function ListsSection({ lists, listPending, onCreate, onRename, onDelete }: {
       </ul>
       {adding
         ? field(null)
-        : <div class="row-btns"><button class="btn" onClick={startAdd}>{tr('+ Nueva lista', '+ New list')}</button></div>}
+        : (
+          <div class="row-btns lists-btns">
+            <button class="btn" onClick={startAdd}>{tr('+ Nueva lista', '+ New list')}</button>
+            {sharing && onJoin && <button class="btn" onClick={onJoin}>{tr('Unirse con un enlace', 'Join with a link')}</button>}
+          </div>
+        )}
     </section>
   );
 }
@@ -392,7 +418,7 @@ function DangerSection({ repo, sync, state, toast }: { repo: Repo; sync: Sync; s
       <span class="label">{tr('Eliminar datos', 'Delete data')}</span>
       <p>
         {signedIn
-          ? tr('Borra todas tus tareas, temas y personas de este dispositivo y de la nube, y elimina tu cuenta. Los otros dispositivos dejarán de sincronizar.', 'Deletes all your tasks, topics and people from this device and the cloud, and deletes your account. Your other devices will stop syncing.')
+          ? tr('Borra todas tus tareas, temas y personas de este dispositivo y de la nube, y elimina tu cuenta. Los otros dispositivos dejarán de sincronizar. Las listas compartidas que creaste no se borran: pasan a la persona que lleve más tiempo en cada una.', 'Deletes all your tasks, topics and people from this device and the cloud, and deletes your account. Your other devices will stop syncing. The shared lists you created aren’t deleted: they pass to the longest-standing member of each one.')
           : tr('Borra todas tus tareas, temas y personas de este dispositivo.', 'Deletes all your tasks, topics and people from this device.')}
       </p>
       {!confirming ? (
