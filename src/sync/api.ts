@@ -25,14 +25,18 @@ export async function parseBody(res: Response): Promise<any> {
   }
 }
 
-/** Construye un HttpError a partir de una respuesta no 2xx de PostgREST o Auth. */
-export async function httpErrorFrom(res: Response): Promise<HttpError> {
-  const body = await parseBody(res);
-  const msg = body.message || body.msg || body.error_description || body.error || `HTTP ${res.status}`;
-  return new HttpError(res.status, String(msg));
+/** Construye un HttpError a partir de un cuerpo ya leído (un Response solo se puede leer una vez). */
+export function httpErrorFromBody(status: number, body: any): HttpError {
+  const msg = body.message || body.msg || body.error_description || body.error || `HTTP ${status}`;
+  return new HttpError(status, String(msg));
 }
 
-function authHeaders(cfg: SyncConfig, session: Session): Record<string, string> {
+/** Construye un HttpError a partir de una respuesta no 2xx de PostgREST o Auth. */
+export async function httpErrorFrom(res: Response): Promise<HttpError> {
+  return httpErrorFromBody(res.status, await parseBody(res));
+}
+
+export function authHeaders(cfg: SyncConfig, session: Session): Record<string, string> {
   return {
     apikey: cfg.anonKey,
     Authorization: `Bearer ${session.accessToken}`,
