@@ -1,0 +1,57 @@
+README.md
+  s_1a113f72a038c4::t_09058971a8050a 91-112
+docs/plan-listas.md
+  s_1a113f72a038c4::t_56f0df66108642 51-70,229
+src/main.tsx
+  s_1a113f72a038c4::t_6cca85a8543c24 11,17-19
+src/ui/App.tsx
+  s_1a113f72a038c4::t_695e7cae76bc50 20,29-30,87-93,130-155,356-359,361,586,594-595,625,696-697,703,719-738
+src/ui/Lists.tsx
+  s_1a113f72a038c4::t_466ae6422cb34c 4,30-33,43-44,117-123,136-140,152,188-190
+src/ui/Onboarding.tsx
+  s_1a113f72a038c4::t_50b4c27ede9415 37-38,57,365-389
+src/ui/PeopleIcon.tsx
+  s_1a113f72a038c4::t_2dec5e2e41b600 1-15
+src/ui/Settings.tsx
+  s_1a113f72a038c4::t_24f59ae1951d8b 13,32-33,37,40,62-63,94-96,229-231,234,274-277,282,286-289,294-298,306-311,421
+src/ui/Share.tsx
+  s_1a113f72a038c4::t_9856f30e3321ed 1-393
+src/ui/Sidebar.tsx
+  s_1a113f72a038c4::t_0c144f1fc3479a 11,38-41,71-72,76,144-147,155,158,164,193,202-208,249-253
+src/ui/lazyViews.ts
+  s_1a113f72a038c4::t_355305a6b3ae43 11-12,14
+src/ui/news.test.ts
+  s_1a113f72a038c4::t_b76a73c2af6c3b 17,44
+src/ui/sharing.ts
+  s_1a113f72a038c4::t_18e967d06a7191 1-180
+src/ui/styles.css
+  s_1a113f72a038c4::t_9ea7fd83bc0101 1260-1312
+src/ui/news.ts
+  s_7720dca33c643c::t_237253f444f623 8-15
+src/ui/sharing.test.ts
+  s_1a113f72a038c4::t_71e03a466da110 1-243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e6cfbc11495a327514c2220035876e4ca9ca8250",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_7720dca33c643c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acf7614876314e989",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
