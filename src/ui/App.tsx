@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { DateFilter, Entity, EntityKind, Filter, ID, ParsedLine, Priority, Repo, Sync, Task } from '../types';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { MAIN_LIST, type DateFilter, type Entity, type EntityKind, type Filter, type ID, type ListScope, type ParsedLine, type Priority, type Repo, type Sync, type Task } from '../types';
 import { applyFilter, counts, dayLoad, emptyFilter, groupTasks, isEmptyFilter, toggleIn } from '../filters';
-import { formatDue, parseBlock } from '../parser';
+import { formatDue, parseBlock, setKnownLists } from '../parser';
 import { toISODate } from '../lib/date';
 import { externalCapture, validateCapture } from '../lib/capture';
-import { dropLabel, scheduleFor, type DropTarget } from '../lib/reschedule';
+import { dropLabel, listOfDrop, scheduleFor, type DropTarget, type ListDrop } from '../lib/reschedule';
 import { useData, useKeyboardInset, useSyncState, useToday, useWide } from './hooks';
 import { Capture } from './Capture';
 import { FilterBar } from './FilterBar';
@@ -22,8 +22,14 @@ import { whenIdle } from './lazy';
 import { Week } from './Week';
 import { byUse } from './byUse';
 import { tr } from '../i18n';
+import { ConfirmDialog, ListSheet } from './Lists';
+import { NewsCard, NewsSheet } from './WhatsNew';
+import { markAllNewsSeen, markNewsSeen, unseenNews, type NewsItem } from './news';
+import { inScope, listName, loadScope, openByList, resolveScope, saveScope } from './listScope';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
+// Hoja de listas: 'pick' cambia de lista; 'move' elige destino para la tarea del editor.
+type ListSheetState = { mode: 'pick' } | { mode: 'move'; taskId: ID };
 
 const FILTER_KEY = 'lista.filter';
 const PAST_DAYS = 30;
@@ -39,6 +45,20 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const kbOpen = useKeyboardInset();
   const wide = useWide();
 
+  // Lista actual (docs/plan-listas.md): se recuerda por dispositivo y se resuelve contra las listas que existen.
+  const [scopeRaw, setScopeRaw] = useState<ListScope>(loadScope);
+  // Antes de cargar las listas, la guardada (no hay tareas que mostrar, pero una captura externa sí sabe dónde está el usuario).
+  const scope: ListScope = data.ready ? resolveScope(scopeRaw, data.lists) : scopeRaw;
+  const changeScope = (s: ListScope) => {
+    setScopeRaw(s);
+    saveScope(s);
+    setSelected(null);
+    setEditing(null);
+  };
+  // El parser solo reconoce /lista de las listas que existen, y solo si hay más de una: con una sola, «/personal»
+  // sigue siendo texto, como siempre.
+  useLayoutEffect(() => { setKnownLists(data.lists.length > 1 ? data.lists.map((l) => l.name) : []); }, [data.lists]);
+
   const [filter, setFilterRaw] = useState<Filter>(loadFilter);
   const [panel, setPanel] = useState(false);
   const [selected, setSelected] = useState<ID | null>(null);
@@ -53,8 +73,15 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const closeIntro = () => {
     setIntro(false);
     try { localStorage.setItem(INTRO_KEY, '1'); } catch { /* modo privado */ }
+    markAllNewsSeen(); // quien llega nuevo ve la bienvenida, no las novedades
+    setNews([]);
   };
   const [toast, setToast] = useState<Toast | null>(null);
+  const [listSheet, setListSheet] = useState<ListSheetState | null>(null);
+  const [confirmDel, setConfirmDel] = useState<ID | null>(null); // lista a borrar (diálogo de confirmación)
+  // Novedades (src/ui/news.ts): una tarjeta por novedad no vista; con la bienvenida abierta no se muestran.
+  const [news, setNews] = useState<NewsItem[]>(() => (intro ? [] : unseenNews()));
+  const [newsSheet, setNewsSheet] = useState(false);
 
   // Tras el primer pintado, bajar los chunks de las vistas diferidas (Ajustes, bienvenida, cifrado, atajos, dictado).
   useEffect(() => whenIdle(preloadViews), []);
@@ -111,18 +138,24 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     return m;
   }, [data.topics, data.people]);
 
+  // Tareas de la lista actual: contadores, bloques, temas y personas, navegación. Las de otras listas no cuentan.
+  const tasks = useMemo(() => data.tasks.filter((t) => inScope(t, scope)), [data.tasks, scope]);
+  // Pendientes por lista (todas, para la hoja y la barra). Sin listId cuenta en la principal.
+  const listPending = useMemo(() => openByList(data.tasks), [data.tasks]);
+  const openTotal = useMemo(() => [...listPending.values()].reduce((a, b) => a + b, 0), [listPending]);
+
   // Tareas pendientes por etiqueta ('#clave', '@clave', '!prioridad').
   const pending = useMemo(() => {
     const m = new Map<string, number>();
     const inc = (k: string) => m.set(k, (m.get(k) ?? 0) + 1);
-    for (const t of data.tasks) {
+    for (const t of tasks) {
       if (t.deleted || t.done) continue;
       t.topics.forEach((k) => inc('#' + k));
       t.people.forEach((k) => inc('@' + k));
       if (t.priority) inc('!' + t.priority);
     }
     return m;
-  }, [data.tasks]);
+  }, [tasks]);
 
   // Lo que se muestra en filtros: solo con pendientes, o los que el filtro activo usa (para no perderlos).
   const shownTopics = useMemo(() => data.topics.filter((e) => pending.has('#' + e.key) || filter.topics.includes(e.key)),
@@ -134,43 +167,43 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const capturePeople = useMemo(() => byUse(data.people, '@', pending), [data.people, pending]);
 
   // Completadas hoy: siguen visibles (tachadas, en su sitio) hasta que cambia el día.
-  const doneToday = useMemo(() => new Set(data.tasks
+  const doneToday = useMemo(() => new Set(tasks
     .filter((t) => t.done && t.doneAt && toISODate(new Date(t.doneAt)) === today)
-    .map((t) => t.id)), [data.tasks, today]);
+    .map((t) => t.id)), [tasks, today]);
 
   const visible = useMemo(() => {
-    const shown = applyFilter(data.tasks, filter, today);
+    const shown = applyFilter(tasks, filter, today);
     if (doneToday.size && filter.status === 'open') {
       const ids = new Set(shown.map((t) => t.id));
-      const extra = data.tasks.filter((t) => doneToday.has(t.id) && !ids.has(t.id));
+      const extra = tasks.filter((t) => doneToday.has(t.id) && !ids.has(t.id));
       // Mantener su posición: se ordenan como si siguieran abiertas.
       return applyFilter(
-        data.tasks.map((t) => (extra.includes(t) ? { ...t, done: 0 as const } : t)),
+        tasks.map((t) => (extra.includes(t) ? { ...t, done: 0 as const } : t)),
         filter, today,
-      ).map((t) => (doneToday.has(t.id) ? data.tasks.find((x) => x.id === t.id)! : t));
+      ).map((t) => (doneToday.has(t.id) ? tasks.find((x) => x.id === t.id)! : t));
     }
     return shown;
-  }, [data.tasks, filter, today, doneToday]);
+  }, [tasks, filter, today, doneToday]);
 
   // Pasadas: completadas antes de hoy (últimos PAST_DAYS días), arriba de la lista y fuera de la vista inicial.
   const past = useMemo(() => {
     if (filter.status !== 'open') return [];
     const since = Date.now() - PAST_DAYS * 864e5;
-    return applyFilter(data.tasks, { ...filter, status: 'done' }, today)
+    return applyFilter(tasks, { ...filter, status: 'done' }, today)
       .filter((t) => !doneToday.has(t.id) && (t.doneAt ?? 0) >= since)
       .sort((a, b) => (a.doneAt ?? 0) - (b.doneAt ?? 0));
-  }, [data.tasks, filter, today, doneToday]);
+  }, [tasks, filter, today, doneToday]);
   const groups = useMemo(() => {
     const matched = [...new Map([...past, ...visible].map((t) => [t.id, t])).values()];
-    const families = groupTasks(data.tasks);
+    const families = groupTasks(tasks);
     const children = new Map(families.map((g) => [g.task.id, g.children]));
     return groupTasks(matched).map((g) => ({ ...g, children: children.get(g.task.id) ?? g.children }));
-  }, [past, visible, data.tasks]);
+  }, [past, visible, tasks]);
   const flat = useMemo(() => groups.flatMap((g) => [g.task, ...g.children]), [groups]);
-  const tally = useMemo(() => counts(data.tasks, today), [data.tasks, today]);
+  const tally = useMemo(() => counts(tasks, today), [tasks, today]);
   // Un día del mini calendario que ya pasó (la app quedó abierta o se guardó ayer) deja de filtrar.
   useEffect(() => { if (filter.day && filter.day < today) setFilter({ ...filter, day: undefined }); }, [today, filter.day]);
-  const load = useMemo(() => dayLoad(data.tasks, today), [data.tasks, today]);
+  const load = useMemo(() => dayLoad(tasks, today), [tasks, today]);
   // Tocar un día del mini calendario muestra solo ese día (sustituye a los filtros de Fecha); tocarlo otra vez lo quita.
   const pickDay = (d: string) => setFilter({ ...filter, dates: [], day: filter.day === d ? undefined : d });
   const week = <Week today={tally.today} overdue={tally.overdue} open={tally.open} days={load} day={filter.day} onPick={pickDay} />;
@@ -178,14 +211,37 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
   // ---------- acciones ----------
   // Tareas recién creadas que el filtro activo no deja ver. Una subtarea se ve si se ve su principal.
+  // Solo cuentan las de la lista actual: las de otra lista ya se avisan con «Añadida a …».
   const hiddenByFilter = (created: Task[]) => {
-    const shown = new Set(applyFilter([...data.tasks, ...created], filter, today).map((t) => t.id));
-    return created.filter((t) => !shown.has(t.id) && !(t.parentId && shown.has(t.parentId))).length;
+    const here = created.filter((t) => inScope(t, scope));
+    const shown = new Set(applyFilter([...tasks, ...here], filter, today).map((t) => t.id));
+    return here.filter((t) => !shown.has(t.id) && !(t.parentId && shown.has(t.parentId))).length;
   };
   const showAllAction = () => ({ label: tr('Ver todo', 'Show all'), run: () => setFilter(emptyFilter()) });
+  // Lista de destino de una tarea nueva: «Todas» escribe en la principal.
+  const addTarget = (): ID => (scope === 'all' ? MAIN_LIST : scope);
+  // Si las principales creadas acaban todas en una misma lista distinta de la actual (la vista no es «Todas»), esa lista y cuántas.
+  const elsewhereOf = (created: Task[]): { id: ID; n: number } | null => {
+    if (scope === 'all') return null;
+    const tops = created.filter((t) => !t.parentId);
+    if (!tops.length) return null;
+    const id = tops[0].listId ?? MAIN_LIST;
+    if (tops.some((t) => (t.listId ?? MAIN_LIST) !== id) || id === scope) return null;
+    return { id, n: tops.length };
+  };
+  // Aviso con Ver: cambia a la lista donde fueron las tareas. Tiene prioridad sobre el de «oculta por el filtro».
+  const announceElsewhere = ({ id, n }: { id: ID; n: number }) => {
+    const name = listName(data.lists, id);
+    showToast({
+      msg: n > 1 ? tr(`${n} tareas añadidas a ${name}`, `${n} tasks added to ${name}`) : tr(`Añadida a ${name}`, `Added to ${name}`),
+      action: { label: tr('Ver', 'View'), run: () => changeScope(id) },
+    });
+  };
   const add = async (lines: ParsedLine[]) => {
-    const created = await repo.addParsed(lines, null);
+    const created = await repo.addParsed(lines, null, addTarget());
     if (!created.length) return;
+    const elsewhere = elsewhereOf(created);
+    if (elsewhere) { announceElsewhere(elsewhere); return; }
     const hidden = hiddenByFilter(created);
     const n = created.length;
     if (!hidden) {
@@ -200,24 +256,31 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     }
   };
 
-  // Tarea que llega desde fuera («Compartir con Lista» en Android): se apunta una vez
-  // y se limpia la URL para que recargar no la duplique.
+  // Aviso tras una captura externa. Se llama con el estado de la última pintada (el efecto corre una sola vez).
+  const handleExternal = useRef<(created: Task[]) => void>(() => undefined);
+  handleExternal.current = (created) => {
+    const elsewhere = elsewhereOf(created);
+    if (elsewhere) { announceElsewhere(elsewhere); return; }
+    // Si el filtro la esconde, avisar pesa más que ofrecer deshacer: el aviso admite una sola acción.
+    if (hiddenByFilter(created)) {
+      showToast({ msg: tr('Apuntada (oculta por el filtro)', 'Saved (hidden by the filter)'), action: showAllAction() });
+      return;
+    }
+    showToast({
+      msg: created.length > 1 ? tr(`${created.length} tareas apuntadas`, `${created.length} tasks saved`) : tr('Apuntada: ', 'Saved: ') + created[0].title,
+      action: { label: tr('Deshacer', 'Undo'), run: () => { for (const t of created) void repo.deleteTask(t.id); } },
+    });
+  };
+
+  // Tarea que llega desde fuera («Compartir con Lista» en Android): se apunta una vez, en la principal
+  // (salvo /lista), y se limpia la URL para que recargar no la duplique.
   useEffect(() => {
     const text = externalCapture(location.search);
     if (!text) return;
     (async () => {
-      const created = await repo.addParsed(validateCapture(parseBlock(text)), null);
+      const created = await repo.addParsed(validateCapture(parseBlock(text)), null, MAIN_LIST);
       history.replaceState(null, '', location.pathname + location.hash);
-      if (!created.length) return;
-      // Si el filtro la esconde, avisar pesa más que ofrecer deshacer: el aviso admite una sola acción.
-      if (hiddenByFilter(created)) {
-        showToast({ msg: tr('Apuntada (oculta por el filtro)', 'Saved (hidden by the filter)'), action: showAllAction() });
-        return;
-      }
-      showToast({
-        msg: created.length > 1 ? tr(`${created.length} tareas apuntadas`, `${created.length} tasks saved`) : tr('Apuntada: ', 'Saved: ') + created[0].title,
-        action: { label: tr('Deshacer', 'Undo'), run: () => { for (const t of created) void repo.deleteTask(t.id); } },
-      });
+      if (created.length) handleExternal.current(created);
     })().catch((e) => showToast(e instanceof Error ? e.message : tr('No se pudieron añadir las tareas.', 'Couldn’t add the tasks.')));
   }, []);
 
@@ -249,16 +312,92 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     showToast({ msg: tr('Tarea borrada', 'Task deleted'), action: { label: tr('Deshacer', 'Undo'), run: () => repo.restoreTask(id) } });
   };
 
+  // Tarea a otra lista (arrastrada a la barra, o elegida en la hoja «Mover a…»): cambia quién la ve.
+  // name: para una lista recién creada, que aún no está en data.lists.
+  const moveToList = async (id: ID, listId: ID, name = listName(data.lists, listId)) => {
+    const t = data.tasks.find((x) => x.id === id);
+    if (!t || (t.listId ?? MAIN_LIST) === listId) return;
+    try {
+      const { undo } = await repo.moveToList(id, listId);
+      showToast({
+        msg: tr(`Movida a ${name}`, `Moved to ${name}`),
+        action: { label: tr('Deshacer', 'Undo'), run: () => {
+          void undo().catch((e) => showToast(e instanceof Error ? e.message : tr('No se pudo deshacer la tarea.', 'Couldn’t undo the task.')));
+        } },
+      });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : tr('No se pudo mover la tarea.', 'Couldn’t move the task.'));
+    }
+  };
+
   // Tarea arrastrada a otro bloque (Hoy, Mañana, Esta semana, Próximas, Sin fecha): cambia su fecha.
-  const move = async (id: ID, target: DropTarget) => {
+  // Soltada en una lista de la barra (list:<id>): se mueve a esa lista.
+  const move = async (id: ID, target: DropTarget | ListDrop) => {
+    const listId = listOfDrop(target);
+    if (listId !== null) { await moveToList(id, listId); return; }
+    const dest = target as DropTarget;
     const t = data.tasks.find((x) => x.id === id);
     if (!t) return;
-    const next = scheduleFor(target, today);
+    const next = scheduleFor(dest, today);
     if (next.due === t.due && (next.period ?? null) === (t.period ?? null)) return;
     const before = { due: t.due, period: t.period ?? null };
     await repo.updateTask(id, next);
-    showToast({ msg: tr('Movida a ', 'Moved to ') + dropLabel(target), action: { label: tr('Deshacer', 'Undo'), run: () => repo.updateTask(id, before) } });
+    showToast({ msg: tr('Movida a ', 'Moved to ') + dropLabel(dest), action: { label: tr('Deshacer', 'Undo'), run: () => repo.updateTask(id, before) } });
   };
+
+  // ---------- listas (hoja, barra y diálogo de borrado) ----------
+  const openMove = (id: ID) => setListSheet({ mode: 'move', taskId: id });
+  const taskListOf = (id: ID): ID => data.tasks.find((x) => x.id === id)?.listId ?? MAIN_LIST;
+  // Elegir una lista en la hoja: en 'move' mueve la tarea (y cierra el editor); en 'pick' cambia de lista.
+  const pickFromSheet = (s: ListScope) => {
+    const sheet = listSheet;
+    setListSheet(null);
+    if (sheet?.mode === 'move') {
+      setEditing(null);
+      if (s !== 'all') void moveToList(sheet.taskId, s);
+      return;
+    }
+    changeScope(s);
+  };
+  // Crear una lista (barra o hoja). Lanza Error si el nombre no vale: lo muestra quien lo pidió.
+  const createList = async (name: string) => {
+    const list = await repo.createList(name);
+    changeScope(list.id);
+  };
+  const createFromSheet = async (name: string) => {
+    const list = await repo.createList(name);
+    const sheet = listSheet;
+    setListSheet(null);
+    if (sheet?.mode === 'move') {
+      setEditing(null);
+      await moveToList(sheet.taskId, list.id, list.name);
+      return;
+    }
+    changeScope(list.id);
+  };
+  const renameList = (id: ID, name: string) => repo.renameList(id, name).then(() => undefined);
+  // Borrar: primero se pregunta (con cuántas tareas se lleva consigo).
+  const askDeleteList = (id: ID) => setConfirmDel(id);
+  const openTasksIn = (id: ID) => data.tasks.filter((t) => !t.parentId && (t.listId ?? MAIN_LIST) === id).length;
+  const deleteListNow = async (id: ID) => {
+    setConfirmDel(null);
+    const name = listName(data.lists, id);
+    try {
+      const { undo } = await repo.deleteList(id);
+      if (scope === id) changeScope(MAIN_LIST);
+      showToast({
+        msg: tr(`Lista «${name}» borrada`, `List “${name}” deleted`),
+        action: { label: tr('Deshacer', 'Undo'), run: () => {
+          void undo().catch((e) => showToast(e instanceof Error ? e.message : tr('No se pudo deshacer', 'Couldn’t undo')));
+        } },
+      });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : tr('No se pudo borrar la lista.', 'Couldn’t delete the list.'));
+    }
+  };
+  const confirmText = (n: number) => (n === 0 ? tr('No tiene tareas.', 'It has no tasks.')
+    : n === 1 ? tr('Tiene 1 tarea. Se borrará con ella.', 'It has 1 task. It will be deleted with it.')
+    : tr(`Tiene ${n} tareas. Se borrarán con ella.`, `It has ${n} tasks. They will be deleted with it.`));
 
   // «Para mañana»: fecha de mañana sin periodo (botón del editor o «m»). Si había texto editado, se guarda con él.
   // Deshacer restaura solo la fecha anterior.
@@ -349,6 +488,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       const el = e.target as HTMLElement;
       const typing = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
       if (intro) return; // la bienvenida gestiona su propio teclado
+      if (listSheet || newsSheet || confirmDel) return; // hojas y diálogos: su propio teclado (Esc los cierra)
       if (shortcuts) { if (e.key === '?' || e.key === 'Escape') { e.preventDefault(); setShortcuts(false); } return; }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -384,6 +524,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       else if (key === 'm' && selected) run(() => void tomorrow(selected));
       else if ((key === 'Backspace' || key === 'Delete') && selected) run(() => remove(selected));
       else if (key === '?') run(() => setShortcuts(true));
+      else if (key === 'l') run(() => setListSheet({ mode: 'pick' }));
       else if (key === 'h') run(() => setFilter({ ...emptyFilter(), dates: ['today'] }));
       else if (key === 's') run(() => setFilter({ ...emptyFilter(), dates: ['week'] }));
       else if (key === 'v') run(() => setFilter({ ...emptyFilter(), dates: ['overdue'] }));
@@ -401,12 +542,18 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
   const syncDot = syncState.status === 'error' || syncState.status === 'offline' ? ' ·' : '';
   const link = sync.link?.() ?? null; // el sync de algunos tests no implementa link()
+  // Cabecera: con varias listas, su nombre (o «Todas») con ▾ y se abre la hoja; con una, «Lista» como siempre.
+  const multi = data.lists.length > 1;
+  const headLabel = !multi ? 'Lista' : scope === 'all' ? tr('Todas', 'All') : listName(data.lists, scope);
 
   return (
     <div class={`app ${wide ? 'wide' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
       <header class="top">
         <div class="bar">
-          <span class="brand">Lista</span>
+          <button class="brand brand-btn" aria-label={tr('Cambiar de lista', 'Switch list')} aria-haspopup="dialog"
+            onClick={() => setListSheet({ mode: 'pick' })}>
+            <span>{headLabel}</span>{multi && <span class="brand-caret" aria-hidden="true">▾</span>}
+          </button>
           <span class="bar-right">
             {!wide && (
               <button class={`link ${panel ? 'on' : ''}`} aria-expanded={panel}
@@ -433,16 +580,25 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           people={shownPeople} allTopics={data.topics} allPeople={data.people} pending={pending}
           counts={tally} week={week} searchRef={searchRef} onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
           onRename={renameEntity} onDelete={deleteEntity}
+          lists={data.lists} scope={scope} listPending={listPending} total={openTotal}
+          onPickList={changeScope} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList}
         />
       )}
 
       <Capture
         topics={captureTopics} people={capturePeople} names={names} today={today} kbOpen={kbOpen}
         inputRef={captureRef} onAdd={add}
+        lists={data.lists} target={multi ? (data.lists.find((l) => l.id === addTarget()) ?? null) : null}
       />
 
       <main>
         {enc === 'locked' && <LazyLockedPanel sync={sync} onRecovery={() => setSettings(true)} />}
+        {/* Novedad no vista: tarjeta al principio de la lista, una a una. Con la bienvenida abierta no se muestra. */}
+        {!intro && news.length > 0 && (
+          <NewsCard item={news[0]}
+            onOpen={() => { markAllNewsSeen(); setNews([]); setNewsSheet(true); }}
+            onClose={() => { markNewsSeen([news[0].id]); setNews((n) => n.slice(1)); }} />
+        )}
         {data.ready && groups.length === 0 ? (
           <div class="empty">
             {isEmptyFilter(filter) ? (
@@ -457,6 +613,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
             onSelect={setSelected} onEdit={setEditing} onToggle={toggle} onSave={save} onDelete={remove} onChip={chipTap}
             doneToday={doneToday} pastMode={filter.status === 'open'} anchorKey={JSON.stringify(filter)} onMove={move}
             onAddSubtasks={addSubtasks}
+            lists={data.lists} showList={scope === 'all'} onPickList={(id) => changeScope(id)} onMoveTo={openMove}
           />
         )}
       </main>
@@ -467,6 +624,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           <button class="link" onClick={() => window.location.reload()}>{tr('Recargar', 'Reload')}</button>
         </div>
       )}
+
+      {newsSheet && <NewsSheet onClose={() => setNewsSheet(false)} />}
 
       {toast && (
         <div class="toast" role="status">
@@ -492,7 +651,20 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         <LazySettings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
           topics={data.topics} people={data.people} pending={pending}
           onRename={renameEntity} onDelete={deleteEntity}
-          onIntro={() => { setSettings(false); setIntro('full'); }} />
+          onIntro={() => { setSettings(false); setIntro('full'); }}
+          lists={data.lists} listPending={listPending} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList} />
+      )}
+      {listSheet && (
+        <ListSheet mode={listSheet.mode} lists={data.lists} pending={listPending} total={openTotal} scope={scope}
+          current={listSheet.mode === 'move' ? taskListOf(listSheet.taskId) : undefined}
+          onPick={pickFromSheet} onCreate={createFromSheet} onRename={renameList} onDelete={askDeleteList}
+          onClose={() => setListSheet(null)} />
+      )}
+      {confirmDel && (
+        <ConfirmDialog
+          title={tr(`¿Borrar «${listName(data.lists, confirmDel)}»?`, `Delete “${listName(data.lists, confirmDel)}”?`)}
+          text={confirmText(openTasksIn(confirmDel))} confirm={tr('Borrar', 'Delete')}
+          onConfirm={() => void deleteListNow(confirmDel)} onCancel={() => setConfirmDel(null)} />
       )}
       {shortcuts && <LazyShortcutsSheet onClose={() => setShortcuts(false)} />}
       {link?.role === 'active' && <LazyLinkDialog sync={sync} link={link} toast={showToast} />}

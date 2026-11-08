@@ -22,6 +22,14 @@ interface Props {
   hideDue?: boolean; // el bloque de la lista ya indica la fecha (Hoy, Mañana, Esta semana)
 }
 
+/** Etiqueta con el nombre de la lista de una tarea (vista «Todas las listas»). Tocarla abre esa lista, sin abrir el editor. */
+export function ListChip({ name, onTap }: { name: string; onTap: () => void }) {
+  const label = tr(`Abrir la lista ${name}`, `Open list ${name}`);
+  return (
+    <button class="chip" aria-label={label} title={label} onClick={(e) => { e.stopPropagation(); onTap(); }}>{name}</button>
+  );
+}
+
 /** Chips discretos de una tarea. Con onTap, tocar #tema/@persona/!prio filtra por él. */
 export function TaskChips({ due, period, done, priority, recurrence, topics, people, names, today, onTap, title, hideDue }: Props) {
   const inline = new Set(title ? inlineTags(title).map((t) => t.sym + normalizeKey(t.name)) : []);

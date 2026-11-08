@@ -3,9 +3,12 @@ import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaskList, TitleText, type Group } from './TaskList';
-import type { Task } from '../types';
+import type { Task, TodoList } from '../types';
+import { MAIN_LIST } from '../types';
 
 let root: HTMLDivElement;
+const mainList: TodoList = { id: MAIN_LIST, name: 'Personal', order: 0, updatedAt: 0, deleted: 0, dirty: 0 } as TodoList;
+const workList: TodoList = { id: 'trabajo', name: 'Trabajo', order: 1, updatedAt: 0, deleted: 0, dirty: 0 } as TodoList;
 
 beforeEach(() => {
   root = document.createElement('div');
@@ -69,6 +72,7 @@ describe('fila con enlace en el título', () => {
       groups, names: new Map(), today: '2026-11-01', selected: null, editing: null,
       onSelect, onEdit, onToggle: vi.fn(), onSave: vi.fn(), onDelete: vi.fn(),
       onChip: vi.fn(), doneToday: new Set<string>(), pastMode: false, anchorKey: 'k', onMove: vi.fn(), onAddSubtasks: vi.fn(async () => {}),
+      lists: [mainList], showList: false, onPickList: vi.fn(), onMoveTo: vi.fn(),
     }), root));
 
   it('el enlace no está dentro de ningún botón y el título tiene rol de botón', () => {
@@ -108,5 +112,69 @@ describe('fila con enlace en el título', () => {
     key(root.querySelector('.title a')!, ' ');
     expect(onEdit).not.toHaveBeenCalled();
     expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
+describe('listas: etiqueta de lista y «Mover a…»', () => {
+  const task = (id: string, title: string, parentId: string | null = null, listId: string | null = null): Task => ({
+    id, title, topics: [], people: [], due: null, priority: null, recurrence: null, parentId, listId,
+    done: 0, doneAt: null, nextId: null, order: 0, createdAt: 0, updatedAt: 0, deleted: 0, dirty: 0,
+  });
+  const render1 = (groups: Group[], opts: { lists?: TodoList[]; showList?: boolean; editing?: string | null; onPickList?: () => void; onMoveTo?: () => void; onEdit?: () => void; onSelect?: () => void } = {}) =>
+    act(() => render(h(TaskList, {
+      groups, names: new Map(), today: '2026-11-01', selected: null, editing: opts.editing ?? null,
+      onSelect: opts.onSelect ?? vi.fn(), onEdit: opts.onEdit ?? vi.fn(), onToggle: vi.fn(), onSave: vi.fn(), onDelete: vi.fn(),
+      onChip: vi.fn(), doneToday: new Set<string>(), pastMode: false, anchorKey: 'k', onMove: vi.fn(), onAddSubtasks: vi.fn(async () => {}),
+      lists: opts.lists ?? [mainList], showList: opts.showList ?? false,
+      onPickList: opts.onPickList ?? vi.fn(), onMoveTo: opts.onMoveTo ?? vi.fn(),
+    }), root));
+  const byText = (text: string) => [...root.querySelectorAll('button')].find((b) => b.textContent === text) ?? null;
+
+  it('con una sola lista no aparece «Mover a…» en el editor', () => {
+    render1([{ task: task('t1', 'Comprar pan'), children: [] }], { editing: 't1' });
+    expect(root.querySelector('.edit')).not.toBeNull();
+    expect(byText('Mover a…')).toBeNull();
+  });
+
+  it('con dos listas aparece «Mover a…» y llama a onMoveTo con la tarea, sin quitar el foco', () => {
+    const onMoveTo = vi.fn();
+    render1([{ task: task('t1', 'Comprar pan'), children: [] }], { editing: 't1', lists: [mainList, workList], onMoveTo });
+    const btn = byText('Mover a…')!;
+    expect(btn).not.toBeNull();
+    const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    act(() => { btn.dispatchEvent(down); });
+    expect(down.defaultPrevented).toBe(true);
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onMoveTo).toHaveBeenCalledWith('t1');
+  });
+
+  it('con showList, la principal muestra su etiqueta de lista; tocarla abre esa lista sin editar ni seleccionar', () => {
+    const onPickList = vi.fn();
+    const onEdit = vi.fn();
+    const onSelect = vi.fn();
+    render1([
+      { task: task('a', 'Informe', null, 'trabajo'), children: [] },
+      { task: task('b', 'Pan', null, null), children: [] },
+    ], { showList: true, lists: [mainList, workList], onPickList, onEdit, onSelect });
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('.chip[aria-label^="Abrir la lista"]')];
+    expect(chips.map((c) => c.textContent)).toEqual(['Trabajo', 'Personal']);
+    act(() => { chips[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onPickList).toHaveBeenCalledWith('trabajo');
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('las subtareas no muestran etiqueta de lista', () => {
+    render1([{ task: task('p', 'Proyecto', null, 'trabajo'), children: [task('c', 'Paso', 'p', 'trabajo')] }], { showList: true, lists: [mainList, workList] });
+    expect(root.querySelectorAll('.chip[aria-label^="Abrir la lista"]')).toHaveLength(1);
+    act(() => (root.querySelector('.fold-task') as HTMLElement).click());
+    expect(root.querySelector('.row.sub')).not.toBeNull();
+    expect(root.querySelectorAll('.chip[aria-label^="Abrir la lista"]')).toHaveLength(1);
+    expect(root.querySelector('.row.sub .chip')).toBeNull();
+  });
+
+  it('sin showList no hay etiquetas de lista', () => {
+    render1([{ task: task('a', 'Informe', null, 'trabajo'), children: [] }], { showList: false, lists: [mainList, workList] });
+    expect(root.querySelector('.chip[aria-label^="Abrir la lista"]')).toBeNull();
   });
 });

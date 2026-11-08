@@ -2,14 +2,19 @@ import { useEffect, useRef } from 'preact/hooks';
 import { tr } from '../i18n';
 import { NEWS, type NewsItem } from './news';
 
-/** Aviso discreto arriba, como el de «Hay una versión nueva». Ver abre la hoja; Cerrar la descarta (los gestiona App). */
+/** Tarjeta de novedad al principio de la lista (en el flujo, sin tapar la cabecera). Ver abre la hoja; Cerrar la descarta (los gestiona App). */
 export function NewsCard({ item, onOpen, onClose }: { item: NewsItem; onOpen: () => void; onClose: () => void }) {
   return (
-    <div class="toast toast-top news-card" role="status">
-      <span>{item.title()}</span>
-      <button class="link" onClick={onOpen} aria-label={tr('Ver novedades', 'See what’s new')}>{tr('Ver', 'View')}</button>
-      <button class="link" onClick={onClose} aria-label={tr('Cerrar aviso de novedades', 'Close the news notice')}>{tr('Cerrar', 'Close')}</button>
-    </div>
+    <section class="news-card" role="status" aria-label={tr('Novedades', 'What’s new')}>
+      <div class="news-card-copy">
+        <strong>{item.title()}</strong>
+        <p>{item.text()}</p>
+      </div>
+      <div class="news-card-acts">
+        <button class="link" onClick={onOpen} aria-label={tr('Ver novedades', 'See what’s new')}>{tr('Ver', 'View')}</button>
+        <button class="link" onClick={onClose} aria-label={tr('Cerrar aviso de novedades', 'Close the news notice')}>{tr('Cerrar', 'Close')}</button>
+      </div>
+    </section>
   );
 }
 

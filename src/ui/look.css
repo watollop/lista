@@ -65,6 +65,9 @@
 /* Marca en tipografía de puntos con el punto naranja */
 :where([data-look="industrial"]) .brand { font-family: var(--dots); font-weight: 700; font-size: 26px; letter-spacing: .04em; text-transform: uppercase; }
 :where([data-look="industrial"]) .brand::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: 2px; }
+/* Con varias listas, el ▾ naranja sustituye al punto (no se juntan los dos) */
+:where([data-look="industrial"]) .brand-btn:has(.brand-caret)::after { display: none; }
+:where([data-look="industrial"]) .brand-caret { color: var(--accent); font-size: 14px; }
 
 :where([data-look="industrial"]) .tab.on { border-bottom-color: var(--accent); }
 :where([data-look="industrial"]) .tab sup { font-family: var(--mono); }
@@ -231,3 +234,6 @@
 
 /* Novedades: títulos de la hoja en mono, como los rótulos */
 :where([data-look="industrial"]) .news-item h3 { font-family: var(--mono); font-size: 13px; font-weight: 400; text-transform: uppercase; letter-spacing: .06em; }
+
+/* Listas: separador fino de las filas de la hoja, como en el resto de listas */
+:where([data-look="industrial"]) .ls-row { border-bottom-color: var(--hair); }

@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact';
-import type { Entity, ID, ISODate, ParsedLine, Task } from '../types';
+import { MAIN_LIST, type Entity, type ID, type ISODate, type ParsedLine, type Task, type TodoList } from '../types';
 import { formatLine, inlineTags, normalizeKey, parseLine } from '../parser';
-import { TaskChips, type ChipTap } from './Chips';
+import { ListChip, TaskChips, type ChipTap } from './Chips';
 import { isCurrentPeriod, periodEnd } from '../lib/period';
 import { splitLinks } from '../lib/links';
 import { addToAppleCalendar, addToCalendar, addToGoogleCalendar, prefersApple } from './calendar';
@@ -32,6 +32,10 @@ interface Props {
   anchorKey: string; // al cambiar (filtro), se vuelve a colocar la vista en el presente
   onMove: (id: ID, target: DropTarget | ListDrop) => void; // tarea arrastrada a otro bloque o a una lista de la barra
   onAddSubtasks: (id: ID, lines: ParsedLine[]) => Promise<void>;
+  lists: TodoList[]; // todas las listas, la principal primero
+  showList: boolean; // vista «Todas las listas»: cada tarea principal muestra su lista
+  onPickList: (listId: ID) => void; // tocar la etiqueta de lista: abre esa lista
+  onMoveTo: (id: ID) => void; // botón «Mover a…» del editor
 }
 
 type SectionKey = 'past' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'next' | 'nodate' | 'done';
@@ -169,7 +173,7 @@ export function TaskList(props: Props) {
 }
 
 function Row({ task, sub, section, names, today, selected, editing, onSelect, onEdit, onToggle, onSave, onDelete, onChip, onMove, onDragStart, onDragEnd,
-  childrenCount = 0, completedCount = 0, expanded = false, onExpand, onAddSubtask }:
+  lists, showList, onPickList, onMoveTo, childrenCount = 0, completedCount = 0, expanded = false, onExpand, onAddSubtask }:
   Props & { task: Task; sub?: boolean; section: SectionKey; onDragStart: (id: ID) => void; onDragEnd: () => void;
     childrenCount?: number; completedCount?: number; expanded?: boolean; onExpand?: () => void; onAddSubtask?: () => void }) {
   const isEditing = editing === task.id;
@@ -220,7 +224,8 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
         {isEditing ? (
           <Editor task={task} names={names} onSave={(l) => onSave(task.id, l)} onCancel={() => onEdit(null)}
             onDelete={() => onDelete(task.id)}
-            onAddSubtask={sub ? undefined : onAddSubtask} />
+            onAddSubtask={sub ? undefined : onAddSubtask}
+            onMoveTo={lists.length > 1 ? () => onMoveTo(task.id) : undefined} />
         ) : (
           <>
             <div class="title-line">
@@ -255,6 +260,11 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
               )}
             </div>
             <div class="meta">
+              {/* Vista «Todas las listas»: la etiqueta de la lista va en las principales; las subtareas siguen a su principal. */}
+              {showList && !sub && (() => {
+                const list = lists.find((l) => l.id === (task.listId ?? MAIN_LIST));
+                return list && <ListChip name={list.name} onTap={() => onPickList(list.id)} />;
+              })()}
               <TaskChips due={task.due} period={task.period} done={!!task.done} priority={task.priority} recurrence={task.recurrence}
                 topics={task.topics} people={task.people} names={names} today={today} onTap={onChip} title={task.title}
                 hideDue={!task.done && ((section === 'today' && task.due === today && !task.period) || (section === 'tomorrow' && !task.period) || (section === 'week' && task.period === 'week'))} />
@@ -375,10 +385,11 @@ function AddSubtaskButton({ onClick, inline = false }: { onClick: () => void; in
 
 /** Edición en línea con la misma sintaxis que la captura. Las fechas se muestran como vence:AAAA-MM-DD
  *  para que una relativa ("mañana") no se recalcule al guardar. */
-function Editor({ task, names, onSave, onCancel, onDelete, onAddSubtask }: {
+function Editor({ task, names, onSave, onCancel, onDelete, onAddSubtask, onMoveTo }: {
   task: Task; names: Map<string, Entity>;
   onSave: (l: ParsedLine) => void; onCancel: () => void; onDelete: () => void;
   onAddSubtask?: () => void;
+  onMoveTo?: () => void; // solo si hay más de una lista
 }) {
   const initial = formatLine({
     title: task.title,
@@ -436,6 +447,8 @@ function Editor({ task, names, onSave, onCancel, onDelete, onAddSubtask }: {
             {tr('Calendario', 'Calendar')}
           </button>
         ))}
+        {/* Mismo gesto que los vecinos: el clic no quita el foco, así que el editor no se guarda al abrir la hoja. */}
+        {onMoveTo && <button class="link" onMouseDown={keep} onClick={onMoveTo}>{tr('Mover a…', 'Move to…')}</button>}
         <button class="link danger" onMouseDown={(e) => { e.preventDefault(); done.current = true; }} onClick={onDelete}>
           {tr('Borrar', 'Delete')}
         </button>

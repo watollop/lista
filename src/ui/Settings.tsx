@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
-import type { Entity, EntityKind, Repo, Sync, SyncState } from '../types';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { MAIN_LIST, type Entity, type EntityKind, type ID, type Repo, type Sync, type SyncState, type TodoList } from '../types';
 import { saveAppearance } from './appearanceSync';
+import { NewsSheet } from './WhatsNew';
 import { EncryptionSection } from './Encryption';
 import { APPEARANCE_CHANGE_EVENT, DEFAULT_SUBTASK_COLOR, getLook, getSubtaskColor, getTheme, setLook, setSubtaskColor, setTheme, type Look, type Theme } from './theme';
 import { SEARCH_FROM, byUse } from './byUse';
@@ -22,12 +23,19 @@ interface Props {
   pending: Map<string, number>; // '#clave' | '@clave' -> pendientes
   onRename: (kind: EntityKind, key: string, name: string) => void;
   onDelete: (kind: EntityKind, key: string) => void;
+  lists: TodoList[]; // la principal primero
+  listPending: Map<ID, number>; // pendientes por lista
+  onCreateList: (name: string) => Promise<void>; // lanza Error con mensaje si el nombre no vale
+  onRenameList: (id: ID, name: string) => Promise<void>;
+  onDeleteList: (id: ID) => void; // App pide confirmación y ofrece Deshacer
 }
 
-export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, people, pending, onRename, onDelete }: Props) {
+export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, people, pending, onRename, onDelete,
+  lists, listPending, onCreateList, onRenameList, onDeleteList }: Props) {
   const [editing, setEditing] = useState<{ kind: EntityKind; key: string } | null>(null);
+  const [news, setNews] = useState(false);
   const editEnt = editing && (editing.kind === 'topic' ? topics : people).find((e) => e.key === editing.key);
-  return (
+  return (<>
     <div class="sheet" role="dialog" aria-modal="true" aria-label={tr('Ajustes', 'Settings')}
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
       <div class="sheet-inner">
@@ -47,6 +55,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
         </section>
         <section class="group" aria-labelledby="ajustes-datos">
           <h2 class="group-title" id="ajustes-datos">{tr('Tus datos', 'Your data')}</h2>
+          <ListsSection lists={lists} listPending={listPending} onCreate={onCreateList} onRename={onRenameList} onDelete={onDeleteList} />
           <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
           {editing && editEnt && (
             <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
@@ -61,10 +70,19 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <h2 class="group-title" id="ajustes-ayuda">{tr('Ayuda', 'Help')}</h2>
           <section>
             <p>{tr('Repasa cómo funciona y todo lo que puedes escribir: fechas, prioridades, repeticiones y atajos.', 'See how it works and everything you can type: dates, priorities, repeats and shortcuts.')}</p>
-            <div class="row-btns"><button class="btn" onClick={onIntro}>{tr('Cómo funciona', 'How it works')}</button></div>
+            <div class="row-btns">
+              <button class="btn" onClick={onIntro}>{tr('Cómo funciona', 'How it works')}</button>
+              <button class="btn" onClick={() => setNews(true)}>{tr('Novedades', 'What’s new')}</button>
+            </div>
             {isEn()
               ? <p>To move a task to tomorrow, drag it to the <strong>Tomorrow</strong> block using the ⠿ handle in its editor (on a computer, also <kbd>m</kbd>).</p>
               : <p>Para pasar una tarea a mañana, arrástrala al bloque <strong>Mañana</strong> desde el asa ⠿ de su editor (en ordenador, también <kbd>m</kbd>).</p>}
+            {isEn()
+              ? <p>To move a task to another list, press <strong>Move to…</strong> in its editor or drag it from the ⠿ handle to the list in the sidebar (on wide screens).</p>
+              : <p>Para pasar una tarea a otra lista, pulsa <strong>Mover a…</strong> en su editor o arrástrala desde el asa ⠿ a la lista de la barra lateral (en pantallas anchas).</p>}
+            {isEn()
+              ? <p class="kbd-only">With the keyboard, <kbd>l</kbd> opens the lists.</p>
+              : <p class="kbd-only">Con teclado, <kbd>l</kbd> abre las listas.</p>}
             {isEn()
               ? <p class="kbd-only">Press <kbd>?</kbd> to see the keyboard shortcuts.</p>
               : <p class="kbd-only">Pulsa <kbd>?</kbd> para ver los atajos de teclado.</p>}
@@ -85,7 +103,9 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
         </a>
       </footer>
     </div>
-  );
+    {/* Fuera de .sheet: así Esc en las novedades cierra solo la hoja de novedades, no Ajustes. */}
+    {news && <NewsSheet onClose={() => setNews(false)} />}
+  </>);
 }
 
 function Account({ sync, state }: { sync: Sync; state: SyncState }) {
@@ -194,6 +214,101 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
         </div>
       </>}
     </section>
+  );
+}
+
+/** Listas (docs/plan-listas.md): una fila por lista con sus pendientes, renombrar en línea y borrar (salvo la principal).
+ *  Al final, alta en línea. Los errores de App (nombre no válido) se muestran bajo el campo y la edición sigue abierta. */
+function ListsSection({ lists, listPending, onCreate, onRename, onDelete }: {
+  lists: TodoList[]; listPending: Map<ID, number>;
+  onCreate: (name: string) => Promise<void>; onRename: (id: ID, name: string) => Promise<void>; onDelete: (id: ID) => void;
+}) {
+  const [renaming, setRenaming] = useState<ID | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const cancel = () => { setRenaming(null); setAdding(false); setError(null); };
+  const startRename = (l: TodoList) => { setAdding(false); setRenaming(l.id); setDraft(l.name); setError(null); };
+  const startAdd = () => { setRenaming(null); setAdding(true); setDraft(''); setError(null); };
+
+  // id null = alta; si no, renombrar. Un nombre sin cambios cierra sin llamar a App.
+  const save = async (id: ID | null) => {
+    if (busy) return;
+    const name = draft.trim();
+    if (!name) { setError(tr('Escribe un nombre.', 'Write a name.')); return; }
+    if (id && lists.find((l) => l.id === id)?.name === name) { cancel(); return; }
+    setBusy(true);
+    try {
+      if (id) await onRename(id, name); else await onCreate(name);
+      cancel();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tr('No se pudo guardar la lista.', 'Couldn’t save the list.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = (id: ID | null) => (
+    <ListNameField id={id} value={draft} error={error}
+      onInput={(v) => { setDraft(v); setError(null); }}
+      onSubmit={() => void save(id)} onCancel={cancel} />
+  );
+
+  return (
+    <section>
+      <span class="label">{tr('Listas', 'Lists')}</span>
+      <p class="look-hint">{tr(
+        'Cada tarea está en una lista. Escribe /nombre para apuntar en otra sin cambiar de lista. La principal no se puede borrar; al borrar otra, se borran sus tareas.',
+        'Each task is in a list. Type /name to add to another list without switching lists. The main list can’t be deleted; deleting another one deletes its tasks.')}</p>
+      <ul class="ent-list">
+        {lists.map((l) => {
+          if (renaming === l.id) return <li key={l.id}>{field(l.id)}</li>;
+          const n = listPending.get(l.id) ?? 0;
+          return (
+            <li key={l.id}>
+              <div class={`ent-row ${n ? '' : 'zero'}`}>
+                <span class="ent-name">{l.name}</span>
+                <span class="ent-count">{n ? (isEn() ? `${n} ${n === 1 ? 'task' : 'tasks'}` : `${n} ${n === 1 ? 'tarea' : 'tareas'}`) : tr('sin tareas', 'no tasks')}</span>
+              </div>
+              <div class="edit-actions">
+                <button class="link" onClick={() => startRename(l)}>{tr('Renombrar', 'Rename')}</button>
+                {l.id !== MAIN_LIST && <button class="link danger" onClick={() => onDelete(l.id)}>{tr('Borrar', 'Delete')}</button>}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {adding
+        ? field(null)
+        : <div class="row-btns"><button class="btn" onClick={startAdd}>{tr('+ Nueva lista', '+ New list')}</button></div>}
+    </section>
+  );
+}
+
+/** Campo en línea de Listas: se enfoca al abrirse (al renombrar, con el nombre seleccionado). Enter guarda;
+ *  Esc cancela y no cierra Ajustes (se corta la propagación). El error de App va bajo el campo. */
+function ListNameField({ id, value, error, onInput, onSubmit, onCancel }: {
+  id: ID | null; value: string; error: string | null;
+  onInput: (v: string) => void; onSubmit: () => void; onCancel: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    if (id) el.select();
+  }, []);
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+      <input ref={ref} type="text" value={value} autoComplete="off"
+        aria-label={id ? tr('Nuevo nombre de la lista', 'New list name') : tr('Nombre de la lista nueva', 'New list name')}
+        placeholder={id ? undefined : tr('Nombre de la lista', 'List name')}
+        onInput={(e) => onInput(e.currentTarget.value)}
+        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onCancel(); } }} />
+      {error && <p class="err">{error}</p>}
+    </form>
   );
 }
 

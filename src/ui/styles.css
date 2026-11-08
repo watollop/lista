@@ -102,6 +102,7 @@ input:focus-visible { outline: none; } /* los campos ya marcan el foco con su l�
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
 }
 .brand { font-size: 13px; font-weight: 500; letter-spacing: 0.3em; text-transform: uppercase; }
 .bar-right { display: flex; align-items: center; gap: 18px; }
@@ -723,6 +724,22 @@ kbd {
   .intro *, .intro *::before, .intro *::after { animation: none !important; transition: none !important; }
 }
 
+/* demo de varias listas: la cabecera, dos tareas, la línea que se escribe y el aviso (ciclo corto, con texto real). */
+.lists { width: 100%; max-width: 300px; display: grid; gap: 14px; color: var(--fg); }
+.lists-head { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 500; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.lists-arrow { font-size: 12px; color: var(--muted); }
+.lists-rows { display: grid; gap: 10px; }
+.lists-line { display: flex; align-items: center; gap: 10px; }
+.lists-line i { flex: none; width: 11px; height: 11px; border: 1px solid var(--fg); border-radius: var(--radius); background: var(--bg); }
+.lists-line b { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+.lists-line.l1 b { flex: .7; }
+/* La línea se escribe en el mismo hueco siempre: no salta al aparecer el texto. */
+.lists-input { min-height: 40px; display: flex; align-items: flex-end; font-size: 16px; font-weight: 300; padding: 8px 0; border-bottom: 1px solid var(--fg); white-space: nowrap; overflow: hidden; }
+.lists-input .tag { color: var(--fg); background: var(--surface); border-radius: var(--radius); padding: 1px 4px; margin: 0 -2px; }
+.lists-note { min-height: 1.4em; margin: 0; font-size: 13px; color: var(--muted); opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; }
+.lists-note.on { opacity: 1; transform: none; }
+.lists.still .demo-caret { display: none; }
+
 /* demo 1: escribir */
 .demo-type { width: 100%; }
 .demo-type .demo-input {
@@ -886,7 +903,7 @@ kbd {
   .side-ent:hover .side-count { visibility: hidden; }
   .side-act:hover { color: var(--fg); }
   .side-act.del:hover { color: var(--warn); }
-  .ent-row:hover .ent-name { text-decoration: underline; text-underline-offset: 3px; }
+  button.ent-row:hover .ent-name { text-decoration: underline; text-underline-offset: 3px; }
 }
 /* Hoja inferior (móvil): sobre la captura, con el teclado en cuenta. */
 .ent-back {
@@ -1168,10 +1185,75 @@ section.droppable.drop-on .section { color: var(--fg); }
 .week-days .on, .week-days .on .week-n, .week-days .on .week-c, .week-days .on .week-d { background: var(--fg); color: var(--bg); }
 .top .week { margin: 4px 0 12px; } /* móvil: dentro de la cabecera, sobre la búsqueda */
 
-/* Novedades */
+/* Novedades: tarjeta al principio de la lista (no flota: no tapa la cabecera ni la captura) */
+.news-card {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 20px; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+}
+.news-card-copy { flex: 1; min-width: 0; }
+.news-card-copy strong { display: block; font-weight: 500; color: var(--fg); margin-bottom: 2px; }
+.news-card-copy p { margin: 0; font-size: 14px; color: var(--muted); }
+.news-card-acts { display: flex; flex: none; gap: 8px; }
+@media (max-width: 480px) {
+  .news-card { flex-direction: column; align-items: stretch; gap: 4px; }
+  .news-card-acts { justify-content: flex-end; }
+}
 .news-sheet { max-height: calc(100dvh - 32px); overflow-y: auto; }
 .news-sheet .label { display: block; margin-bottom: 16px; }
 .news-item + .news-item { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; }
 .news-item h3 { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg); margin-bottom: 6px; }
 .news-item p { font-size: 15px; color: var(--muted); margin-bottom: 0; }
 .news-sheet .row-btns { margin-top: 20px; }
+
+/* ---------- Listas (docs/plan-listas.md) ---------- */
+/* Cabecera: el nombre de la lista es un botón con la pinta del «Lista» de siempre. La fuente de Industrial la pone look.css. */
+.brand-btn {
+  display: inline-flex; align-items: center;
+  min-height: 44px; padding: 0; margin: 0;
+  background: none; border: 0; border-radius: 0; color: inherit; cursor: pointer;
+  font-family: var(--font); text-align: left;
+  min-width: 0; flex: 0 1 auto; /* un nombre largo se recorta con «…» y no empuja a Buscar y Ajustes */
+}
+.bar-right { flex: none; }
+.brand-btn > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-caret { flex: none; margin-left: 8px; font-size: 10px; color: var(--muted); letter-spacing: 0; }
+
+/* Hoja de listas (móvil y escritorio) */
+.dialog.list-sheet { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.list-sheet > .label { display: block; margin-bottom: 12px; }
+.ls-list { list-style: none; border-top: 1px solid var(--line); }
+.ls-row { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--line); }
+.ls-pick {
+  flex: 1; min-width: 0; min-height: 48px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0; text-align: left; font-size: 16px; color: var(--fg);
+}
+.ls-pick:disabled { color: var(--faint); cursor: default; }
+.ls-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ls-row.on .ls-name { font-weight: 500; }
+.ls-count { flex: none; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ls-mark { flex: none; width: 14px; text-align: center; color: var(--fg); }
+.ls-edit {
+  flex: none; display: grid; place-items: center; width: 44px; height: 44px;
+  color: var(--faint); border-radius: var(--radius);
+}
+@media (hover: hover) { .ls-edit:hover { color: var(--fg); } }
+.ls-editing { flex-wrap: wrap; padding: 8px 0 10px; }
+.ls-input { width: 100%; font-size: 16px; padding: 8px 0; border-bottom: 1px solid var(--fg); background: none; color: var(--fg); }
+.ls-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 18px; width: 100%; margin-top: 4px; }
+.ls-acts .link { color: var(--muted); }
+.ls-acts .danger { margin-left: auto; }
+.ls-add { display: block; margin-top: 12px; color: var(--muted); }
+.ls-new { margin-top: 12px; }
+.ls-new .ls-input { margin-bottom: 4px; }
+.dialog .ls-error { font-size: 13px; color: var(--warn); margin: 10px 0 0; }
+.list-sheet .row-btns { margin-top: 20px; }
+
+/* Diálogo de confirmación (borrar lista) */
+.dialog.confirm .confirm-title { font-size: 17px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg); margin-bottom: 8px; }
+.dialog.confirm .row-btns { margin-top: 20px; justify-content: flex-end; }
+
+/* Barra lateral: grupo Listas arriba del todo, con sus errores en línea */
+.side-group.side-lists { margin-top: 0; margin-bottom: 26px; }
+.side-err { font-size: 12px; color: var(--warn); margin: 0 0 10px; }

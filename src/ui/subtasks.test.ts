@@ -10,6 +10,7 @@ import { App } from './App';
 import { Capture } from './Capture';
 import { SubtaskInputs } from './SubtaskInputs';
 import { INTRO_KEY } from './intro';
+import { NEWS, NEWS_KEY } from './news';
 import { DEFAULT_SUBTASK_COLOR, applyTheme, getSubtaskColor, setSubtaskColor } from './theme';
 import type { Entity, ParsedLine, Repo } from '../types';
 
@@ -19,6 +20,7 @@ beforeEach(() => {
   history.replaceState(null, '', '/');
   localStorage.clear();
   localStorage.setItem(INTRO_KEY, '1');
+  localStorage.setItem(NEWS_KEY, JSON.stringify(NEWS.map((n) => n.id))); // novedades ya vistas: no tapan los avisos que se comprueban
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener() {}, removeEventListener() {} })));
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
   vi.stubGlobal('scrollTo', vi.fn());

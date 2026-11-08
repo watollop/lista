@@ -19,6 +19,8 @@ const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-
 /** En táctil (móvil) se dice "este móvil"; con ratón (ordenador) "este ordenador". */
 const isPhone = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 const device = () => (isPhone() ? tr('móvil', 'phone') : tr('ordenador', 'computer'));
+/** Cómo se crea una lista en este dispositivo: el móvil toca el nombre de arriba; el ordenador usa la barra lateral. */
+const createHow = () => (isPhone() ? tr('tocando el nombre de arriba', 'by tapping the name at the top') : tr('desde la barra lateral', 'from the sidebar'));
 
 // Funciones, no constantes: los textos dependen del idioma, que se fija al arrancar (después de importar los módulos).
 const SLIDES = (): Slide[] => [
@@ -30,6 +32,12 @@ const SLIDES = (): Slide[] => [
   },
   { title: tr('Escribe en una línea', 'Write it in one line'), text: () => tr('Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', 'Date, topic, priority and repeat are picked up as you type. Repeating tasks come back on their own.'), Demo: TypingDemo },
   { title: tr('Completa y filtra', 'Complete and filter'), text: () => tr('Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas. Las vencidas siempre están arriba.', 'Swipe right to complete. Tap a person or a topic to see only their tasks. Overdue tasks are always at the top.'), Demo: SwipeDemo },
+  {
+    title: tr('Más listas, si las necesitas', 'More lists, if you need them'),
+    text: () => tr(`Empiezas con una: Personal. Crea otra para la compra o el trabajo ${createHow()}. Y escribe /compra para apuntar en ella sin cambiar de lista.`,
+      `You start with one: Personal. Create another for shopping or work ${createHow()}. And type /shopping to add to it without switching lists.`),
+    Demo: ListsDemo,
+  },
   {
     title: tr('Tus datos, contigo', 'Your data stays with you'),
     text: () => tr(`Todo se guarda solo en este ${device()} y funciona sin conexión, sin cuenta. Si quieres tenerlo también en otros dispositivos, entra con Google para sincronizar.`,
@@ -317,6 +325,38 @@ function CoverDemo() {
       <span class="cover-lines" aria-hidden="true">
         {[0, 1, 2].map((k) => <span key={k} class={`cover-line l${k}`}><i /><b /></span>)}
       </span>
+    </div>
+  );
+}
+
+/** Varias listas: se escribe «Leche /compra» en la principal, la tarea se apunta en Compra y el aviso lo dice. */
+function ListsDemo() {
+  const TEXT = tr('Leche /compra', 'Milk /shopping');
+  const NOTE = tr('Añadida a Compra', 'Added to Shopping');
+  // Tras escribir, la línea se envía (el campo queda vacío) y el aviso aparece; luego todo vuelve a empezar.
+  const SENT = TEXT.length + 4;
+  const [n, setN] = useState(() => (reduced() ? SENT + 20 : 0));
+  useEffect(() => {
+    if (reduced()) return;
+    const id = setInterval(() => setN((k) => (k >= SENT + 40 ? 0 : k + 1)), 70);
+    return () => clearInterval(id);
+  }, []);
+  const sent = n >= SENT;
+  const text = sent ? '' : TEXT.slice(0, n);
+  return (
+    <div class={`lists ${reduced() ? 'still' : ''}`}>
+      <div class="lists-head">{tr('Personal', 'Personal')} <span class="lists-arrow">▾</span></div>
+      <div class="lists-rows">
+        <span class="lists-line"><i /><b /></span>
+        <span class="lists-line l1"><i /><b /></span>
+      </div>
+      <div class="lists-input">
+        <span>
+          {text.split(/(\s+)/).map((w, k) => (w.startsWith('/') ? <span key={k} class="tag">{w}</span> : w))}
+          {!sent && <span class="demo-caret" />}
+        </span>
+      </div>
+      <p class={`lists-note ${sent ? 'on' : ''}`}>{NOTE}</p>
     </div>
   );
 }

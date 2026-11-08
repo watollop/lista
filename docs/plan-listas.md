@@ -19,7 +19,7 @@
 - **Todas las listas.** Vista que mezcla todas. Cada tarea lleva una etiqueta pequeña con su lista; tocarla abre esa lista.
 - **Todo se calcula en la lista actual:** bloques (Hoy, Mañana…), contadores, mini calendario, temas y personas con pendientes, búsqueda y filtros. Los temas, las personas y los filtros guardados son comunes a todas las listas.
 - **Escritorio:** sección **Listas** arriba de la barra lateral (encima del mini calendario), con pendientes por lista, **Todas las listas** y **+ Nueva lista**. Lápiz y papelera al pasar el ratón, como los temas. Con una sola lista, la sección no aparece: solo un discreto **+ Nueva lista** al final de la barra. Una tarea se mueve **arrastrándola** (asa ⠿ del editor) a una lista de la barra. Tecla **l**: abre el selector de listas.
-- **Móvil:** el nombre de la cabecera («Lista») pasa a ser el nombre de la lista actual, con ▾ cuando hay más de una. Al tocarlo se abre la hoja de listas: listas con pendientes, **Todas las listas** y **+ Nueva lista**; mantener pulsada una lista (o su lápiz) la edita.
+- **Móvil:** el nombre de la cabecera («Lista») pasa a ser el nombre de la lista actual, con ▾ cuando hay más de una. Al tocarlo se abre la hoja de listas: listas con pendientes, **Todas las listas** y **+ Nueva lista**; el lápiz de cada lista la renombra o la borra. En la cabecera, la vista conjunta se llama «Todas».
 - **Editor de tarea:** junto a **+ Subtarea**, **Calendario** y **Borrar**, el botón **Mover a…** (solo con más de una lista) abre la hoja de listas para elegir destino. Es el equivalente táctil de arrastrar a la barra.
 - **Ajustes → Listas:** crear, renombrar y borrar, en los dos tamaños de pantalla.
 - **Borrar una lista** borra también sus tareas, tras confirmar («Compra tiene 12 tareas. Se borrarán con ella.»), y ofrece **Deshacer**.
@@ -34,7 +34,7 @@
 - Al editar una tarea, escribir `/trabajo` la mueve (con sus subtareas). No escribir ninguna lista no la cambia.
 
 ### Novedades y bienvenida
-- **Novedades:** quien ya usaba Lista ve una vez una tarjeta «Nuevo: listas» con una frase y **Ver** (abre la hoja de Novedades) o **Cerrar**. Las entradas viven en `src/ui/news.ts` (`{ id, es, en }`); se recuerda cuáles se vieron en `localStorage` (`lista.news`). Quien llega nuevo ve la bienvenida, no las novedades: al cerrarla se marcan todas como vistas. **Ajustes → Novedades** las muestra siempre.
+- **Novedades:** quien ya usaba Lista ve una vez, al principio de la lista (sin tapar la cabecera), una tarjeta «Nuevo: listas» con una frase y **Ver** (abre la hoja de Novedades) o **Cerrar**. Las entradas viven en `src/ui/news.ts` (`{ id, title, text }`, textos con `tr`) y la tarjeta y la hoja en `src/ui/WhatsNew.tsx`; se recuerda cuáles se vieron en `localStorage` (`lista.news`). Quien llega nuevo ve la bienvenida, no las novedades: al cerrarla se marcan todas como vistas. **Ajustes → Novedades** las muestra siempre.
 - **Bienvenida:** una slide sobre las listas, con su demo, y la mención a `/lista` en la referencia de lo que se puede escribir.
 
 ### Listas compartidas (fase 2)
@@ -132,7 +132,7 @@
 
 | Fase | Contenido | Criterio |
 |---|---|---|
-| 1 | Listas propias: datos, sync del nuevo tipo, parser `/lista`, interfaz en escritorio y móvil, Novedades, bienvenida, Ajustes, atajos y README | Con una lista, todo igual. Tests verdes. |
+| 1 ✅ | Listas propias: datos, sync del nuevo tipo, parser `/lista`, interfaz en escritorio y móvil, Novedades, bienvenida, Ajustes, atajos y README | Con una lista, todo igual. Tests verdes. |
 | 2A | Cripto de listas e invitaciones (`src/sync/listcrypto.ts`) + tests de ataque | Sin tocar nada más. |
 | 2B | Servidor (migración SQL) y capa de API | Suite intacta. Hay que ejecutar la migración en Supabase. |
 | 2C | Sync multiespacio (cursores por lista, reparto, membresía perdida) | Dos usuarios simulados comparten una lista. |

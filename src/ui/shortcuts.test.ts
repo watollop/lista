@@ -7,6 +7,7 @@ import { createRepo } from '../data/repo';
 import { createSync } from '../sync';
 import { App } from './App';
 import { INTRO_KEY } from './intro';
+import { NEWS, NEWS_KEY } from './news';
 import { SHORTCUTS } from './shortcuts';
 import appSource from './App.tsx?raw';
 import { parseLine } from '../parser';
@@ -19,8 +20,12 @@ describe('lista compartida de atajos', () => {
     expect(keys).toContain('?');
   });
 
+  it('incluye l para cambiar de lista', () => {
+    expect(keys).toContain('l');
+  });
+
   it('contiene las teclas que App.tsx gestiona', () => {
-    for (const k of ['/', 'n', 'j', 'k', 'x', 'e', 'm', 'h', 's', 'v', 'f', '?']) {
+    for (const k of ['/', 'n', 'j', 'k', 'x', 'e', 'm', 'h', 's', 'v', 'f', 'l', '?']) {
       expect(appSource, `App.tsx gestiona '${k}'`).toContain(`'${k}'`);
       expect(keys, `la lista muestra '${k}'`).toContain(k);
     }
@@ -39,6 +44,7 @@ beforeEach(() => {
   history.replaceState(null, '', '/');
   localStorage.clear();
   localStorage.setItem(INTRO_KEY, '1');
+  localStorage.setItem(NEWS_KEY, JSON.stringify(NEWS.map((n) => n.id))); // novedades ya vistas: no tapan los avisos que se comprueban
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener() {}, removeEventListener() {} })));
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
   vi.stubGlobal('scrollTo', vi.fn());
