@@ -133,7 +133,7 @@
 | Fase | Contenido | Criterio |
 |---|---|---|
 | 1 ✅ | Listas propias: datos, sync del nuevo tipo, parser `/lista`, interfaz en escritorio y móvil, Novedades, bienvenida, Ajustes, atajos y README | Con una lista, todo igual. Tests verdes. |
-| 2A | Cripto de listas e invitaciones (`src/sync/listcrypto.ts`) + tests de ataque | Sin tocar nada más. |
+| 2A ✅ | Cripto de listas e invitaciones (`src/sync/listcrypto.ts`) + tests de ataque | Sin tocar nada más. |
 | 2B | Servidor (migración SQL) y capa de API | Suite intacta. Hay que ejecutar la migración en Supabase. |
 | 2C | Sync multiespacio (cursores por lista, reparto, membresía perdida) | Dos usuarios simulados comparten una lista. |
 | 2D | Interfaz de compartir, unirse, miembros, salir y quitar; Novedades y bienvenida | Flujos de §4.5 en escritorio y móvil. |
