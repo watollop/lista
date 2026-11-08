@@ -8,6 +8,7 @@ import { EntityEditor } from './EntityEditor';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { tr } from '../i18n';
+import { PeopleIcon } from './PeopleIcon';
 
 interface Props {
   filter: Filter;
@@ -34,6 +35,10 @@ interface Props {
   onCreateList: (name: string) => Promise<void>; // lanza Error si no se puede (se muestra en la barra)
   onRenameList: (id: ID, name: string) => Promise<void>;
   onDeleteList: (id: ID) => void; // la confirmación la gestiona App
+  // Compartir (docs/plan-listas.md, fase 2D). Con sharing false no aparece nada de compartir.
+  sharing?: boolean; // hay sincronización configurada (state.status !== 'disabled')
+  onShareList?: (id: ID) => void; // abre el diálogo de compartir de esa lista
+  onJoinList?: () => void; // «Unirse con un enlace»
 }
 
 const DATES = (): Array<[DateFilter, string]> => [
@@ -63,10 +68,12 @@ export function Sidebar(p: Props) {
           <ul class="side-list">
             {p.lists.map((l) => (
               <ListEntry key={l.id} list={l} on={p.scope === l.id} count={p.listPending.get(l.id)}
-                onPick={() => p.onPickList(l.id)} onRename={p.onRenameList} onDelete={p.onDeleteList} />
+                onPick={() => p.onPickList(l.id)} onRename={p.onRenameList} onDelete={p.onDeleteList}
+                sharing={!!p.sharing} onShare={p.onShareList} />
             ))}
             <Item on={p.scope === 'all'} count={p.total} onClick={() => p.onPickList('all')}>{tr('Todas las listas', 'All lists')}</Item>
             <NewListItem onCreate={p.onCreateList} />
+            {p.sharing && p.onJoinList && <JoinListItem onJoin={p.onJoinList} />}
           </ul>
         </section>
       )}
@@ -134,7 +141,10 @@ export function Sidebar(p: Props) {
 
       {p.lists.length <= 1 && (
         <section class="side-group">
-          <ul class="side-list"><NewListItem onCreate={p.onCreateList} /></ul>
+          <ul class="side-list">
+            <NewListItem onCreate={p.onCreateList} />
+            {p.sharing && p.onJoinList && <JoinListItem onJoin={p.onJoinList} />}
+          </ul>
         </section>
       )}
     </aside>
@@ -142,14 +152,16 @@ export function Sidebar(p: Props) {
 }
 
 /** Una lista en la barra: lápiz (renombrar en línea) y papelera (no en la principal) al pasar el ratón; soltar tareas aquí las mueve. */
-function ListEntry({ list, on, count, onPick, onRename, onDelete }: {
+function ListEntry({ list, on, count, onPick, onRename, onDelete, sharing, onShare }: {
   list: TodoList; on: boolean; count?: number; onPick: () => void;
   onRename: (id: ID, name: string) => Promise<void>; onDelete: (id: ID) => void;
+  sharing: boolean; onShare?: (id: ID) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(list.name);
   const [err, setErr] = useState('');
   const isMain = list.id === MAIN_LIST;
+  const shared = sharing && !!list.shared; // una lista compartida no se borra desde aquí: eso pasa en el diálogo de compartir
   const startEdit = () => { setName(list.name); setErr(''); setEditing(true); };
   const cancel = () => { setEditing(false); setErr(''); };
   const save = () => {
@@ -178,6 +190,7 @@ function ListEntry({ list, on, count, onPick, onRename, onDelete }: {
       <button class={`side-item ${on ? 'on' : ''}`} aria-pressed={on}
         onClick={(e) => { if (e.detail < 2) onPick(); }} onDblClick={startEdit}>
         <span>{list.name}</span>
+        {shared && <PeopleIcon title={tr('Compartida', 'Shared')} />}
         {count ? <span class="side-count">{count}</span> : null}
       </button>
       <span class="side-acts">
@@ -186,7 +199,13 @@ function ListEntry({ list, on, count, onPick, onRename, onDelete }: {
             <path d="M3 13l.6-2.6 7.4-7.4 2 2-7.4 7.4z" /><path d="M9.5 4.5l2 2" />
           </svg>
         </button>
-        {!isMain && (
+        {sharing && onShare && !isMain && (
+          <button class="side-act" aria-label={shared ? tr(`Compartida: ${list.name}`, `Shared: ${list.name}`) : tr(`Compartir ${list.name}`, `Share ${list.name}`)}
+            title={shared ? tr('Compartida', 'Shared') : tr('Compartir', 'Share')} onClick={() => onShare(list.id)}>
+            <PeopleIcon />
+          </button>
+        )}
+        {!isMain && !shared && (
           <button class="side-act del" aria-label={tr(`Borrar ${list.name}`, `Delete ${list.name}`)} title={tr('Borrar', 'Delete')} onClick={() => onDelete(list.id)}>
             <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
               <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" />
@@ -225,6 +244,11 @@ function NewListItem({ onCreate }: { onCreate: (name: string) => Promise<void> }
       {err && <p class="side-err" role="alert">{err}</p>}
     </li>
   );
+}
+
+/** «Unirse con un enlace» al final de las listas: discreto, como «+ Nueva lista». Abre la misma entrada que la hoja y Ajustes. */
+function JoinListItem({ onJoin }: { onJoin: () => void }) {
+  return <li><button class="side-item side-add" onClick={onJoin}>{tr('Unirse con un enlace', 'Join with a link')}</button></li>;
 }
 
 function Group({ title, children }: { title: string; children: preact.ComponentChildren }) {

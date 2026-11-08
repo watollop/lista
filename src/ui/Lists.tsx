@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { MAIN_LIST, type ID, type ListScope, type TodoList } from '../types';
 import { tr } from '../i18n';
+import { PeopleIcon } from './PeopleIcon';
 
 /** Nombre de lista sin espacios sobrantes. */
 const cleanName = (s: string) => s.trim();
@@ -26,6 +27,10 @@ interface SheetProps {
   onRename: (id: ID, name: string) => Promise<void>;
   onDelete: (id: ID) => void; // la confirmación la gestiona App
   onClose: () => void;
+  // Compartir (docs/plan-listas.md, fase 2D). Con sharing false no aparece nada de compartir.
+  sharing?: boolean; // hay sincronización configurada (Settings: state.status !== 'disabled')
+  onShare?: (id: ID) => void; // abre el diálogo de compartir de esa lista
+  onJoin?: () => void; // «Unirse con un enlace»
 }
 
 /**
@@ -35,6 +40,8 @@ interface SheetProps {
 export function ListSheet(p: SheetProps) {
   const { mode, lists, pending, scope, current } = p;
   const move = mode === 'move';
+  const sharing = !!p.sharing;
+  const anyShared = sharing && lists.some((l) => !!l.shared);
   const title = move ? tr('Mover a…', 'Move to…') : tr('Listas', 'Lists');
   const ref = useRef<HTMLDivElement>(null);
   // Guardamos el último onClose para que el efecto (que solo corre al abrir) no use uno viejo.
@@ -107,6 +114,13 @@ export function ListSheet(p: SheetProps) {
     <div class="dialog-backdrop" onClick={(e) => { if (e.target === e.currentTarget) p.onClose(); }}>
       <div class="dialog list-sheet" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={ref}>
         <span class="label">{title}</span>
+        {move && anyShared && (
+          <p class="look-hint">
+            {tr('Las listas con ', 'Lists with ')}
+            <PeopleIcon title={tr('Compartida', 'Shared')} />
+            {tr(' están compartidas: lo que muevas ahí lo verán sus miembros.', ' are shared: what you move there will be seen by its members.')}
+          </p>
+        )}
         <ul class="ls-list">
           {lists.map((l) => {
             const here = l.id === mark;
@@ -119,7 +133,11 @@ export function ListSheet(p: SheetProps) {
                   <div class="ls-acts">
                     <button class="link" onClick={() => void saveEdit(l.id)} disabled={busy}>{tr('Guardar', 'Save')}</button>
                     <button class="link" onClick={cancelEdit}>{tr('Cancelar', 'Cancel')}</button>
-                    {l.id !== MAIN_LIST && (
+                    {sharing && p.onShare && l.id !== MAIN_LIST && (
+                      <button class="link" aria-label={`${l.shared ? tr('Compartida', 'Shared') : tr('Compartir', 'Share')} ${l.name}`}
+                        onClick={() => p.onShare?.(l.id)}>{l.shared ? tr('Compartida', 'Shared') : tr('Compartir', 'Share')}</button>
+                    )}
+                    {l.id !== MAIN_LIST && !l.shared && (
                       <button class="link danger" onClick={() => p.onDelete(l.id)}>{tr('Borrar lista', 'Delete list')}</button>
                     )}
                   </div>
@@ -131,6 +149,7 @@ export function ListSheet(p: SheetProps) {
                 <button class="ls-pick" aria-current={here ? 'true' : undefined} disabled={move && here}
                   onClick={() => p.onPick(l.id)}>
                   <span class="ls-name">{l.name}</span>
+                  {sharing && !!l.shared && <PeopleIcon title={tr('Compartida', 'Shared')} />}
                   {count(l.id) > 0 && <span class="ls-count">{count(l.id)}</span>}
                   <span class="ls-mark" aria-hidden="true">{here ? '✓' : ''}</span>
                 </button>
@@ -165,6 +184,9 @@ export function ListSheet(p: SheetProps) {
           </div>
         ) : (
           <button class="ls-add" onClick={openCreate}>{tr('+ Nueva lista', '+ New list')}</button>
+        )}
+        {!move && sharing && p.onJoin && (
+          <button class="ls-add" onClick={() => p.onJoin?.()}>{tr('Unirse con un enlace', 'Join with a link')}</button>
         )}
         {error && <p class="ls-error" role="alert">{error}</p>}
         <div class="row-btns"><button class="btn" onClick={p.onClose}>{tr('Cerrar', 'Close')}</button></div>

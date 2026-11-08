@@ -17,7 +17,7 @@ import { Critter } from './Critter';
 import { INTRO_KEY } from './intro';
 import { startAppearanceSync } from './appearanceSync';
 import { startLangSync } from './langSync';
-import { LazyLinkDialog, LazyLockedPanel, LazyOnboarding, LazySettings, LazyShortcutsSheet, preloadViews } from './lazyViews';
+import { LazyJoinDialog, LazyLinkDialog, LazyLockedPanel, LazyOnboarding, LazySettings, LazyShareDialog, LazyShortcutsSheet, preloadViews } from './lazyViews';
 import { whenIdle } from './lazy';
 import { Week } from './Week';
 import { byUse } from './byUse';
@@ -26,6 +26,8 @@ import { ConfirmDialog, ListSheet } from './Lists';
 import { NewsCard, NewsSheet } from './WhatsNew';
 import { markAllNewsSeen, markNewsSeen, unseenNews, type NewsItem } from './news';
 import { inScope, listName, loadScope, openByList, resolveScope, saveScope } from './listScope';
+import { PeopleIcon } from './PeopleIcon';
+import { captureJoinLink, clearPendingJoin, pendingJoin } from './sharing';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 // Hoja de listas: 'pick' cambia de lista; 'move' elige destino para la tarea del editor.
@@ -82,6 +84,13 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   // Novedades (src/ui/news.ts): una tarjeta por novedad no vista; con la bienvenida abierta no se muestran.
   const [news, setNews] = useState<NewsItem[]>(() => (intro ? [] : unseenNews()));
   const [newsSheet, setNewsSheet] = useState(false);
+  // Listas compartidas (docs/plan-listas.md, «Interfaz de compartir»): diálogo de una lista y diálogo de unirse.
+  // Unirse: link = el enlace que abrió la app (#unirse=…, guardado por captureJoinLink en main.tsx) o null para pegarlo.
+  const [shareFor, setShareFor] = useState<ID | null>(null);
+  const [join, setJoin] = useState<{ link: string | null } | null>(() => {
+    const link = pendingJoin();
+    return link ? { link } : null;
+  });
 
   // Tras el primer pintado, bajar los chunks de las vistas diferidas (Ajustes, bienvenida, cifrado, atajos, dictado).
   useEffect(() => whenIdle(preloadViews), []);
@@ -117,6 +126,32 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     window.addEventListener(UPDATE_READY_EVENT, on);
     return () => window.removeEventListener(UPDATE_READY_EVENT, on);
   }, []);
+
+  // Sin sincronización configurada no hay nada que compartir (y el sync de algunos tests no lo implementa).
+  const sharing = syncState.status !== 'disabled' && typeof sync.shareList === 'function';
+  const closeJoin = () => { clearPendingJoin(); setJoin(null); };
+  // Un enlace de invitación abierto con la app ya cargada en esta pestaña solo cambia el fragmento: se recoge igual.
+  useEffect(() => {
+    const onHash = () => {
+      if (!captureJoinLink()) return;
+      const link = pendingJoin();
+      if (link) setJoin({ link });
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const openShare = (id: ID) => { setListSheet(null); setSettings(false); setShareFor(id); };
+  const openJoin = () => { setListSheet(null); setSettings(false); setJoin({ link: null }); };
+
+  // El sync quitó una lista compartida (me quitaron, se borró para todos o salí desde otro dispositivo): se avisa.
+  const lastSync = syncState.status === 'idle' ? syncState.lastSync : null;
+  useEffect(() => {
+    if (syncState.status !== 'idle' || typeof sync.takeLostLists !== 'function') return;
+    void sync.takeLostLists().then((names) => {
+      if (names.length === 1) showToast(tr(`Ya no formas parte de «${names[0]}»`, `You’re no longer in “${names[0]}”`));
+      else if (names.length > 1) showToast(tr(`Ya no formas parte de ${names.length} listas compartidas`, `You’re no longer in ${names.length} shared lists`));
+    }, () => {});
+  }, [syncState.status, lastSync]);
 
   // Cifrado: al pasar de bloqueado a desbloqueado (enlace o clave de recuperación) se confirma con un aviso.
   const enc = sync.encryption?.() ?? 'off'; // el sync de algunos tests no implementa el cifrado
@@ -318,9 +353,12 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     const t = data.tasks.find((x) => x.id === id);
     if (!t || (t.listId ?? MAIN_LIST) === listId) return;
     try {
-      const { undo } = await repo.moveToList(id, listId);
+      // Entre una lista compartida y otra la tarea cambia de id (docs/plan-listas.md §4.4): la selección la sigue.
+      const { id: movedId, undo } = await repo.moveToList(id, listId);
+      if (movedId && movedId !== id) setSelected((cur) => (cur === id ? movedId : cur));
+      const shared = data.lists.find((l) => l.id === listId)?.shared;
       showToast({
-        msg: tr(`Movida a ${name}`, `Moved to ${name}`),
+        msg: shared ? tr(`Movida a ${name}, compartida`, `Moved to ${name}, shared`) : tr(`Movida a ${name}`, `Moved to ${name}`),
         action: { label: tr('Deshacer', 'Undo'), run: () => {
           void undo().catch((e) => showToast(e instanceof Error ? e.message : tr('No se pudo deshacer la tarea.', 'Couldn’t undo the task.')));
         } },
@@ -545,6 +583,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   // Cabecera: con varias listas, su nombre (o «Todas») con ▾ y se abre la hoja; con una, «Lista» como siempre.
   const multi = data.lists.length > 1;
   const headLabel = !multi ? 'Lista' : scope === 'all' ? tr('Todas', 'All') : listName(data.lists, scope);
+  const headShared = multi && scope !== 'all' && !!data.lists.find((l) => l.id === scope)?.shared;
 
   return (
     <div class={`app ${wide ? 'wide' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
@@ -552,7 +591,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         <div class="bar">
           <button class="brand brand-btn" aria-label={tr('Cambiar de lista', 'Switch list')} aria-haspopup="dialog"
             onClick={() => setListSheet({ mode: 'pick' })}>
-            <span>{headLabel}</span>{multi && <span class="brand-caret" aria-hidden="true">▾</span>}
+            <span>{headLabel}</span>{headShared && <PeopleIcon title={tr('Compartida', 'Shared')} />}
+            {multi && <span class="brand-caret" aria-hidden="true">▾</span>}
           </button>
           <span class="bar-right">
             {!wide && (
@@ -582,6 +622,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           onRename={renameEntity} onDelete={deleteEntity}
           lists={data.lists} scope={scope} listPending={listPending} total={openTotal}
           onPickList={changeScope} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList}
+          sharing={sharing} onShareList={openShare} onJoinList={openJoin}
         />
       )}
 
@@ -652,12 +693,14 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           topics={data.topics} people={data.people} pending={pending}
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }}
-          lists={data.lists} listPending={listPending} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList} />
+          lists={data.lists} listPending={listPending} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList}
+          onShareList={sharing ? openShare : undefined} onJoinList={sharing ? openJoin : undefined} />
       )}
       {listSheet && (
         <ListSheet mode={listSheet.mode} lists={data.lists} pending={listPending} total={openTotal} scope={scope}
           current={listSheet.mode === 'move' ? taskListOf(listSheet.taskId) : undefined}
           onPick={pickFromSheet} onCreate={createFromSheet} onRename={renameList} onDelete={askDeleteList}
+          sharing={sharing} onShare={openShare} onJoin={openJoin}
           onClose={() => setListSheet(null)} />
       )}
       {confirmDel && (
@@ -672,6 +715,26 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       {intro && (
         <LazyOnboarding onClose={closeIntro} extended={intro === 'full'}
           signIn={googleOk && syncState.status === 'signedOut' ? () => sync.signInWithGoogle() : undefined} />
+      )}
+      {/* Después de la bienvenida: quien llega con un enlace de invitación lo ve encima. */}
+      {sharing && shareFor && (() => {
+        const list = data.lists.find((l) => l.id === shareFor);
+        if (!list) return null;
+        return (
+          <LazyShareDialog list={list} sync={sync} state={syncState} toast={showToast} onClose={() => setShareFor(null)}
+            onGone={(id, name) => {
+              if (scope === id) changeScope(MAIN_LIST);
+              showToast(tr(`«${name}» ya no está en tus listas`, `“${name}” is no longer in your lists`));
+            }} />
+        );
+      })()}
+      {sharing && join && (
+        <LazyJoinDialog link={join.link} sync={sync} state={syncState} onClose={closeJoin}
+          onJoined={(id, name) => {
+            clearPendingJoin();
+            changeScope(id);
+            showToast(tr(`Te has unido a «${name}»`, `You joined “${name}”`));
+          }} />
       )}
     </div>
   );

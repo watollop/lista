@@ -88,6 +88,28 @@ Empiezas con una, **Personal**. Puedes renombrarla, pero no borrarla. Para separ
 
 </details>
 
+## Listas compartidas
+
+Una lista puede ser de varias personas: la compra con tu pareja, las tareas de casa. Compártela y la editáis juntos, cada uno desde sus dispositivos. Hace falta entrar con **Google** y el servidor de sincronización, con su migración (ver «Sincronización con Supabase», más abajo).
+
+- **Compartir.** En el móvil, toca el lápiz de una lista en la hoja de listas y **Compartir**; también en **Ajustes → Listas**. En el ordenador, el icono de personas de la barra lateral, junto al lápiz. **Personal no se comparte.**
+- **Unirse.** El enlace se envía por WhatsApp, Mensajes… (o se copia) y sirve para una sola persona: caduca en 7 días. Quien lo abre entra con Google y pulsa **Unirme**.
+- **En iPhone.** Si el enlace se abre en Safari y no en Lista, pulsa **Copiar enlace** y pégalo en la app: toca el nombre de arriba → **Unirse con un enlace** (en el ordenador está en la barra lateral, y en los dos en **Ajustes → Listas**).
+- **Quién manda.** Todos los miembros editan tareas, renombran la lista e invitan. Quien la creó —o quien la herede— quita a personas y **borra la lista para todos**. Cualquiera puede **salir**: la lista desaparece de sus dispositivos y sigue para los demás.
+- **Si quien la creó se va.** Si sale o borra su cuenta, la lista pasa al miembro más antiguo, que hereda quitar y borrar.
+- **Qué ve el servidor.** Solo quién comparte con quién, cuántas tareas tiene cada lista y cuándo hay actividad. Nunca los títulos ni los nombres: el contenido va cifrado con la clave de cada lista.
+
+<details>
+<summary>Límites</summary>
+
+- **El enlace es la llave.** Quien lo tenga antes de que se use puede unirse. Por eso caduca, es de un solo uso y los miembros se ven en la lista.
+- **Máximo 50 personas** por lista.
+- **Al quitar a alguien, la clave no cambia.** Ya no puede leer el servidor, pero conserva la clave que tenía.
+- **No es instantáneo.** Los cambios de los demás llegan en la siguiente sincronización: al volver a la app, al recuperar la conexión o cada 30 segundos mientras usas Lista.
+- **Hace falta la migración del servidor.** Ejecuta la [migración de listas](supabase/migrations/20261108_listas.sql) como se indica en Supabase. Sin ella, las listas compartidas no funcionan, pero lo demás sí.
+
+</details>
+
 ## Hazla, táchala, sigue
 
 - **Completa o borra.** Desliza a la derecha para tachar; a la izquierda para borrar.

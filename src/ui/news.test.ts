@@ -14,7 +14,7 @@ describe('Novedades: qué se ha visto', () => {
 
   it('markNewsSeen marca solo los ids indicados y se guarda como array JSON', () => {
     markNewsSeen([ID]);
-    expect(unseenNews()).toEqual([]);
+    expect(unseenNews()).toEqual(NEWS.filter((n) => n.id !== ID));
     expect(JSON.parse(localStorage.getItem(NEWS_KEY)!)).toEqual([ID]);
     // Repetir no duplica ids.
     markNewsSeen([ID]);
@@ -41,7 +41,7 @@ describe('Novedades: qué se ha visto', () => {
     localStorage.setItem(NEWS_KEY, '{no es json');
     expect(unseenNews()).toEqual([]);
     expect(() => markNewsSeen([ID])).not.toThrow();
-    expect(unseenNews()).toEqual([]);
+    expect(unseenNews()).toEqual(NEWS.filter((n) => n.id !== ID));
   });
 
   it('un valor JSON que no es array tampoco rompe', () => {
