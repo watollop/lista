@@ -1055,6 +1055,7 @@ section.droppable.drop-on .section { color: var(--fg); }
 
 .help-fold { margin-top: 18px; border-top: 1px solid var(--line); }
 .help-fold .ent-head { font-size: 14px; color: var(--muted); }
+.help-fold + .help-fold { margin-top: 0; border-top: 0; }
 
 /* Editando, la casilla pasa a ser el asa para arrastrar la tarea a otro día (se arrastra, no se pulsa). */
 .check.move { color: var(--faint); cursor: grab; touch-action: none; }
@@ -1293,8 +1294,14 @@ section.droppable.drop-on .section { color: var(--fg); }
 @media (max-width: 480px) {
   .share-dialog .row-btns:not(.share-foot) { flex-direction: column; align-items: stretch; }
 }
-/* Ajustes → Listas: los botones, separados de la última lista. Barra lateral: el icono pegado al nombre. */
+/* Ajustes → Listas: filas que se abren en su sitio y botones separados de la última lista. Barra lateral: el icono
+   pegado al nombre. */
 .lists-btns { margin-top: 16px; }
+.ent-list .list-open { padding: 4px 0 8px; }
+.list-new { margin-top: 12px; }
+.ent-name .shared-ico { margin-left: 8px; }
+.sheet .row-btns .kbd-only { display: none; }
+@media (hover: hover) and (pointer: fine) { .sheet .row-btns .kbd-only { display: inline-flex; align-items: center; } }
 .side-item .shared-ico { margin-right: auto; margin-left: -6px; align-self: center; }
 /* «Mover a…»: aviso de que lo movido a una lista compartida lo ven sus miembros. */
 .list-sheet .look-hint { font-size: 13px; color: var(--faint); margin: -4px 0 12px; }

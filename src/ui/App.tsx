@@ -694,7 +694,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }}
           lists={data.lists} listPending={listPending} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList}
-          onShareList={sharing ? openShare : undefined} onJoinList={sharing ? openJoin : undefined} />
+          onShareList={sharing ? openShare : undefined} onJoinList={sharing ? openJoin : undefined}
+          onShortcuts={() => { setSettings(false); setShortcuts(true); }} />
       )}
       {listSheet && (
         <ListSheet mode={listSheet.mode} lists={data.lists} pending={listPending} total={openTotal} scope={scope}
