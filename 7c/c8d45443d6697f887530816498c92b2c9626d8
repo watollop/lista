@@ -1,0 +1,53 @@
+src/data/db.ts
+  s_1a113f72a038c4::t_15d540cf5baefa 2,16,47-48
+src/parser/english.test.ts
+  s_1a113f72a038c4::t_c97914b0eccd22 1,3,86-98
+src/parser/index.ts
+  s_1a113f72a038c4::t_ee6a652d4cbb9a 5,37-43,77-86,132,162,168-171,181-182
+src/parser/parser.test.ts
+  s_1a113f72a038c4::t_dc060b119bb454 1-2,487-556
+src/sync/crypto.ts
+  s_1a113f72a038c4::t_9b16198530199e 7
+src/sync/index.ts
+  s_1a113f72a038c4::t_a3a20e529b7e7d 86
+src/ui/hooks.ts
+  s_1a113f72a038c4::t_9cba28dbb493d8 2,10,16,25-26,28
+src/ui/look.css
+  s_1a113f72a038c4::t_ed0fdb1c2229aa 231-233
+src/ui/styles.css
+  s_1a113f72a038c4::t_5e78d7ae42a32c 1170-1177
+src/ui/News.tsx
+  s_67c4eac07938af::t_0f35c05741f82c 1-53
+src/ui/news.test.ts
+  s_67c4eac07938af::t_451fd47b919647 1-51
+src/ui/news.ts
+  s_67c4eac07938af::t_dda1a1bc66341e 1-46
+src/data/repo.test.ts
+  s_67c4eac07938af::t_b76bad1ac1a93d 687,941-1155
+src/data/repo.ts
+  s_67c4eac07938af::t_51da9b22bcab17 16,18-19,36-43,158,214-242,246-258,304,307-311,326-331,340,371-378,524-611,670-671,675,681,690,696,709-710,733-735,763,765-766,778,801-803,862-863
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7cc8d45443d6697f887530816498c92b2c9626d8",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_67c4eac07938af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8544dd480697bb5",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
