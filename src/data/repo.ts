@@ -5,6 +5,7 @@ import type {
   EntityKind,
   Filter,
   ID,
+  ListItem,
   ParsedLine,
   RemoteItem,
   Repo,
@@ -141,6 +142,15 @@ async function purgeOne<R extends SyncRec>(tbl: Table<R, string>, cutoff: number
   return keys.length;
 }
 
+/** Resultado de moveFamily. ids: id resultante de cada miembro vivo copiado (solo entre espacios distintos);
+ *  prev: listas anteriores de los que cambiaron (mismo espacio); cross: si hubo copia con ids nuevos. */
+interface FamilyMove {
+  ids: Map<ID, ID>;
+  prev: { id: ID; listId: ID | null }[];
+  cross: boolean;
+  changed: boolean;
+}
+
 export function createRepo(dbName = 'lista'): Repo {
   const db = new ListaDB(dbName);
   const subs = new Set<() => void>();
@@ -229,28 +239,72 @@ export function createRepo(dbName = 'lista'): Repo {
     return name;
   }
 
-  /** Pone la familia de `top` (la tarea y todas sus subtareas) en la lista `target` (null = principal).
-   *  También las subtareas borradas: si se deshace su borrado, vuelven a la lista de su principal.
-   *  Devuelve las listas anteriores de las tareas que cambian; vacío si ya estaban ahí (no escribe nada). */
-  async function moveFamily(top: Task, target: ID | null, now: number): Promise<{ id: ID; listId: ID | null }[]> {
+  /** Espacio de una lista: la propia id si está viva y compartida; 'personal' en cualquier otro caso (también la
+   *  principal y null). Una tarea está en el espacio de su lista (docs/plan-listas.md §4.4). */
+  async function spaceOfList(listId: ID | null): Promise<ID | 'personal'> {
+    if (!listId || listId === MAIN_LIST) return 'personal';
+    const list = await db.lists.get(listId);
+    return list && list.deleted === 0 && list.shared ? listId : 'personal';
+  }
+
+  /** Pone la familia de `top` (la tarea y todas sus subtareas, también las borradas: si se deshace su borrado,
+   *  vuelven a la lista de su principal) en la lista `target` (null = principal).
+   *  Mismo espacio: solo cambia listId. Espacios distintos: copia las vivas con id nuevo en el destino (parentId y
+   *  nextId remapeados dentro de la familia) y deja tombstones de los originales, que conservan su listId para
+   *  subir a su espacio de origen. Las subtareas borradas no se copian. */
+  async function moveFamily(top: Task, target: ID | null, now: number): Promise<FamilyMove> {
     const family = [top, ...(await db.tasks.where('parentId').equals(top.id).toArray())];
-    const moves = family.filter((t) => (t.listId ?? null) !== target);
-    if (!moves.length) return [];
-    await db.tasks.bulkPut(moves.map((t) => ({ ...t, listId: target, updatedAt: now, dirty: 1 as const })));
-    return moves.map((t) => ({ id: t.id, listId: t.listId ?? null }));
+    const from = await spaceOfList(top.listId ?? null);
+    const to = await spaceOfList(target);
+    if (from === to) {
+      const moves = family.filter((t) => (t.listId ?? null) !== target);
+      if (!moves.length) return { ids: new Map(), prev: [], cross: false, changed: false };
+      await db.tasks.bulkPut(moves.map((t) => ({ ...t, listId: target, updatedAt: now, dirty: 1 as const })));
+      return {
+        ids: new Map(),
+        prev: moves.map((t) => ({ id: t.id, listId: t.listId ?? null })),
+        cross: false,
+        changed: true,
+      };
+    }
+    const alive = family.filter((t) => t.deleted === 0);
+    if (!alive.length) return { ids: new Map(), prev: [], cross: false, changed: false };
+    const ids = new Map<ID, ID>(alive.map((t) => [t.id, crypto.randomUUID()] as const));
+    const copies: Task[] = alive.map((t) => ({
+      ...t,
+      id: ids.get(t.id)!,
+      listId: target,
+      parentId: t.parentId && ids.has(t.parentId) ? ids.get(t.parentId)! : null,
+      nextId: t.nextId && ids.has(t.nextId) ? ids.get(t.nextId)! : null,
+      updatedAt: now,
+      dirty: 1 as const,
+    }));
+    const originals: Task[] = alive.map((t) => ({ ...t, deleted: 1 as const, updatedAt: now, dirty: 1 as const }));
+    await db.tasks.bulkPut([...copies, ...originals]);
+    return { ids, prev: [], cross: true, changed: true };
   }
 
   async function reconcileFamilies(): Promise<void> {
     const rows = await db.tasks.toArray();
     const now = stamp(rows.reduce((max, t) => Math.max(max, t.updatedAt), 0));
     // Una subtarea va siempre en la lista de su principal: un remoto de otro dispositivo puede haberlas separado.
-    // Gana la principal (la familia se mueve entera en moveToList).
+    // Gana la principal (la familia se mueve entera en moveToList). Si la principal está en otro espacio, la
+    // subtarea se desvincula en vez de moverla: así una tarea personal nunca acaba en una lista compartida.
     const liveRows = live(rows);
     const tops = new Map(liveRows.filter((t) => t.parentId === null).map((t) => [t.id, t] as const));
+    const spaces = new Map<ID | null, ID | 'personal'>();
+    const spaceOf = async (listId: ID | null | undefined): Promise<ID | 'personal'> => {
+      const key = listId ?? null;
+      if (!spaces.has(key)) spaces.set(key, await spaceOfList(key));
+      return spaces.get(key)!;
+    };
     const misplaced: Task[] = [];
     for (const t of liveRows) {
       const top = t.parentId === null ? undefined : tops.get(t.parentId);
-      if (top && (t.listId ?? null) !== (top.listId ?? null)) {
+      if (!top) continue;
+      if ((await spaceOf(t.listId)) !== (await spaceOf(top.listId))) {
+        misplaced.push({ ...t, parentId: null, updatedAt: now, dirty: 1 });
+      } else if ((t.listId ?? null) !== (top.listId ?? null)) {
         misplaced.push({ ...t, listId: top.listId ?? null, updatedAt: now, dirty: 1 });
       }
     }
@@ -369,12 +423,17 @@ export function createRepo(dbName = 'lista'): Repo {
         const topics = await ensureEntities(db.topics, line.topics, now);
         const people = await ensureEntities(db.people, line.people, now);
         // Lista escrita con /nombre distinta de la actual: la familia entera se mueve a ella. Sin lista, no cambia.
+        // Entre espacios distintos la tarea editada es una copia nueva: se edita esa.
+        let targetId = id;
         if (line.list) {
           const target = (await liveListsSorted()).find((l) => listKey(l.name) === line.list);
           const top = task.parentId ? await db.tasks.get(task.parentId) : undefined;
-          if (target) await moveFamily(top && top.deleted === 0 ? top : task, storedListId(target.id), now);
+          if (target) {
+            const moved = await moveFamily(top && top.deleted === 0 ? top : task, storedListId(target.id), now);
+            targetId = moved.ids.get(id) ?? id;
+          }
         }
-        const current = (await db.tasks.get(id)) ?? task;
+        const current = (await db.tasks.get(targetId)) ?? task;
         const next: Task = { ...current, ...fields, topics, people, updatedAt: now, dirty: 1 };
         await db.tasks.put(next);
         return next;
@@ -546,7 +605,11 @@ export function createRepo(dbName = 'lista'): Repo {
         const base = id === MAIN_LIST ? (current && current.deleted === 0 ? current : defaultMainList()) : current;
         if (!base || base.deleted === 1) throw new Error(tr('Lista no encontrada', 'List not found'));
         const clean = await checkListName(name, id);
-        const next: TodoList = { ...base, name: clean, updatedAt: now, dirty: 1 };
+        // Una compartida: la versión del nombre sube; el registro meta lo llevará el sync.
+        const next: TodoList = {
+          ...base, name: clean, updatedAt: now, dirty: 1,
+          ...(base.shared ? { shared: { ...base.shared, nameAt: now } } : {}),
+        };
         await db.lists.put(next);
         return next;
       });
@@ -560,6 +623,7 @@ export function createRepo(dbName = 'lista'): Repo {
         const now = stamp();
         const list = await db.lists.get(id);
         if (!list || list.deleted === 1) throw new Error(tr('Lista no encontrada', 'List not found'));
+        if (list.shared) throw new Error(tr('Para dejar una lista compartida, sal de ella.', 'To remove a shared list, leave it.'));
         // Solo las vivas: las que ya estaban borradas no entran en esta operación y no se restauran.
         const victims = live(await db.tasks.toArray()).filter((t) => t.listId === id);
         await db.tasks.bulkPut(victims.map((t) => ({ ...t, deleted: 1 as const, dirty: 1 as const, updatedAt: now })));
@@ -584,29 +648,132 @@ export function createRepo(dbName = 'lista'): Repo {
     },
 
     async moveToList(id, listId) {
-      const undo = await db.transaction('rw', allTables, async () => {
+      const result = await db.transaction('rw', allTables, async () => {
         const now = stamp();
         const task = await db.tasks.get(id);
         if (!task || task.deleted === 1) throw new Error(tr('Tarea no encontrada', 'Task not found'));
         if (!(await liveListsSorted()).some((l) => l.id === listId)) throw new Error(tr('Lista no encontrada', 'List not found'));
         const parent = task.parentId ? await db.tasks.get(task.parentId) : undefined;
         const top = parent && parent.deleted === 0 ? parent : task;
-        const prev = await moveFamily(top, storedListId(listId), now);
-        if (!prev.length) return null;
-        return async () => {
+        const moved = await moveFamily(top, storedListId(listId), now);
+        const topId = moved.ids.get(top.id) ?? top.id;
+        if (!moved.changed) return { id: topId, undo: null };
+        // Deshacer un cruce entre espacios es otro cruce: la copia vuelve a su lista anterior con ids nuevos.
+        const prevList = storedListId(top.listId);
+        const undo = async () => {
           await db.transaction('rw', allTables, async () => {
             const t = stamp();
-            for (const p of prev) {
-              const cur = await db.tasks.get(p.id);
-              if (cur && cur.deleted === 0) await db.tasks.put({ ...cur, listId: p.listId, updatedAt: t, dirty: 1 });
+            if (moved.cross) {
+              const cur = await db.tasks.get(topId);
+              if (cur && cur.deleted === 0) await moveFamily(cur, prevList, t);
+            } else {
+              for (const p of moved.prev) {
+                const cur = await db.tasks.get(p.id);
+                if (cur && cur.deleted === 0) await db.tasks.put({ ...cur, listId: p.listId, updatedAt: t, dirty: 1 });
+              }
             }
           });
           notify();
         };
+        return { id: topId, undo };
       });
-      if (!undo) return { undo: async () => {} };
+      if (!result.undo) return { id: result.id, undo: async () => {} };
       notify();
-      return { undo };
+      return { id: result.id, undo: result.undo };
+    },
+
+    async markShared(listId, lk) {
+      if (listId === MAIN_LIST) throw new Error(tr('La lista principal no se puede compartir.', 'The main list can’t be shared.'));
+      const copied = await db.transaction('rw', allTables, async () => {
+        const now = stamp();
+        const list = await db.lists.get(listId);
+        if (!list || list.deleted === 1) throw new Error(tr('Lista no encontrada', 'List not found'));
+        if (list.shared) throw new Error(tr('La lista ya está compartida.', 'The list is already shared.'));
+        const mine = (await db.tasks.toArray()).filter((t) => t.listId === listId);
+        const alive = mine.filter((t) => t.deleted === 0);
+        // Copias vivas con id nuevo (también las completadas); originales a tombstone con listId null (espacio personal).
+        const ids = new Map<ID, ID>(alive.map((t) => [t.id, crypto.randomUUID()] as const));
+        const copies: Task[] = alive.map((t) => ({
+          ...t,
+          id: ids.get(t.id)!,
+          parentId: t.parentId && ids.has(t.parentId) ? ids.get(t.parentId)! : null,
+          nextId: t.nextId && ids.has(t.nextId) ? ids.get(t.nextId)! : null,
+          updatedAt: now,
+          dirty: 1 as const,
+        }));
+        const originals: Task[] = alive.map((t) => ({ ...t, listId: null, deleted: 1 as const, updatedAt: now, dirty: 1 as const }));
+        // Los tombstones antiguos de la lista pasan al espacio personal sin tocar su versión.
+        const tombs: Task[] = mine.filter((t) => t.deleted === 1).map((t) => ({ ...t, listId: null }));
+        await db.tasks.bulkPut([...copies, ...originals, ...tombs]);
+        await db.lists.put({ ...list, shared: { lk, nameAt: now }, updatedAt: now, dirty: 1 });
+        return alive.length;
+      });
+      notify();
+      return copied;
+    },
+
+    async joinShared(listId, lk, name) {
+      const joined = await db.transaction('rw', db.lists, async () => {
+        const now = stamp();
+        const current = await db.lists.get(listId);
+        if (current && current.deleted === 0 && current.shared) return { list: current, written: false };
+        const max = (await liveListsSorted()).reduce((m, l) => Math.max(m, l.order), 0);
+        const list: TodoList = {
+          id: listId, name: name.trim() || 'Lista', order: max + 1, shared: { lk, nameAt: 0 },
+          updatedAt: now, deleted: 0, dirty: 1,
+        };
+        await db.lists.put(list);
+        return { list, written: true };
+      });
+      if (joined.written) notify();
+      return joined.list;
+    },
+
+    async applyShared(listId, items) {
+      const wrote = await db.transaction('rw', allTables, async () => {
+        let any = false;
+        let tasks = false;
+        const batchTaskIds = new Set(items.filter((it) => it.kind === 'task').map((it) => it.id));
+        for (const it of items) {
+          let w = false;
+          switch (it.kind) {
+            case 'task':
+              w = await applySharedTask(listId, it, batchTaskIds);
+              tasks = tasks || w;
+              break;
+            case 'topic':
+              w = await applySharedEntity('topic', it);
+              break;
+            case 'person':
+              w = await applySharedEntity('person', it);
+              break;
+            case 'meta':
+              w = await applySharedMeta(listId, it);
+              break;
+          }
+          any = any || w;
+        }
+        if (tasks) await reconcileFamilies();
+        return any;
+      });
+      if (wrote) notify();
+    },
+
+    async purgeShared(listId) {
+      const previous = await db.transaction('rw', [...allTables, db.meta], async () => {
+        const now = stamp();
+        const list = await db.lists.get(listId);
+        // Borrado físico: un tombstone de cada tarea se propagaría a los demás miembros.
+        const victims = (await db.tasks.toArray()).filter((t) => t.listId === listId).map((t) => t.id);
+        await db.tasks.bulkDelete(victims);
+        await db.meta.delete(`sync.cursor.list:${listId}`);
+        if (!list) return null;
+        // Tombstone sin LK: mis otros dispositivos también la quitan.
+        await db.lists.put({ id: listId, name: '', order: list.order, shared: null, deleted: 1, updatedAt: now, dirty: 1 });
+        return list.name;
+      });
+      notify();
+      return previous;
     },
 
     async renameEntity(kind, key, newName) {
@@ -739,7 +906,7 @@ export function createRepo(dbName = 'lista'): Repo {
     },
 
     async applyRemote(items) {
-      const wrote = await db.transaction('rw', allTables, async () => {
+      const wrote = await db.transaction('rw', [...allTables, db.meta], async () => {
         let any = false;
         for (const it of items) {
           const w = await applyByKind(it.kind, it);
@@ -849,6 +1016,70 @@ export function createRepo(dbName = 'lista'): Repo {
     },
   };
 
+  /** Tarea de una lista compartida (docs/plan-listas.md §4.4). Nunca pisa una tarea local de otro espacio. */
+  async function applySharedTask(listId: ID, it: ListItem, batchIds: Set<ID>): Promise<boolean> {
+    const local = await db.tasks.get(it.id);
+    if (local && (local.listId ?? null) !== listId) return false;
+    if (local && it.updated_at <= local.updatedAt) return false;
+    const data = it.data as Omit<Task, 'dirty'>;
+    // Una subtarea solo cuelga de una principal de esta lista: si no la hay (ni en este lote), queda suelta.
+    let parentId = data.parentId ?? null;
+    if (parentId !== null && !batchIds.has(parentId)) {
+      const parent = await db.tasks.get(parentId);
+      if (!parent || (parent.listId ?? null) !== listId) parentId = null;
+    }
+    await db.tasks.put({
+      ...data, listId, parentId, updatedAt: it.updated_at, deleted: it.deleted ? 1 : 0, dirty: 0,
+    });
+    return true;
+  }
+
+  /** Tema o persona de una lista compartida: solo se crea si no hay una viva con esa clave; los borrados se ignoran. */
+  async function applySharedEntity(kind: EntityKind, it: ListItem): Promise<boolean> {
+    if (it.deleted) return false;
+    const tbl = tableOf(kind);
+    const existing = await tbl.get(it.id);
+    if (existing && existing.deleted === 0) return false;
+    const data = it.data as Omit<Entity, 'dirty'>;
+    await tbl.put({ ...data, key: it.id, updatedAt: it.updated_at, deleted: 0, dirty: 0 });
+    return true;
+  }
+
+  /** Ficha de la lista (meta 'list'): el nombre cambia solo si su versión es más nueva que nameAt. No toca updatedAt ni dirty. */
+  async function applySharedMeta(listId: ID, it: ListItem): Promise<boolean> {
+    if (it.id !== 'list' || it.deleted) return false;
+    const list = await db.lists.get(listId);
+    if (!list || list.deleted === 1 || !list.shared) return false;
+    const data = it.data as { name?: unknown } | null;
+    const name = typeof data?.name === 'string' ? data.name.trim() : '';
+    if (!name || it.updated_at <= list.shared.nameAt) return false;
+    await db.lists.put({ ...list, name, shared: { ...list.shared, nameAt: it.updated_at } });
+    return true;
+  }
+
+  /** Lista del espacio personal que llega del servidor. Si alguno de los dos lados es compartido, el nombre lo
+   *  gana el nameAt mayor. Un tombstone de una lista que aquí era compartida borra sus tareas en local (ya no soy miembro). */
+  async function applyRemoteList(it: RemoteItem): Promise<boolean> {
+    const local = await db.lists.get(it.id);
+    if (local && it.updated_at <= local.updatedAt) return false;
+    const data = it.data as Omit<TodoList, 'dirty'>;
+    const ls = local?.shared ?? null;
+    const rs = data.shared ?? null;
+    const useLocalName = ls !== null && (rs === null || ls.nameAt > rs.nameAt);
+    const name = useLocalName && local ? local.name : data.name;
+    const { shared: _shared, ...rest } = data;
+    const shared = rs ? { ...rs, nameAt: Math.max(rs.nameAt, ls?.nameAt ?? rs.nameAt) } : it.deleted ? null : ls;
+    await db.lists.put({
+      ...rest, name, ...(shared ? { shared } : {}), updatedAt: it.updated_at, deleted: it.deleted ? 1 : 0, dirty: 0,
+    });
+    if (it.deleted && ls) {
+      const victims = (await db.tasks.toArray()).filter((t) => t.listId === it.id).map((t) => t.id);
+      await db.tasks.bulkDelete(victims);
+      await db.meta.delete(`sync.cursor.list:${it.id}`);
+    }
+    return true;
+  }
+
   async function applyByKind(kind: SyncKind, it: RemoteItem): Promise<boolean> {
     switch (kind) {
       case 'task':
@@ -860,7 +1091,7 @@ export function createRepo(dbName = 'lista'): Repo {
       case 'filter':
         return applyOne(db.filters, it);
       case 'list':
-        return applyOne(db.lists, it);
+        return applyRemoteList(it);
       case 'setting': {
         const data = it.data;
         if (!data || typeof data !== 'object' || !('key' in data) || data.key !== it.id || !('value' in data) ||

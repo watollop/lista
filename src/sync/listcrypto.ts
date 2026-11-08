@@ -6,16 +6,10 @@ import { CorruptItemError, fromB64, toB64 } from './crypto';
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
-export type ListKind = 'task' | 'topic' | 'person' | 'meta';
-const LIST_KINDS: readonly ListKind[] = ['task', 'topic', 'person', 'meta'];
+import type { ListItem, ListKind } from '../types';
 
-export interface ListItem {
-  kind: ListKind;
-  id: string;
-  data: unknown;
-  updated_at: number;
-  deleted: boolean;
-}
+export type { ListItem, ListKind } from '../types';
+const LIST_KINDS: readonly ListKind[] = ['task', 'topic', 'person', 'meta'];
 
 /** Fila tal como la ve el servidor: solo el id opaco, la versión y el estado de borrado son visibles. */
 export interface ListRow {

@@ -111,12 +111,64 @@
 - **Cliente** en `src/sync/listapi.ts`: un 404 (falta la migración) lanza `SharingUnavailableError`; los rechazos de invitación, `InviteRejectedError` con su código.
 - **Probado** en un Postgres en memoria (PGlite) que imita Supabase: 59 casos de permisos, traspaso y borrado, tanto con `schema.sql` (dos veces) como con la migración sobre el esquema anterior (dos veces).
 
-### 4.4 Sincronización
-- Cada sync pide **mis membresías** (`list_members` del usuario). Con eso y los registros `list` personales sabe qué listas compartidas tiene y con qué LK.
-- Por cada lista compartida: sube sus pendientes cifrados con su LK y baja desde **su propio cursor** (`sync.cursor.list:<id>` en `meta`, con el mismo solapamiento). Un cursor global no sirve: al unirse a una lista, sus filas antiguas tienen `synced_at` anteriores.
-- `pendingChanges()` sigue devolviendo todo; el sync reparte cada registro a su espacio según el `listId` de la tarea (o, para temas y personas, a todos los espacios cuyas tareas los usan).
-- **Membresía perdida** (me quitaron o se borró la lista): se borran **solo en local** la lista y sus tareas, físicamente y sin marcarlas `dirty` (un tombstone las borraría para todos), y se avisa: «Ya no formas parte de «Compra»».
-- **Salir:** igual, después de borrar mi fila de `list_members`.
+### 4.4 Sincronización (fase 2C)
+
+**Espacios.** Cada registro vive en un espacio: el **personal** (`items`, cifrado con la DK) o el de una **lista compartida** (`list_items`, cifrado con su LK).
+
+| Registro | Espacio |
+|---|---|
+| Tarea (también su tombstone) | El de su `listId` si esa lista está compartida (`TodoList.shared`); si no, el personal |
+| Tema / persona | El personal y, además, cada lista compartida con tareas vivas que lo usan (solo vivos) |
+| Filtro, preferencia | El personal |
+| Lista (`TodoList`) | El personal, con `shared: { lk, nameAt }`: así la LK llega a mis otros dispositivos |
+| Nombre de una lista compartida | Registro `meta` (id `list`, `{ name }`) en la propia lista, con `updated_at = nameAt` |
+
+**Nombre de una lista compartida.** `shared.nameAt` es la versión del nombre. Renombrar pone `nameAt = ahora` y sube `meta`. Al llegar un `meta` con `updated_at > nameAt`, se cambia el nombre y `nameAt` sin marcar `dirty`. Al llegar el registro personal de la lista, gana el `nameAt` mayor de los dos. El nombre nunca retrocede por un orden de llegada distinto.
+
+**Mover entre espacios = copiar con id nuevo y tombstone del original.** Lo hace el repo, sin estado extra en el sync:
+- **Cuándo:** al mover una familia (`moveToList`, `replaceParsed` con `/lista`) entre listas de **espacios distintos** (personal ↔ compartida, o entre dos compartidas). Entre dos listas personales, como hasta ahora.
+- **Qué se crea:** copia viva de cada tarea de la familia, con id nuevo, en la lista de destino. Se remapean `parentId` y `nextId` dentro de la familia; un `nextId` que apunta fuera queda en `null`.
+- **Qué queda:** cada original pasa a tombstone, conserva su `listId` de origen y sube a su espacio. Así nunca hay una tarea viva y un tombstone con el mismo id en dos espacios.
+- **Deshacer:** es otro movimiento entre espacios.
+- **Compartir una lista existente** (`markShared`) hace lo mismo con todas sus tareas vivas, también las completadas. Los originales quedan como tombstones con `listId = null`, para que suban al espacio personal y no al compartido. Los tombstones antiguos de esa lista también pasan a `listId = null`.
+
+**Un ciclo de sync:**
+1. **Subida personal:** todo lo pendiente salvo las tareas de listas compartidas.
+2. **Bajada personal.**
+3. **Membresías:** se piden **después** de la bajada personal. Así, si llega el registro de una lista a la que mi otro dispositivo se acaba de unir, la membresía ya existe.
+4. **Por cada lista con `shared`:**
+   - Si estoy en las membresías: sube sus tareas pendientes, los temas y personas que usan sus tareas vivas y el `meta` si el registro de la lista está pendiente. Luego baja desde **su cursor** (`sync.cursor.list:<id>`, con el mismo solapamiento de 5 s) y aplica.
+   - Si no estoy: **membresía perdida**.
+5. Un 404 de las tablas o RPC nuevas (falta la migración) se ignora: solo sincroniza lo personal.
+
+**Membresías sin LK local** (me uní en otro dispositivo y aún no ha llegado su registro): se ignoran.
+
+**Al aplicar lo que llega de una lista compartida** (`repo.applyShared`):
+- **Tareas:** LWW. Se fuerza `listId` a esa lista. Un `parentId` que no es de esa lista pasa a `null`. Nunca pisa una tarea local de otro espacio con el mismo id.
+- **Temas y personas:** se crean si no existen vivos en local; si existen, se queda el nombre local. Los tombstones se ignoran.
+- **`meta`:** cambia el nombre según `nameAt`.
+
+**Membresía perdida, salir o borrar para todos** (`repo.purgeShared`):
+- **En local:** se borran físicamente sus tareas, sin marcarlas `dirty` (un tombstone las borraría para todos).
+- **El registro de la lista** queda como tombstone pendiente, sin LK, para que mis otros dispositivos también la quiten.
+- **En mis otros dispositivos:** al aplicar el tombstone remoto de una lista que tenían compartida, borran también sus tareas en local.
+- **Aviso:** «Ya no formas parte de «Compra»».
+
+**Compartir** (`sync.shareList`, operación exclusiva):
+1. Generar la LK y guardar `sync.pendingShare = { listId, lk }`.
+2. `create_list`.
+3. `repo.markShared` y borrar `pendingShare`.
+4. Sync.
+5. Crear la invitación.
+
+Si la app se cierra a medias, el siguiente sync retoma desde `pendingShare`. `create_list` con `created: false` y la lista ya compartida en local significa que otro dispositivo se adelantó: se usa su LK.
+
+**Unirse** (`sync.joinList`):
+1. Parsear el enlace y llamar a `accept_invite`.
+2. Desenvolver `{ lk, name }` y crear la lista en local con `repo.joinShared`. Puede repetir nombre con una lista propia.
+3. Sync.
+
+`accept_invite` es idempotente, así que repetir con el mismo enlace sirve si la app se cerró a medias.
 
 ### 4.5 Flujos
 **Compartir una lista** (con sesión y el dispositivo desbloqueado)
@@ -153,7 +205,7 @@
 | 1 ✅ | Listas propias: datos, sync del nuevo tipo, parser `/lista`, interfaz en escritorio y móvil, Novedades, bienvenida, Ajustes, atajos y README | Con una lista, todo igual. Tests verdes. |
 | 2A ✅ | Cripto de listas e invitaciones (`src/sync/listcrypto.ts`) + tests de ataque | Sin tocar nada más. |
 | 2B ✅ | Servidor (migración SQL) y capa de API (`src/sync/listapi.ts`) | Suite intacta. Hay que ejecutar la migración en Supabase. |
-| 2C | Sync multiespacio (cursores por lista, reparto, membresía perdida) | Dos usuarios simulados comparten una lista. |
+| 2C ✅ | Sync multiespacio (`src/sync/shared.ts`): cursores por lista, reparto, membresía perdida, compartir, unirse, salir, quitar y borrar | Dos usuarios simulados comparten una lista (`src/sync/shared.test.ts`, contra `src/sync/fakeSupabase.ts`). |
 | 2D | Interfaz de compartir, unirse, miembros, salir y quitar; Novedades y bienvenida | Flujos de §4.5 en escritorio y móvil. |
 | 2E | Validación real con dos cuentas de Google, en iPhone, Android y ordenador | Sin pérdida de datos. |
 
@@ -162,4 +214,9 @@
 - Parser: `/lista` solo si existe, al inicio de palabra; `15/11`, `y/o`, URL; listKey con espacios y tildes; autocompletado.
 - Cliente antiguo que baja un `list`: lo omite y no rompe nada.
 - Cripto (2A): round-trip con LK; AAD que impide mover filas entre listas; invitación con secreto erróneo, `authKey` sin `wrapKey`, invitación manipulada.
-- Sync (2C): el servidor simulado no ve ningún título en claro de la lista compartida; membresía perdida borra solo en local sin subir tombstones; mover entre espacios no deja tareas duplicadas ni perdidas.
+- Sync (2C), de punta a punta con tres usuarios (y dos dispositivos de una misma cuenta) contra `fakeSupabase.ts`, que imita la migración:
+  - **Privacidad:** el servidor no ve ningún título, nombre de lista ni tema en claro.
+  - **Unirse:** un enlace sirve una sola vez; el otro dispositivo del que comparte (que ya tenía las tareas) acaba con una sola copia; el segundo dispositivo de quien se une recibe la lista; se puede repetir nombre con una lista propia.
+  - **Cambios entre miembros:** añadir, completar, borrar y renombrar llegan a todos sin retroceder; mover entre espacios no duplica ni pierde tareas.
+  - **Salir, quitar y borrar:** quitar o salir borra solo en local y avisa (`takeLostLists`); borrar para todos desaparece en todos los dispositivos; si el owner sale, la lista pasa al siguiente.
+  - **Casos raros:** un «compartir» cortado se termina en el siguiente sync; sin la migración, lo personal sincroniza igual.

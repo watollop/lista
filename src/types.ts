@@ -44,8 +44,28 @@ export const MAIN_LIST = 'main';
 /** Lista de tareas (docs/plan-listas.md). La principal no se puede borrar y va siempre primero. */
 export interface TodoList extends SyncRec {
   id: ID; // MAIN_LIST para la principal
-  name: string; // forma de visualización; dos listas no pueden normalizar al mismo listKey
+  name: string; // forma de visualización; dos listas propias no pueden normalizar al mismo listKey
   order: number; // orden en el selector; menor primero (la principal va primero siempre)
+  /** Solo en listas compartidas (docs/plan-listas.md §4.4). La principal nunca se comparte. */
+  shared?: SharedList | null;
+}
+
+/** Lo que guarda cada miembro de una lista compartida, en su registro personal (cifrado con su DK). */
+export interface SharedList {
+  lk: string; // clave de la lista (AES-256-GCM raw en base64, ver src/sync/listcrypto.ts)
+  nameAt: number; // versión del nombre (ms): la del último registro meta aplicado o del último renombrado local
+}
+
+/** Tipo de registro dentro de una lista compartida: tareas, temas y personas, y su ficha (meta, id 'list'). */
+export type ListKind = 'task' | 'topic' | 'person' | 'meta';
+
+/** Registro de una lista compartida ya descifrado. data: Task, Entity o { name } (meta), sin dirty. */
+export interface ListItem {
+  kind: ListKind;
+  id: string;
+  data: unknown;
+  updated_at: number;
+  deleted: boolean;
 }
 
 /** Lista actual de la pantalla: una lista concreta o todas mezcladas. Se recuerda por dispositivo. */
@@ -265,12 +285,29 @@ export interface Repo {
   createList(name: string): Promise<TodoList>;
   /** Renombra (también la principal, que entonces pasa a tener registro). Mismas reglas que createList. */
   renameList(id: ID, name: string): Promise<TodoList>;
-  /** Borra una lista y todas sus tareas (tombstones) en una transacción. La principal no se puede borrar.
+  /** Borra una lista y todas sus tareas (tombstones) en una transacción. La principal no se puede borrar,
+   *  ni una compartida (eso es salir o borrar para todos, en el sync).
    *  undo restaura la lista y solo las tareas que borró esta operación. */
   deleteList(id: ID): Promise<{ tasks: number; undo: () => Promise<void> }>;
   /** Mueve una tarea principal y sus subtareas a otra lista (una subtarea mueve a su familia entera).
+   *  Entre espacios distintos (personal ↔ compartida, o dos compartidas) copia la familia con ids nuevos y deja
+   *  tombstones de los originales (docs/plan-listas.md §4.4). `id` es el de la tarea principal resultante.
    *  undo la devuelve a la lista anterior. */
-  moveToList(id: ID, listId: ID): Promise<{ undo: () => Promise<void> }>;
+  moveToList(id: ID, listId: ID): Promise<{ id: ID; undo: () => Promise<void> }>;
+
+  // --- listas compartidas (docs/plan-listas.md §4.4); las llama el sync, no la interfaz ---
+  /** Convierte una lista propia (no la principal, viva, sin compartir) en compartida con la LK dada: guarda
+   *  shared = { lk, nameAt: ahora } y copia sus tareas vivas (con subtareas, también completadas) con ids nuevos,
+   *  dejando los originales como tombstones con listId null. Devuelve cuántas tareas copió. */
+  markShared(listId: ID, lk: string): Promise<number>;
+  /** Crea en local una lista compartida a la que me acabo de unir (o la reactiva si era un tombstone), al final,
+   *  con shared = { lk, nameAt: 0 } y dirty. Admite un nombre repetido. Si ya existe viva y compartida, la devuelve. */
+  joinShared(listId: ID, lk: string, name: string): Promise<TodoList>;
+  /** Aplica registros ya descifrados de una lista compartida (reglas en docs/plan-listas.md §4.4). Quedan dirty=0. */
+  applyShared(listId: ID, items: ListItem[]): Promise<void>;
+  /** Ya no soy miembro: borra físicamente en local sus tareas (sin tombstones) y deja la lista como tombstone
+   *  dirty, sin LK. Devuelve el nombre que tenía (null si no existía). */
+  purgeShared(listId: ID): Promise<string | null>;
 
   /** Renombra un tema/persona. Si el nuevo nombre normaliza a otra clave que ya existe, FUSIONA: sus tareas y
    *  filtros guardados pasan a esa clave y la antigua se borra (tombstone). Reescribe las etiquetas en el texto
@@ -360,6 +397,28 @@ export interface Sync {
   cancelLink(): Promise<void>;
   /** Dispositivo activado: el usuario ha comprobado que el código coincide; envía la clave cifrada al nuevo. */
   confirmLink(): Promise<void>;
+
+  // ---------- listas compartidas (docs/plan-listas.md §4.4 y §4.5, src/sync/shared.ts) ----------
+  /** Comparte una lista propia (sesión iniciada y cifrado 'on'): la crea en el servidor, pasa sus tareas al
+   *  espacio compartido, sincroniza y devuelve un enlace de invitación. */
+  shareList(listId: ID): Promise<{ link: string; expiresAt: string }>;
+  /** Nuevo enlace de invitación (un solo uso, 7 días) para una lista ya compartida. */
+  createInvite(listId: ID): Promise<{ link: string; expiresAt: string }>;
+  /** Se une con un enlace (completo o solo su fragmento #unirse=…). Lanza InviteRejectedError si el servidor
+   *  lo rechaza. Devuelve la lista local creada. */
+  joinList(link: string): Promise<{ listId: ID; name: string }>;
+  /** Sale de una lista compartida (si era el owner, pasa al miembro más antiguo) y la quita de este dispositivo. */
+  leaveList(listId: ID): Promise<void>;
+  /** Solo el owner: borra la lista para todos y la quita de este dispositivo. */
+  deleteSharedList(listId: ID): Promise<void>;
+  /** Solo el owner: quita a otra persona. */
+  removeMember(listId: ID, userId: string): Promise<void>;
+  /** Miembros con su email y nombre. */
+  listMembers(listId: ID): Promise<ListMemberInfo[]>;
+  /** Mis membresías según el último sync (vacío si el servidor no admite listas compartidas). */
+  memberships(): Promise<ListMembership[]>;
+  /** Nombres de las listas que este dispositivo quitó por membresía perdida desde la última llamada; las olvida. */
+  takeLostLists(): Promise<string[]>;
 }
 
 /** Enlace de dispositivos en curso. 'new' = este dispositivo pide la clave; 'active' = este dispositivo la da. */
