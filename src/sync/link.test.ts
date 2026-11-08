@@ -312,6 +312,7 @@ function line(title: string): ParsedLine {
     recurrence: null,
     isSubtask: false,
     tokens: [],
+    list: null,
   };
 }
 

@@ -16,6 +16,7 @@ function line(title: string, extra: Partial<ParsedLine> = {}): ParsedLine {
     recurrence: null,
     isSubtask: false,
     tokens: [],
+    list: null,
     ...extra,
   };
 }

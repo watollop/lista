@@ -13,3 +13,9 @@ export function normalizeKey(name: string): string {
 export function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
+
+/** Clave de una lista para la sintaxis /nombre: como normalizeKey, sin espacios ni signos.
+ *  «La compra», /la-compra y /lacompra dan la misma clave. */
+export function listKey(name: string): string {
+  return normalizeKey(name).replace(/[^\p{L}\p{N}]+/gu, '');
+}
