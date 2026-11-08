@@ -1,0 +1,23 @@
+src/lib/reschedule.ts
+  s_1a113f72a038c4::t_dfb54ad5b268da 9-14
+src/ui/TaskList.tsx
+  s_1a113f72a038c4::t_a0bef6138deffa 11,33
+src/ui/drag.ts
+  s_1a113f72a038c4::t_1802cde7cd3c7d 3,13-14,16,67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ecb567a99b66c431270230c8ff5197da4cfdf541",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
