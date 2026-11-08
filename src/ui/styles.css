@@ -1167,3 +1167,11 @@ section.droppable.drop-on .section { color: var(--fg); }
 /* Día filtrado: tecla encendida */
 .week-days .on, .week-days .on .week-n, .week-days .on .week-c, .week-days .on .week-d { background: var(--fg); color: var(--bg); }
 .top .week { margin: 4px 0 12px; } /* móvil: dentro de la cabecera, sobre la búsqueda */
+
+/* Novedades */
+.news-sheet { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.news-sheet .label { display: block; margin-bottom: 16px; }
+.news-item + .news-item { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; }
+.news-item h3 { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; color: var(--fg); margin-bottom: 6px; }
+.news-item p { font-size: 15px; color: var(--muted); margin-bottom: 0; }
+.news-sheet .row-btns { margin-top: 20px; }

@@ -228,3 +228,6 @@
 
 /* Bicho de píxeles: el naranja de la app y los ojos como la «pantalla» de la captura */
 :where([data-look="industrial"]) .critter { --critter: var(--accent); --critter-eye: var(--screen); }
+
+/* Novedades: títulos de la hoja en mono, como los rótulos */
+:where([data-look="industrial"]) .news-item h3 { font-family: var(--mono); font-size: 13px; font-weight: 400; text-transform: uppercase; letter-spacing: .06em; }

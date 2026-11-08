@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Entity, SavedFilter, Setting, Task } from '../types';
+import type { Entity, SavedFilter, Setting, Task, TodoList } from '../types';
 
 export interface MetaRow {
   key: string;
@@ -13,6 +13,7 @@ export class ListaDB extends Dexie {
   declare people: Table<Entity, string>;
   declare filters: Table<SavedFilter, string>;
   declare settings: Table<Setting, string>;
+  declare lists: Table<TodoList, string>;
   declare meta: Table<MetaRow, string>;
 
   constructor(name = 'lista') {
@@ -43,5 +44,7 @@ export class ListaDB extends Dexie {
           .modify((r: { deleted?: unknown }) => { r.deleted = r.deleted ? 1 : 0; });
       }
     });
+    // Listas (docs/plan-listas.md). Sin migración de tareas: las existentes van a la principal (listId null).
+    this.version(5).stores({ lists: 'id, dirty, deleted' });
   }
 }

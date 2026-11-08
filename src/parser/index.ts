@@ -2,7 +2,7 @@ import type {
   ActiveToken, ISODate, ParsedLine, ParsedToken, Period, Priority, Recurrence, TokenType,
 } from '../types';
 import { diffDays, fromISODate, toISODate, todayISO } from '../lib/date';
-import { normalizeKey } from '../lib/text';
+import { listKey, normalizeKey } from '../lib/text';
 import { firstOccurrence } from '../lib/recurrence';
 import { parsePeriodToken, periodToken } from '../lib/period';
 import { MASK, foldText, parseSpanishDate } from './dates';
@@ -32,6 +32,13 @@ function explicitDue(v: string, today: ISODate): ISODate | null {
     if (cand >= today) return cand;
   }
   return null;
+}
+
+/** Listas que existen (listKey). Estado global, como el idioma: la app lo fija con setKnownLists y así
+ *  parseLine conserva su firma. Sin listas conocidas, /palabra nunca es una lista. */
+let knownLists = new Set<string>();
+export function setKnownLists(keys: string[]): void {
+  knownLists = new Set(keys.map(listKey));
 }
 
 const unique = (names: string[]) => {
@@ -65,6 +72,16 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
     const start = m.index!;
     (m[1] === '#' ? topicNames : personNames).push(m[2]);
     take(m[1] === '#' ? 'topic' : 'person', start, start + m[0].length);
+  }
+
+  // /lista: solo si la lista existe, y solo al inicio de palabra (así 15/11, y/o o las URL no cambian).
+  // Va antes de las fechas: una lista «viernes» no es el viernes. Si hay varias, gana la última.
+  let list: string | null = null;
+  for (const m of w.matchAll(/(?<!\S)\/([\p{L}\p{N}_-]+)/gu)) {
+    const key = listKey(m[1]);
+    if (!knownLists.has(key)) continue; // una /palabra desconocida se queda como texto
+    list = key;
+    take('list', m.index!, m.index! + m[0].length);
   }
 
   let priority: Priority | null = null;
@@ -112,6 +129,7 @@ export function parseLine(line: string, now: Date = new Date()): ParsedLine {
     priority,
     recurrence,
     isSubtask,
+    list,
     tokens: tokens.sort((a, b) => a.start - b.start),
   };
 }
@@ -141,15 +159,16 @@ export function parseBlock(text: string, now: Date = new Date()): ParsedLine[] {
   return out;
 }
 
-/** Token de tema/persona bajo el cursor (para autocompletar). */
+/** Token de tema/persona/lista bajo el cursor (para autocompletar). */
 export function activeToken(text: string, caret: number): ActiveToken | null {
   const end = Math.min(Math.max(caret, 0), text.length);
   let i = end;
   while (i > 0 && isWordChar(text[i - 1])) i--;
   const sym = text[i - 1];
-  if (sym !== '#' && sym !== '@') return null;
-  if (i >= 2 && !/[\s<]/.test(text[i - 2])) return null;
-  return { type: sym === '#' ? 'topic' : 'person', prefix: text.slice(i, end), start: i - 1, end };
+  if (sym !== '#' && sym !== '@' && sym !== '/') return null;
+  if (i >= 2 && !/[\s<]/.test(text[i - 2])) return null; // 15/ no activa nada
+  const type = sym === '#' ? 'topic' : sym === '@' ? 'person' : 'list';
+  return { type, prefix: text.slice(i, end), start: i - 1, end };
 }
 
 /** #tema / @persona escritos dentro de un texto, con su posición (mismas reglas que parseLine). */
@@ -159,7 +178,8 @@ export function inlineTags(text: string): Array<{ sym: '#' | '@'; name: string; 
   }));
 }
 
-/** Línea canónica que vuelve a parsearse al mismo resultado. */
+/** Línea canónica que vuelve a parsearse al mismo resultado.
+ *  No incluye la lista (ParsedLine.list): al editar, no escribir /lista significa «no cambiar de lista». */
 export function formatLine(t: {
   title: string;
   topicNames: string[];

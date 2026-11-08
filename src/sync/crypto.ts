@@ -4,7 +4,7 @@ import { tr } from '../i18n';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
-const KINDS: readonly SyncKind[] = ['task', 'topic', 'person', 'filter', 'setting'];
+const KINDS: readonly SyncKind[] = ['task', 'topic', 'person', 'filter', 'setting', 'list'];
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 /** Error al descifrar una fila: manipulada, de otra clave o mal formada. */

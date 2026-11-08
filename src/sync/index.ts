@@ -83,7 +83,7 @@ const dkKey = (userId: string): string => `dk:${userId}`; // DK en base64
 const migKey = (userId: string): string => `encmig:${userId}`; // true mientras la migración no esté verificada
 
 /** Kinds que viajan en claro (versiones antiguas de la app o migración pendiente). */
-const PLAIN_KINDS: readonly SyncKind[] = ['task', 'topic', 'person', 'filter', 'setting'];
+const PLAIN_KINDS: readonly SyncKind[] = ['task', 'topic', 'person', 'filter', 'setting', 'list'];
 
 /** Protocolo de enlace en curso: B (dispositivo nuevo, 'new') o A (activado, 'active'). */
 type LinkCtx = { role: 'new'; st: BState } | { role: 'active'; st: AState };

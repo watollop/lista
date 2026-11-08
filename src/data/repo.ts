@@ -13,8 +13,10 @@ import type {
   SyncKind,
   SyncRec,
   Task,
+  TodoList,
 } from '../types';
-import { normalizeKey } from '../lib/text';
+import { MAIN_LIST } from '../types';
+import { listKey, normalizeKey } from '../lib/text';
 import { nextOccurrence } from '../lib/recurrence';
 import { addDays, diffDays, todayISO } from '../lib/date';
 import { retagTitle } from '../parser/retag';
@@ -30,6 +32,14 @@ function stamp(after = 0): number {
 }
 
 const live = <T extends SyncRec>(rows: T[]): T[] => rows.filter((r) => r.deleted === 0);
+
+/** Lista principal por defecto. No tiene registro hasta que se renombra: así no se sincroniza un nombre por defecto. */
+function defaultMainList(): TodoList {
+  return { id: MAIN_LIST, name: tr('Personal', 'Personal'), order: 0, updatedAt: 0, deleted: 0, dirty: 0 };
+}
+
+/** listId tal y como se guarda en una tarea: null para la principal. */
+const storedListId = (listId: ID | null | undefined): ID | null => (!listId || listId === MAIN_LIST ? null : listId);
 
 /** Máximo order entre hermanos vivos + 1. */
 function nextOrder(rows: Task[], parentId: ID | null): number {
@@ -145,7 +155,7 @@ export function createRepo(dbName = 'lista'): Repo {
   };
   if (channel) channel.onmessage = () => emit();
 
-  const allTables = [db.tasks, db.topics, db.people, db.filters, db.settings] as const;
+  const allTables = [db.tasks, db.topics, db.people, db.filters, db.settings, db.lists] as const;
   const tableOf = (kind: EntityKind) => (kind === 'topic' ? db.topics : db.people);
 
   const childrenOf = async (id: ID) => live(await db.tasks.where('parentId').equals(id).toArray());
@@ -201,10 +211,51 @@ export function createRepo(dbName = 'lista'): Repo {
     return changeDone(parent, done, now);
   }
 
+  /** Listas vivas: la principal primero (con su nombre por defecto si no tiene registro) y luego por order. */
+  async function liveListsSorted(): Promise<TodoList[]> {
+    const stored = await db.lists.get(MAIN_LIST);
+    const main = stored && stored.deleted === 0 ? stored : defaultMainList();
+    const others = live(await db.lists.toArray()).filter((l) => l.id !== MAIN_LIST).sort((a, b) => a.order - b.order);
+    return [main, ...others];
+  }
+
+  /** Nombre limpio de una lista. Lanza si está vacío o si su clave ya es la de otra lista viva (exceptId se excluye). */
+  async function checkListName(raw: string, exceptId: ID): Promise<string> {
+    const name = raw.trim();
+    const key = listKey(name);
+    if (!name || !key) throw new Error(tr('Escribe un nombre para la lista.', 'Write a name for the list.'));
+    const other = (await liveListsSorted()).find((l) => l.id !== exceptId && listKey(l.name) === key);
+    if (other) throw new Error(tr(`Ya hay una lista «${other.name}».`, `There’s already a list “${other.name}”.`));
+    return name;
+  }
+
+  /** Pone la familia de `top` (la tarea y todas sus subtareas) en la lista `target` (null = principal).
+   *  También las subtareas borradas: si se deshace su borrado, vuelven a la lista de su principal.
+   *  Devuelve las listas anteriores de las tareas que cambian; vacío si ya estaban ahí (no escribe nada). */
+  async function moveFamily(top: Task, target: ID | null, now: number): Promise<{ id: ID; listId: ID | null }[]> {
+    const family = [top, ...(await db.tasks.where('parentId').equals(top.id).toArray())];
+    const moves = family.filter((t) => (t.listId ?? null) !== target);
+    if (!moves.length) return [];
+    await db.tasks.bulkPut(moves.map((t) => ({ ...t, listId: target, updatedAt: now, dirty: 1 as const })));
+    return moves.map((t) => ({ id: t.id, listId: t.listId ?? null }));
+  }
+
   async function reconcileFamilies(): Promise<void> {
     const rows = await db.tasks.toArray();
     const now = stamp(rows.reduce((max, t) => Math.max(max, t.updatedAt), 0));
-    const parents = new Set(live(rows).map((t) => t.parentId).filter((id) => id !== null));
+    // Una subtarea va siempre en la lista de su principal: un remoto de otro dispositivo puede haberlas separado.
+    // Gana la principal (la familia se mueve entera en moveToList).
+    const liveRows = live(rows);
+    const tops = new Map(liveRows.filter((t) => t.parentId === null).map((t) => [t.id, t] as const));
+    const misplaced: Task[] = [];
+    for (const t of liveRows) {
+      const top = t.parentId === null ? undefined : tops.get(t.parentId);
+      if (top && (t.listId ?? null) !== (top.listId ?? null)) {
+        misplaced.push({ ...t, listId: top.listId ?? null, updatedAt: now, dirty: 1 });
+      }
+    }
+    if (misplaced.length) await db.tasks.bulkPut(misplaced);
+    const parents = new Set(liveRows.map((t) => t.parentId).filter((id) => id !== null));
     for (const id of parents) await reconcileParent(id, now);
   }
 
@@ -250,9 +301,14 @@ export function createRepo(dbName = 'lista'): Repo {
       return (await db.filters.where('deleted').equals(0).toArray()).sort((a, b) => a.order - b.order);
     },
 
-    async addParsed(lines, defaultParentId = null) {
+    async addParsed(lines, defaultParentId = null, listId) {
       const created = await db.transaction('rw', allTables, async () => {
         const now = stamp();
+        const lists = await liveListsSorted();
+        if (listId && !lists.some((l) => l.id === listId)) throw new Error(tr('Lista no encontrada', 'List not found'));
+        // Clave de cada lista viva (la principal, con su nombre efectivo) → id
+        const idByKey = new Map<string, ID>();
+        for (const l of lists) if (!idByKey.has(listKey(l.name))) idByKey.set(listKey(l.name), l.id);
         const rows = await db.tasks.toArray();
         let defaultParent: ID | null = null;
         if (defaultParentId) {
@@ -267,6 +323,12 @@ export function createRepo(dbName = 'lista'): Repo {
           const fields = fieldsFromLine(line);
           if (!fields.title) continue;
           const parentId: ID | null = line.isSubtask ? (lastTop ?? defaultParent) : null;
+          // Lista de una principal: la indicada con /nombre, si no la del lote, si no la principal.
+          // Una subtarea va siempre en la lista de su principal.
+          const fromLine = line.list ? idByKey.get(line.list) : undefined;
+          const taskListId = parentId
+            ? (rows.find((t) => t.id === parentId)?.listId ?? null)
+            : storedListId(fromLine ?? listId);
           const topics = await ensureEntities(db.topics, line.topics, now);
           const people = await ensureEntities(db.people, line.people, now);
           const task: Task = {
@@ -275,6 +337,7 @@ export function createRepo(dbName = 'lista'): Repo {
             topics,
             people,
             parentId,
+            listId: taskListId,
             done: 0,
             doneAt: null,
             nextId: null,
@@ -305,7 +368,14 @@ export function createRepo(dbName = 'lista'): Repo {
         if (!fields.title) throw new Error(tr('El título no puede estar vacío', 'The title can’t be empty'));
         const topics = await ensureEntities(db.topics, line.topics, now);
         const people = await ensureEntities(db.people, line.people, now);
-        const next: Task = { ...task, ...fields, topics, people, updatedAt: now, dirty: 1 };
+        // Lista escrita con /nombre distinta de la actual: la familia entera se mueve a ella. Sin lista, no cambia.
+        if (line.list) {
+          const target = (await liveListsSorted()).find((l) => listKey(l.name) === line.list);
+          const top = task.parentId ? await db.tasks.get(task.parentId) : undefined;
+          if (target) await moveFamily(top && top.deleted === 0 ? top : task, storedListId(target.id), now);
+        }
+        const current = (await db.tasks.get(id)) ?? task;
+        const next: Task = { ...current, ...fields, topics, people, updatedAt: now, dirty: 1 };
         await db.tasks.put(next);
         return next;
       });
@@ -451,6 +521,94 @@ export function createRepo(dbName = 'lista'): Repo {
       if (changed) notify();
     },
 
+    async listLists() {
+      return liveListsSorted();
+    },
+
+    async createList(name) {
+      const created = await db.transaction('rw', db.lists, async () => {
+        const now = stamp();
+        const clean = await checkListName(name, '');
+        const rows = await liveListsSorted();
+        const max = rows.reduce((m, l) => Math.max(m, l.order), 0);
+        const list: TodoList = { id: crypto.randomUUID(), name: clean, order: max + 1, updatedAt: now, deleted: 0, dirty: 1 };
+        await db.lists.put(list);
+        return list;
+      });
+      notify();
+      return created;
+    },
+
+    async renameList(id, name) {
+      const renamed = await db.transaction('rw', db.lists, async () => {
+        const now = stamp();
+        const current = await db.lists.get(id);
+        const base = id === MAIN_LIST ? (current && current.deleted === 0 ? current : defaultMainList()) : current;
+        if (!base || base.deleted === 1) throw new Error(tr('Lista no encontrada', 'List not found'));
+        const clean = await checkListName(name, id);
+        const next: TodoList = { ...base, name: clean, updatedAt: now, dirty: 1 };
+        await db.lists.put(next);
+        return next;
+      });
+      notify();
+      return renamed;
+    },
+
+    async deleteList(id) {
+      if (id === MAIN_LIST) throw new Error(tr('La lista principal no se puede borrar.', 'The main list can’t be deleted.'));
+      const result = await db.transaction('rw', allTables, async () => {
+        const now = stamp();
+        const list = await db.lists.get(id);
+        if (!list || list.deleted === 1) throw new Error(tr('Lista no encontrada', 'List not found'));
+        // Solo las vivas: las que ya estaban borradas no entran en esta operación y no se restauran.
+        const victims = live(await db.tasks.toArray()).filter((t) => t.listId === id);
+        await db.tasks.bulkPut(victims.map((t) => ({ ...t, deleted: 1 as const, dirty: 1 as const, updatedAt: now })));
+        await db.lists.put({ ...list, deleted: 1, dirty: 1, updatedAt: now });
+        const victimIds = victims.map((t) => t.id);
+        const undo = async () => {
+          await db.transaction('rw', allTables, async () => {
+            const t = stamp();
+            await checkListName(list.name, id);
+            await db.lists.put({ ...list, deleted: 0, dirty: 1, updatedAt: t });
+            for (const taskId of victimIds) {
+              const cur = await db.tasks.get(taskId);
+              if (cur && cur.deleted === 1) await db.tasks.put({ ...cur, deleted: 0, dirty: 1, updatedAt: t });
+            }
+          });
+          notify();
+        };
+        return { tasks: victims.filter((t) => !t.parentId).length, undo };
+      });
+      notify();
+      return result;
+    },
+
+    async moveToList(id, listId) {
+      const undo = await db.transaction('rw', allTables, async () => {
+        const now = stamp();
+        const task = await db.tasks.get(id);
+        if (!task || task.deleted === 1) throw new Error(tr('Tarea no encontrada', 'Task not found'));
+        if (!(await liveListsSorted()).some((l) => l.id === listId)) throw new Error(tr('Lista no encontrada', 'List not found'));
+        const parent = task.parentId ? await db.tasks.get(task.parentId) : undefined;
+        const top = parent && parent.deleted === 0 ? parent : task;
+        const prev = await moveFamily(top, storedListId(listId), now);
+        if (!prev.length) return null;
+        return async () => {
+          await db.transaction('rw', allTables, async () => {
+            const t = stamp();
+            for (const p of prev) {
+              const cur = await db.tasks.get(p.id);
+              if (cur && cur.deleted === 0) await db.tasks.put({ ...cur, listId: p.listId, updatedAt: t, dirty: 1 });
+            }
+          });
+          notify();
+        };
+      });
+      if (!undo) return { undo: async () => {} };
+      notify();
+      return { undo };
+    },
+
     async renameEntity(kind, key, newName) {
       const name = newName.trim().replace(/^[#@]/, '').trim();
       if (!name) throw new Error(tr('Nombre vacío', 'Empty name'));
@@ -509,17 +667,18 @@ export function createRepo(dbName = 'lista'): Repo {
     },
 
     async exportBackup(): Promise<Backup> {
-      const [tasks, topics, people, filters] = await db.transaction('r', allTables, async () =>
-        Promise.all([db.tasks.toArray(), db.topics.toArray(), db.people.toArray(), db.filters.toArray()]),
+      const [tasks, topics, people, filters, lists] = await db.transaction('r', allTables, async () =>
+        Promise.all([db.tasks.toArray(), db.topics.toArray(), db.people.toArray(), db.filters.toArray(), db.lists.toArray()]),
       );
       return {
         app: 'lista',
-        version: 1,
+        version: 2,
         exportedAt: Date.now(),
         tasks: live(tasks),
         topics: live(topics),
         people: live(people),
         filters: live(filters),
+        lists: live(lists),
       };
     },
 
@@ -528,12 +687,13 @@ export function createRepo(dbName = 'lista'): Repo {
         const { dirty: _dirty, ...rest } = r;
         return rest as T;
       };
-      const [tasks, topics, people, filters, settings] = await Promise.all([
+      const [tasks, topics, people, filters, settings, lists] = await Promise.all([
         db.tasks.where('dirty').equals(1).toArray(),
         db.topics.where('dirty').equals(1).toArray(),
         db.people.where('dirty').equals(1).toArray(),
         db.filters.where('dirty').equals(1).toArray(),
         db.settings.where('dirty').equals(1).toArray(),
+        db.lists.where('dirty').equals(1).toArray(),
       ]);
       const items: RemoteItem[] = [];
       for (const t of tasks)
@@ -546,6 +706,8 @@ export function createRepo(dbName = 'lista'): Repo {
         items.push({ kind: 'filter', id: f.id, data: strip(f), updated_at: f.updatedAt, deleted: f.deleted === 1 });
       for (const s of settings)
         items.push({ kind: 'setting', id: s.key, data: strip(s), updated_at: s.updatedAt, deleted: s.deleted === 1 });
+      for (const l of lists)
+        items.push({ kind: 'list', id: l.id, data: strip(l), updated_at: l.updatedAt, deleted: l.deleted === 1 });
       return items;
     },
 
@@ -567,6 +729,9 @@ export function createRepo(dbName = 'lista'): Repo {
               break;
             case 'setting':
               await markOne(db.settings, it.id, it.updated_at);
+              break;
+            case 'list':
+              await markOne(db.lists, it.id, it.updated_at);
               break;
           }
         }
@@ -595,9 +760,10 @@ export function createRepo(dbName = 'lista'): Repo {
     // setSetting(..., 'initialize'), y apenas ocupan espacio.
     async purgeTombstones(olderThanMs) {
       const cutoff = Date.now() - olderThanMs;
-      return db.transaction('rw', [db.tasks, db.topics, db.people, db.filters], async () =>
+      return db.transaction('rw', [db.tasks, db.topics, db.people, db.filters, db.lists], async () =>
         (await purgeOne(db.tasks, cutoff)) + (await purgeOne(db.topics, cutoff)) +
-        (await purgeOne(db.people, cutoff)) + (await purgeOne(db.filters, cutoff)),
+        (await purgeOne(db.people, cutoff)) + (await purgeOne(db.filters, cutoff)) +
+        (await purgeOne(db.lists, cutoff)),
       );
     },
 
@@ -609,6 +775,7 @@ export function createRepo(dbName = 'lista'): Repo {
         await db.people.toCollection().modify({ dirty: 1 });
         await db.filters.toCollection().modify({ dirty: 1 });
         await db.settings.toCollection().modify({ dirty: 1 });
+        await db.lists.toCollection().modify({ dirty: 1 });
       });
     },
 
@@ -630,6 +797,9 @@ export function createRepo(dbName = 'lista'): Repo {
               break;
             case 'setting':
               await db.settings.update(ref.id, { dirty: 1 });
+              break;
+            case 'list':
+              await db.lists.update(ref.id, { dirty: 1 });
               break;
           }
         }
@@ -689,6 +859,8 @@ export function createRepo(dbName = 'lista'): Repo {
         return applyOne(db.people, it);
       case 'filter':
         return applyOne(db.filters, it);
+      case 'list':
+        return applyOne(db.lists, it);
       case 'setting': {
         const data = it.data;
         if (!data || typeof data !== 'object' || !('key' in data) || data.key !== it.id || !('value' in data) ||
