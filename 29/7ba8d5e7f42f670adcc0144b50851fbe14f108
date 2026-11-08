@@ -1,0 +1,31 @@
+docs/plan-listas.md
+  s_1a113f72a038c4::t_8846a384b4ba39 136
+src/sync/listcrypto.test.ts
+  s_1a113f72a038c4::t_86e1ebbd093aea 1-283
+src/sync/listcrypto.ts
+  s_67c4eac07938af::t_06692a886bf5a5 1-240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "297ba8d5e7f42f670adcc0144b50851fbe14f108",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_67c4eac07938af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8544dd480697bb5",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
