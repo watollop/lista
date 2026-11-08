@@ -6,6 +6,12 @@ import { lang } from '../i18n';
 /** Bloques de la lista donde se puede soltar una tarea arrastrada (Vencidas no: no se mueve al pasado). */
 export type DropTarget = 'today' | 'tomorrow' | 'week' | 'next' | 'nodate';
 
+/** Lista de la barra lateral donde se suelta una tarea para moverla a ella (data-drop="list:<id>"). */
+export type ListDrop = `list:${string}`;
+export const listDrop = (id: string): ListDrop => `list:${id}`;
+/** Id de la lista si el destino es una lista; null si es un bloque de fecha. */
+export const listOfDrop = (t: DropTarget | ListDrop): string | null => (t.startsWith('list:') ? t.slice(5) : null);
+
 export const dropLabel = (t: DropTarget) => (lang() === 'en'
   ? { today: 'Today', tomorrow: 'Tomorrow', week: 'This week', next: 'Upcoming', nodate: 'No date' }
   : { today: 'Hoy', tomorrow: 'Mañana', week: 'Esta semana', next: 'Próximas', nodate: 'Sin fecha' })[t];

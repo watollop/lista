@@ -8,7 +8,7 @@ import { splitLinks } from '../lib/links';
 import { addToAppleCalendar, addToCalendar, addToGoogleCalendar, prefersApple } from './calendar';
 import { addDays } from '../lib/date';
 import { useDrag, dragging } from './drag';
-import type { DropTarget } from '../lib/reschedule';
+import type { DropTarget, ListDrop } from '../lib/reschedule';
 import { SubtaskInputs } from './SubtaskInputs';
 import { titleTooLong, titleTooLongMsg } from '../lib/capture';
 import { isEn, tr } from '../i18n';
@@ -30,7 +30,7 @@ interface Props {
   doneToday: Set<ID>; // completadas hoy: se quedan en su sitio hasta que cambia el día
   pastMode: boolean; // vista de pendientes: las completadas antes de hoy van a "Pasadas", arriba
   anchorKey: string; // al cambiar (filtro), se vuelve a colocar la vista en el presente
-  onMove: (id: ID, target: DropTarget) => void; // tarea arrastrada a otro bloque
+  onMove: (id: ID, target: DropTarget | ListDrop) => void; // tarea arrastrada a otro bloque o a una lista de la barra
   onAddSubtasks: (id: ID, lines: ParsedLine[]) => Promise<void>;
 }
 
