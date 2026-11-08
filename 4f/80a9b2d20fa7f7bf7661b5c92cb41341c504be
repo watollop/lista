@@ -1,0 +1,45 @@
+docs/plan-listas.md
+  s_1a113f72a038c4::t_9fd8727bbb6007 114-171,208,217-222
+src/sync/fakeSupabase.test.ts
+  s_1a113f72a038c4::t_2742c046f643b9 1-494
+src/sync/fakeSupabase.ts
+  s_1a113f72a038c4::t_c95ae8e2c56eaf 1-738
+src/sync/index.ts
+  s_1a113f72a038c4::t_7cb55e8629b9a9 6,9-10,58-73,77,85-86,278-281,283-284,297-298,301-309,388-389,404-407,985-1070,1095-1103
+src/sync/listcrypto.ts
+  s_1a113f72a038c4::t_0d44ed9407c5bd 9,11-12
+src/sync/shared.test.ts
+  s_1a113f72a038c4::t_ff2a2e445d3df5 1-387
+src/sync/shared.ts
+  s_1a113f72a038c4::t_0833f039110ec4 1-363
+src/types.ts
+  s_1a113f72a038c4::t_495d4a0b61809a 47,49-68,288-289,293-294,296-310,400-421
+src/data/repo.ts
+  s_4ca722ffd8b620::t_7d09887adfeacb 8,145-153,242-255,257-284,291-292,295-300,304-307,426-427,431-434,436,608-612,626,651,658-663,666-673,678-773,776,909,1019-1082,1094
+src/data/shared.test.ts
+  s_4ca722ffd8b620::t_7d855e156b4b91 1-445
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4f80a9b2d20fa7f7bf7661b5c92cb41341c504be",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_4ca722ffd8b620": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a59f0295e5cbac4aa",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
