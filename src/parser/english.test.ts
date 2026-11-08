@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { setLangForTests } from '../i18n';
-import { formatDue, formatLine, formatRecurrence, parseLine } from './index';
+import { formatDue, formatLine, formatRecurrence, parseLine, setKnownLists } from './index';
 import { formatPeriod } from '../lib/period';
 
 // Lunes 2 de noviembre de 2026.
@@ -81,5 +81,18 @@ describe('intérprete en inglés', () => {
     expect(p('Preparar la daily').recurrence).toBeNull();
     expect(p('x tomorrow').due).toBeNull();
     setLangForTests('en');
+  });
+});
+
+describe('listas en inglés', () => {
+  beforeAll(() => setLangForTests('en'));
+  afterAll(() => setLangForTests('es'));
+  afterEach(() => setKnownLists([]));
+
+  it('/lista funciona igual, y una lista llamada como un día no es fecha', () => {
+    setKnownLists(['work', 'friday']);
+    expect(p('Call Ana /work')).toMatchObject({ title: 'Call Ana', list: 'work', due: null });
+    expect(p('Call Ana /friday')).toMatchObject({ title: 'Call Ana', list: 'friday', due: null });
+    expect(p('Call Ana on friday').due).toBe('2026-11-06');
   });
 });

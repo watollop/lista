@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { parseLine, parseBlock, activeToken, formatLine, formatDue, formatRecurrence, normalizeKey } from './index';
+import { afterEach, describe, it, expect } from 'vitest';
+import { parseLine, parseBlock, activeToken, formatLine, formatDue, formatRecurrence, normalizeKey, setKnownLists } from './index';
 import { parseSpanishDate } from './dates';
 
 // Martes 27 oct 2026
@@ -482,5 +482,75 @@ describe('formatRecurrence', () => {
 describe('normalizeKey re-exportado', () => {
   it('es la misma función de lib/text', () => {
     expect(normalizeKey(' Áurea ')).toBe('aurea');
+  });
+});
+
+describe('listas: /nombre', () => {
+  afterEach(() => setKnownLists([]));
+
+  it('una lista desconocida queda como texto', () => {
+    const l = parseLine('Leche /compra', now);
+    expect(l).toMatchObject({ title: 'Leche /compra', list: null, tokens: [] });
+  });
+
+  it('una lista conocida se reconoce, sale del título y list es la clave', () => {
+    setKnownLists(['compra']);
+    const l = parseLine('Leche /compra', now);
+    expect(l).toMatchObject({ title: 'Leche', list: 'compra' });
+    expect(l.tokens).toEqual([{ type: 'list', text: '/compra', start: 6, end: 13 }]);
+  });
+
+  it('setKnownLists guarda listKey: tildes, mayúsculas, espacios y guiones', () => {
+    setKnownLists(['La compra']);
+    expect(parseLine('Leche /La-compra', now)).toMatchObject({ title: 'Leche', list: 'lacompra' });
+    expect(parseLine('Leche /lacompra', now)).toMatchObject({ title: 'Leche', list: 'lacompra' });
+    expect(parseLine('Leche /LA-COMPRÁ', now)).toMatchObject({ title: 'Leche', list: 'lacompra' });
+  });
+
+  it('gana la última, y todas salen del título', () => {
+    setKnownLists(['compra', 'trabajo']);
+    expect(parseLine('Leche /compra /trabajo', now)).toMatchObject({ title: 'Leche', list: 'trabajo' });
+  });
+
+  it('una lista sin token de lista no cambia nada', () => {
+    setKnownLists(['compra']);
+    expect(parseLine('Leche', now).list).toBeNull();
+  });
+
+  it('15/11 sigue siendo fecha aunque exista una lista con ese nombre', () => {
+    setKnownLists(['11', 'compra']);
+    expect(parseLine('Pagar 15/11', now)).toMatchObject({ title: 'Pagar', due: '2026-11-15', list: null });
+    expect(parseLine('Pagar vence:15/11', now).due).toBe('2026-11-15');
+  });
+
+  it('y/o, km/h y URL no son listas aunque existan', () => {
+    setKnownLists(['o', 'h', 'compra']);
+    expect(parseLine('Pan y/o leche', now)).toMatchObject({ title: 'Pan y/o leche', list: null });
+    expect(parseLine('Correr 10 km/h', now)).toMatchObject({ title: 'Correr 10 km/h', list: null });
+    expect(parseLine('Mira https://a.com/compra', now)).toMatchObject({ title: 'Mira https://a.com/compra', list: null });
+  });
+
+  it('una lista llamada «viernes» no es la fecha', () => {
+    setKnownLists(['viernes']);
+    expect(parseLine('Cita /viernes', now)).toMatchObject({ title: 'Cita', list: 'viernes', due: null });
+    expect(parseLine('Cita el viernes', now).due).toBe('2026-10-30');
+  });
+
+  it('con subtareas (<) cada segmento puede tener su lista', () => {
+    setKnownLists(['compra', 'trabajo']);
+    const [a, b, c] = parseBlock('Leche /compra <Informe /trabajo <Huevos', now);
+    expect([a, b, c].map((l) => [l.title, l.list])).toEqual([['Leche', 'compra'], ['Informe', 'trabajo'], ['Huevos', null]]);
+    expect(b.isSubtask).toBe(true);
+  });
+
+  it('activeToken con / al inicio, tras espacio y tras <', () => {
+    expect(activeToken('/com', 4)).toEqual({ type: 'list', prefix: 'com', start: 0, end: 4 });
+    expect(activeToken('Leche /', 7)).toEqual({ type: 'list', prefix: '', start: 6, end: 7 });
+    expect(activeToken('Tarea</co', 9)).toEqual({ type: 'list', prefix: 'co', start: 6, end: 9 });
+  });
+
+  it('activeToken no se activa en 15/ ni en y/o', () => {
+    expect(activeToken('Pagar 15/', 9)).toBeNull();
+    expect(activeToken('Pan y/', 6)).toBeNull();
   });
 });

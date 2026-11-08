@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Entity, Repo, SavedFilter, Sync, SyncState, Task } from '../types';
+import type { Entity, Repo, SavedFilter, Sync, SyncState, Task, TodoList } from '../types';
 import { todayISO } from '../lib/date';
 
 export interface Data {
@@ -7,12 +7,13 @@ export interface Data {
   topics: Entity[];
   people: Entity[];
   filters: SavedFilter[];
+  lists: TodoList[]; // la principal primero (ver Repo.listLists)
   ready: boolean;
 }
 
 /** Carga todo y recarga en cada escritura (local, remota o de otra pestaña). */
 export function useData(repo: Repo): Data {
-  const [data, setData] = useState<Data>({ tasks: [], topics: [], people: [], filters: [], ready: false });
+  const [data, setData] = useState<Data>({ tasks: [], topics: [], people: [], filters: [], lists: [], ready: false });
   useEffect(() => {
     let alive = true;
     let queued = false;
@@ -21,10 +22,10 @@ export function useData(repo: Repo): Data {
       queued = true;
       await Promise.resolve();
       queued = false;
-      const [tasks, topics, people, filters] = await Promise.all([
-        repo.listTasks(), repo.listTopics(), repo.listPeople(), repo.listFilters(),
+      const [tasks, topics, people, filters, lists] = await Promise.all([
+        repo.listTasks(), repo.listTopics(), repo.listPeople(), repo.listFilters(), repo.listLists(),
       ]);
-      if (alive) setData({ tasks, topics, people, filters, ready: true });
+      if (alive) setData({ tasks, topics, people, filters, lists, ready: true });
     };
     load();
     const off = repo.subscribe(load);

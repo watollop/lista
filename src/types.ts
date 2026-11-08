@@ -33,7 +33,23 @@ export interface Task extends SyncRec {
   nextId: ID | null; // ocurrencia creada al completar una recurrente (para deshacer)
   order: number; // orden manual dentro del grupo; menor primero
   createdAt: number;
+  /** Lista a la que pertenece. null o ausente = la principal (MAIN_LIST). Una subtarea siempre está en la lista
+   *  de su principal. Ver docs/plan-listas.md. */
+  listId?: ID | null;
 }
+
+/** Id de la lista principal. Sus tareas tienen listId null; solo tiene registro si se renombra. */
+export const MAIN_LIST = 'main';
+
+/** Lista de tareas (docs/plan-listas.md). La principal no se puede borrar y va siempre primero. */
+export interface TodoList extends SyncRec {
+  id: ID; // MAIN_LIST para la principal
+  name: string; // forma de visualización; dos listas no pueden normalizar al mismo listKey
+  order: number; // orden en el selector; menor primero (la principal va primero siempre)
+}
+
+/** Lista actual de la pantalla: una lista concreta o todas mezcladas. Se recuerda por dispositivo. */
+export type ListScope = ID | 'all';
 
 export type EntityKind = 'topic' | 'person';
 
@@ -74,7 +90,7 @@ export interface SavedFilter extends SyncRec {
 
 // ---------- parser ----------
 
-export type TokenType = 'topic' | 'person' | 'date' | 'priority' | 'recurrence';
+export type TokenType = 'topic' | 'person' | 'date' | 'priority' | 'recurrence' | 'list';
 
 export interface ParsedToken {
   type: TokenType;
@@ -92,14 +108,17 @@ export interface ParsedLine {
   priority: Priority | null;
   recurrence: Recurrence | null;
   isSubtask: boolean; // empieza por '>', va indentada o es un segmento tras '<'
+  /** listKey de una lista existente escrita como /nombre (solo se reconocen las conocidas, ver setKnownLists).
+   *  null = no se indicó: la tarea va a la lista actual (o, al editar, no cambia de lista). */
+  list: string | null;
   tokens: ParsedToken[]; // ordenados por start
 }
 
 /** Token en edición bajo el cursor, para autocompletar. */
 export interface ActiveToken {
-  type: 'topic' | 'person';
-  prefix: string; // lo escrito tras '#'/'@'
-  start: number; // índice del '#'/'@'
+  type: 'topic' | 'person' | 'list';
+  prefix: string; // lo escrito tras '#'/'@'/'/'
+  start: number; // índice del '#'/'@'/'/'
   end: number;
 }
 
@@ -107,23 +126,24 @@ export interface ActiveToken {
 
 export interface Backup {
   app: 'lista';
-  version: 1;
+  version: 2; // 2: añade lists
   exportedAt: number;
   tasks: Task[];
   topics: Entity[];
   people: Entity[];
   filters: SavedFilter[];
+  lists: TodoList[];
 }
 
 // ---------- sync ----------
 
-export type SyncKind = 'task' | 'topic' | 'person' | 'filter' | 'setting';
+export type SyncKind = 'task' | 'topic' | 'person' | 'filter' | 'setting' | 'list';
 
 /** Registro tal y como viaja al/desde el servidor. */
 export interface RemoteItem {
   kind: SyncKind;
-  id: string; // Task.id, Entity.key o SavedFilter.id
-  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'> | Omit<Setting, 'dirty'>;
+  id: string; // Task.id, Entity.key, SavedFilter.id, Setting.key o TodoList.id
+  data: Omit<Task, 'dirty'> | Omit<Entity, 'dirty'> | Omit<SavedFilter, 'dirty'> | Omit<Setting, 'dirty'> | Omit<TodoList, 'dirty'>;
   updated_at: number;
   deleted: boolean;
 }
@@ -183,11 +203,16 @@ export interface Repo {
   listTopics(): Promise<Entity[]>; // no borradas, orden alfabético
   listPeople(): Promise<Entity[]>;
   listFilters(): Promise<SavedFilter[]>; // no borrados, por order
+  /** Listas vivas: la principal primero (con nombre por defecto si no tiene registro) y luego por order. */
+  listLists(): Promise<TodoList[]>;
 
   /** Crea tareas desde líneas parseadas. Una línea isSubtask cuelga de la última no-subtarea del lote
-   *  o, si no hay, de defaultParentId (si es null se crea como tarea normal). Crea Topic/Person si no existen. */
-  addParsed(lines: ParsedLine[], defaultParentId?: ID | null): Promise<Task[]>;
-  /** Sustituye título/tokens de una tarea existente con una línea parseada (edición). */
+   *  o, si no hay, de defaultParentId (si es null se crea como tarea normal). Crea Topic/Person si no existen.
+   *  Lista de cada tarea principal: la de su `line.list` si existe; si no, listId (por defecto la principal).
+   *  Las subtareas van siempre a la lista de su principal. */
+  addParsed(lines: ParsedLine[], defaultParentId?: ID | null, listId?: ID): Promise<Task[]>;
+  /** Sustituye título/tokens de una tarea existente con una línea parseada (edición).
+   *  Si line.list indica otra lista existente, la tarea (con sus subtareas) se mueve a ella. */
   replaceParsed(id: ID, line: ParsedLine): Promise<Task>;
   updateTask(id: ID, patch: Partial<Omit<Task, 'id'>>): Promise<Task>;
   /** Alterna done; un padre cambia también sus subtareas en la misma transacción.
@@ -202,6 +227,17 @@ export interface Repo {
   saveFilter(name: string, filter: Filter): Promise<SavedFilter>;
   deleteFilter(id: ID): Promise<void>;
 
+  /** Crea una lista al final. Lanza Error si el nombre está vacío o su listKey coincide con otra lista viva. */
+  createList(name: string): Promise<TodoList>;
+  /** Renombra (también la principal, que entonces pasa a tener registro). Mismas reglas que createList. */
+  renameList(id: ID, name: string): Promise<TodoList>;
+  /** Borra una lista y todas sus tareas (tombstones) en una transacción. La principal no se puede borrar.
+   *  undo restaura la lista y solo las tareas que borró esta operación. */
+  deleteList(id: ID): Promise<{ tasks: number; undo: () => Promise<void> }>;
+  /** Mueve una tarea principal y sus subtareas a otra lista (una subtarea mueve a su familia entera).
+   *  undo la devuelve a la lista anterior. */
+  moveToList(id: ID, listId: ID): Promise<{ undo: () => Promise<void> }>;
+
   /** Renombra un tema/persona. Si el nuevo nombre normaliza a otra clave que ya existe, FUSIONA: sus tareas y
    *  filtros guardados pasan a esa clave y la antigua se borra (tombstone). Reescribe las etiquetas en el texto
    *  de las tareas (#viejo -> #nuevo). Mismo key (solo cambia mayúsculas/tildes): actualiza el nombre visible. */
@@ -212,10 +248,10 @@ export interface Repo {
 
   exportBackup(): Promise<Backup>;
   /** Borra físicamente, solo en local, los tombstones sincronizados (deleted=1, dirty=0) con updatedAt anterior a
-   *  now - olderThanMs, en tareas, temas, personas y filtros. Nunca toca pendientes ni vivos. No notifica
+   *  now - olderThanMs, en tareas, temas, personas, filtros y listas. Nunca toca pendientes ni vivos. No notifica
    *  (nada visible cambia). Devuelve cuántos registros borró. */
   purgeTombstones(olderThanMs: number): Promise<number>;
-  /** Borra todos los datos locales (tareas, temas, personas, filtros y metadatos de sync). */
+  /** Borra todos los datos locales (tareas, temas, personas, filtros, listas y metadatos de sync). */
   wipe(): Promise<void>;
 
   /** Preferencias que viajan con la cuenta. setSetting marca dirty y notifica; las remotas llegan por applyRemote. */
@@ -229,14 +265,14 @@ export interface Repo {
   markPushed(items: RemoteItem[]): Promise<void>;
   /** Aplica cambios remotos con LWW: solo si no existe o remote.updated_at > local.updatedAt. Quedan dirty=0. */
   applyRemote(items: RemoteItem[]): Promise<void>;
-  /** Marca dirty=1 TODOS los registros de tareas, temas, personas, filtros y preferencias, incluidos los
+  /** Marca dirty=1 TODOS los registros de tareas, temas, personas, filtros, listas y preferencias, incluidos los
    *  borrados (tombstones). No cambia updatedAt ni notifica. Lo usa la migración a cifrado. */
   markAllDirty(): Promise<void>;
   /** Marca dirty=1 solo los registros indicados (los que no existan se ignoran). No cambia updatedAt ni notifica. */
   markDirty(refs: { kind: SyncKind; id: string }[]): Promise<void>;
   getMeta<T = unknown>(key: string): Promise<T | undefined>;
   setMeta(key: string, value: unknown): Promise<void>;
-  /** Borra todos los datos locales de tareas, temas, personas, filtros, preferencias y metadatos (incl. la DK). */
+  /** Borra todos los datos locales de tareas, temas, personas, filtros, listas, preferencias y metadatos (incl. la DK). */
   clearAll(): Promise<void>;
 
   /** Notifica cualquier escritura (local o remota). Devuelve la función para desuscribirse. */

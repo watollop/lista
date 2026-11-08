@@ -16,6 +16,7 @@ function line(title: string, extra: Partial<ParsedLine> = {}): ParsedLine {
     recurrence: null,
     isSubtask: false,
     tokens: [],
+    list: null,
     ...extra,
   };
 }
@@ -683,7 +684,7 @@ describe('exportBackup', () => {
     await r.deleteTask(b.id);
     const bk = await r.exportBackup();
     expect(bk.app).toBe('lista');
-    expect(bk.version).toBe(1);
+    expect(bk.version).toBe(2);
     expect(bk.tasks.map((t) => t.id)).toEqual([a.id]);
   });
 });
@@ -935,5 +936,220 @@ describe('purga de tombstones y lecturas sin borrados', () => {
     expect(await r.listTasks()).toEqual([]);
     await r.applyRemote([{ kind: 'task', id: 't', data: task('t', { title: 'nueva' }), updated_at: Date.now(), deleted: false }]);
     expect((await r.listTasks()).map((t) => t.title)).toEqual(['nueva']);
+  });
+});
+
+describe('listas', () => {
+  const DAY = 864e5;
+  const titles = async (r: ReturnType<typeof newRepo>) => (await r.listTasks()).map((t) => t.title).sort();
+
+  it('la principal existe sin registro, se llama Personal y no se sincroniza', async () => {
+    const r = newRepo();
+    expect(await r.listLists()).toEqual([expect.objectContaining({ id: 'main', name: 'Personal', order: 0, deleted: 0 })]);
+    expect(await r.pendingChanges()).toEqual([]);
+    const [t] = await r.addParsed([line('sin lista')]);
+    expect(t.listId).toBeNull();
+  });
+
+  it('crear: recorta el nombre, valida y rechaza duplicados sin distinguir tildes ni espacios', async () => {
+    const r = newRepo();
+    const cb = vi.fn();
+    r.subscribe(cb);
+    const compra = await r.createList('  La compra ');
+    expect(compra).toMatchObject({ name: 'La compra', order: 1, dirty: 1, deleted: 0 });
+    expect(cb).toHaveBeenCalled();
+    expect((await r.listLists()).map((l) => l.name)).toEqual(['Personal', 'La compra']);
+    await expect(r.createList('   ')).rejects.toThrow('Escribe un nombre para la lista.');
+    await expect(r.createList('¡¡')).rejects.toThrow('Escribe un nombre para la lista.');
+    await expect(r.createList('lacompra')).rejects.toThrow('Ya hay una lista «La compra».');
+    await expect(r.createList('PERSONAL')).rejects.toThrow('Ya hay una lista «Personal».');
+    expect(await r.listLists()).toHaveLength(2);
+  });
+
+  it('renombrar la principal crea su registro; no puede chocar con otra lista ni renombrarse a vacío', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    await expect(r.renameList(compra.id, 'personal')).rejects.toThrow('Ya hay una lista «Personal».');
+    await expect(r.renameList(compra.id, ' ')).rejects.toThrow('Escribe un nombre para la lista.');
+    await expect(r.renameList('no-existe', 'X')).rejects.toThrow('Lista no encontrada');
+    const cb = vi.fn();
+    r.subscribe(cb);
+    const casa = await r.renameList('main', 'Casa');
+    expect(casa).toMatchObject({ id: 'main', name: 'Casa', order: 0, dirty: 1 });
+    expect(cb).toHaveBeenCalled();
+    expect((await r.listLists()).map((l) => l.name)).toEqual(['Casa', 'Compra']);
+    expect((await r.pendingChanges()).some((p) => p.kind === 'list' && p.id === 'main')).toBe(true);
+    await expect(r.renameList(compra.id, 'casa')).rejects.toThrow('Ya hay una lista «Casa».');
+  });
+
+  it('la principal no se borra y una lista no encontrada da error', async () => {
+    const r = newRepo();
+    await expect(r.deleteList('main')).rejects.toThrow('La lista principal no se puede borrar.');
+    await expect(r.deleteList('no-existe')).rejects.toThrow('Lista no encontrada');
+  });
+
+  it('borrar lista: tombstone de sus tareas y deshacer restaura solo las que borró', async () => {
+    const r = newRepo();
+    const trabajo = await r.createList('Trabajo');
+    const [tarea, sub] = await r.addParsed([line('Tarea', { list: 'trabajo' }), line('sub', { isSubtask: true })]);
+    const [e] = await r.addParsed([line('e')], null, trabajo.id);
+    const [d] = await r.addParsed([line('d')], null, trabajo.id);
+    await r.deleteTask(d.id);
+    await r.addParsed([line('en main')]);
+    const res = await r.deleteList(trabajo.id);
+    expect(res.tasks).toBe(2);
+    expect((await r.listLists()).map((l) => l.id)).toEqual(['main']);
+    expect(await titles(r)).toEqual(['en main']);
+    expect((await r.pendingChanges()).find((p) => p.id === trabajo.id)?.deleted).toBe(true);
+    await res.undo();
+    expect((await r.listLists()).map((l) => l.id)).toEqual(['main', trabajo.id]);
+    expect(await titles(r)).toEqual(['Tarea', 'e', 'en main', 'sub']);
+    const restored = (await r.listTasks()).map((t) => t.id);
+    expect(restored).toEqual(expect.arrayContaining([tarea.id, sub.id, e.id]));
+    expect(restored).not.toContain(d.id);
+    const pend = await r.pendingChanges();
+    expect(pend.find((p) => p.kind === 'task' && p.id === tarea.id)?.updated_at).toBeGreaterThan(tarea.updatedAt);
+  });
+
+  it('mover una familia a otra lista y deshacer la devuelve', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const [padre, hijo] = await r.addParsed([line('Padre'), line('Hijo', { isSubtask: true })]);
+    const { undo } = await r.moveToList(padre.id, compra.id);
+    expect((await r.listTasks()).map((t) => t.listId)).toEqual([compra.id, compra.id]);
+    await undo();
+    expect((await r.listTasks()).map((t) => t.listId ?? null)).toEqual([null, null]);
+    expect(hijo.parentId).toBe(padre.id);
+  });
+
+  it('mover desde una subtarea mueve la familia entera', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const [padre, hijo] = await r.addParsed([line('Padre'), line('Hijo', { isSubtask: true })]);
+    await r.moveToList(hijo.id, compra.id);
+    const byId = Object.fromEntries((await r.listTasks()).map((t) => [t.id, t]));
+    expect(byId[padre.id].listId).toBe(compra.id);
+    expect(byId[hijo.id].listId).toBe(compra.id);
+  });
+
+  it('mover a la misma lista no escribe nada; destino inexistente da error', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const [t] = await r.addParsed([line('t')], null, compra.id);
+    await r.markPushed(await r.pendingChanges());
+    const cb = vi.fn();
+    r.subscribe(cb);
+    await r.moveToList(t.id, compra.id);
+    expect(await r.pendingChanges()).toEqual([]);
+    expect(cb).not.toHaveBeenCalled();
+    await expect(r.moveToList(t.id, 'no-existe')).rejects.toThrow('Lista no encontrada');
+  });
+
+  it('addParsed usa la lista indicada con /nombre, si no listId, y si la clave no existe cae a listId', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const trabajo = await r.createList('Trabajo');
+    const [a, b, c] = await r.addParsed(
+      [line('a', { list: 'compra' }), line('b', { list: 'nohay' }), line('c')],
+      null,
+      trabajo.id,
+    );
+    expect(a.listId).toBe(compra.id);
+    expect(b.listId).toBe(trabajo.id);
+    expect(c.listId).toBe(trabajo.id);
+    const [d] = await r.addParsed([line('d', { list: 'personal' })], null, compra.id);
+    expect(d.listId).toBeNull();
+    await expect(r.addParsed([line('x')], null, 'no-existe')).rejects.toThrow('Lista no encontrada');
+  });
+
+  it('las subtareas heredan siempre la lista de su principal', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const [padre, hijo] = await r.addParsed(
+      [line('Padre', { list: 'compra' }), line('Hijo', { isSubtask: true, list: 'personal' })],
+    );
+    expect(hijo.listId).toBe(compra.id);
+    expect(padre.listId).toBe(compra.id);
+    const [otra] = await r.addParsed([line('> nieta', { isSubtask: true, list: 'personal' })], padre.id);
+    expect(otra.listId).toBe(compra.id);
+    expect(otra.parentId).toBe(padre.id);
+  });
+
+  it('replaceParsed mueve la familia si line.list es otra lista y conserva la lista si es null', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const [padre, hijo] = await r.addParsed([line('Padre'), line('Hijo', { isSubtask: true })]);
+    await r.replaceParsed(padre.id, line('Padre editado', { list: 'compra' }));
+    const moved = Object.fromEntries((await r.listTasks()).map((t) => [t.id, t]));
+    expect(moved[padre.id]).toMatchObject({ title: 'Padre editado', listId: compra.id });
+    expect(moved[hijo.id].listId).toBe(compra.id);
+    await r.replaceParsed(padre.id, line('Otro título'));
+    const kept = (await r.listTasks()).find((t) => t.id === padre.id);
+    expect(kept).toMatchObject({ title: 'Otro título', listId: compra.id });
+    // Una subtarea mueve a su familia entera; la principal (personal) no tiene registro: listId null.
+    await r.replaceParsed(hijo.id, line('Hijo a main', { list: 'personal' }));
+    expect((await r.listTasks()).map((t) => t.listId ?? null)).toEqual([null, null]);
+  });
+
+  it('sync: las listas viajan como kind list en pendingChanges, markPushed y applyRemote', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const pend = await r.pendingChanges();
+    expect(pend).toEqual([expect.objectContaining({ kind: 'list', id: compra.id, deleted: false })]);
+    await r.markPushed(pend);
+    expect(await r.pendingChanges()).toEqual([]);
+
+    const remote: RemoteItem = {
+      kind: 'list',
+      id: 'remota',
+      data: { id: 'remota', name: 'Remota', order: 5, updatedAt: 5000, deleted: 0 },
+      updated_at: 5000,
+      deleted: false,
+    };
+    await r.applyRemote([remote]);
+    expect((await r.listLists()).map((l) => l.name)).toEqual(['Personal', 'Compra', 'Remota']);
+    expect(await r.pendingChanges()).toEqual([]);
+    await r.applyRemote([{ ...remote, updated_at: 4000, data: { ...remote.data, name: 'Vieja' }, deleted: false }]);
+    expect((await r.listLists()).find((l) => l.id === 'remota')?.name).toBe('Remota');
+  });
+
+  it('una subtarea remota con otra lista que su principal se alinea con ella', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const [padre, hijo] = await r.addParsed([line('Padre'), line('Hijo', { isSubtask: true })]);
+    await r.markPushed(await r.pendingChanges());
+    const { dirty: _d, ...pdata } = padre as Task & { dirty?: number };
+    await r.applyRemote([{
+      kind: 'task', id: padre.id, data: { ...pdata, listId: compra.id }, updated_at: padre.updatedAt + 1000, deleted: false,
+    }]);
+    const sub = (await r.listTasks()).find((t) => t.id === hijo.id);
+    expect(sub?.listId).toBe(compra.id);
+    expect((await r.pendingChanges()).some((p) => p.kind === 'task' && p.id === hijo.id)).toBe(true);
+  });
+
+  it('exportBackup v2 incluye las listas vivas', async () => {
+    const r = newRepo();
+    const compra = await r.createList('Compra');
+    const borrada = await r.createList('Borrada');
+    await r.deleteList(borrada.id);
+    const bk = await r.exportBackup();
+    expect(bk.version).toBe(2);
+    expect(bk.lists.map((l) => l.id)).toEqual([compra.id]);
+  });
+
+  it('purgeTombstones purga las listas borradas viejas y sincronizadas', async () => {
+    const name = 'test-' + crypto.randomUUID();
+    const old = Date.now() - 90 * DAY;
+    const seed = new ListaDB(name);
+    await seed.lists.bulkPut([
+      { id: 'vieja', name: 'Vieja', order: 1, updatedAt: old, deleted: 1, dirty: 0 },
+      { id: 'pendiente', name: 'Pendiente', order: 2, updatedAt: old, deleted: 1, dirty: 1 },
+      { id: 'viva', name: 'Viva', order: 3, updatedAt: old, deleted: 0, dirty: 0 },
+    ]);
+    seed.close();
+    expect(await createRepo(name).purgeTombstones(60 * DAY)).toBe(1);
+    const check = new ListaDB(name);
+    expect((await check.lists.toArray()).map((l) => l.id).sort()).toEqual(['pendiente', 'viva']);
+    check.close();
   });
 });

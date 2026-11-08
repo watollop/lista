@@ -36,7 +36,7 @@ describe('eliminar cuenta', () => {
 
   it('repo.wipe deja la base local vacía', async () => {
     const r = createRepo('test-' + crypto.randomUUID());
-    await r.addParsed([{ title: 'x', topics: ['casa'], people: ['ana'], due: null, period: null, priority: null, recurrence: null, isSubtask: false, tokens: [] }]);
+    await r.addParsed([{ title: 'x', topics: ['casa'], people: ['ana'], due: null, period: null, priority: null, recurrence: null, isSubtask: false, tokens: [], list: null }]);
     await r.wipe();
     expect(await r.listTasks()).toEqual([]);
     expect(await r.listTopics()).toEqual([]);

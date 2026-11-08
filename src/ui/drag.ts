@@ -1,6 +1,6 @@
 import { useRef, useState } from 'preact/hooks';
 import type { ID } from '../types';
-import type { DropTarget } from '../lib/reschedule';
+import type { DropTarget, ListDrop } from '../lib/reschedule';
 
 /** Arrastre en curso (solo uno a la vez); el deslizamiento lateral lo consulta para no competir. */
 export const dragging = { id: null as ID | null };
@@ -10,9 +10,10 @@ const GRAB = 48; // px máximos entre el borde izquierdo de la tarea arrastrada 
 
 /**
  * Arrastrar una tarea a otro bloque de la lista desde el asa «Mover» del editor (así no compite con
- * seleccionar texto, el scroll o deslizar). Los destinos son elementos con data-drop="today|tomorrow|week|next|nodate".
+ * seleccionar texto, el scroll o deslizar). Los destinos son elementos con data-drop="today|tomorrow|week|next|nodate"
+ * o, en la barra lateral, data-drop="list:<id>" (mover a esa lista).
  */
-export function useDrag(id: ID, enabled: boolean, onStart: () => void, onEnd: (target: DropTarget | null) => void) {
+export function useDrag(id: ID, enabled: boolean, onStart: () => void, onEnd: (target: DropTarget | ListDrop | null) => void) {
   const [d, setD] = useState({ x: 0, y: 0 });
   const [active, setActive] = useState(false);
   const justDragged = useRef(false);
@@ -63,7 +64,7 @@ export function useDrag(id: ID, enabled: boolean, onStart: () => void, onEnd: (t
       document.removeEventListener('touchmove', noScroll);
       cancelAnimationFrame(raf);
       over?.classList.remove('drop-on');
-      const target = e.type === 'pointerup' ? (over?.dataset.drop as DropTarget | undefined) ?? null : null;
+      const target = e.type === 'pointerup' ? (over?.dataset.drop as DropTarget | ListDrop | undefined) ?? null : null;
       dragging.id = null;
       press.current = null;
       justDragged.current = true;

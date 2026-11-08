@@ -1,23 +1,37 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { Entity, ISODate, ParsedLine } from '../types';
+import type { Entity, ISODate, ParsedLine, TodoList } from '../types';
 import { activeToken, normalizeKey, parseBlock } from '../parser';
 import { validateCapture } from '../lib/capture';
+import { listKey } from '../lib/text';
 import { TaskChips } from './Chips';
 import { canDictate } from './recognition';
 import { LazyDictation } from './lazyViews';
+import { listInsertText, listSuggestions } from './suggest';
 import { tr } from '../i18n';
 
 interface Props {
   topics: Entity[];
   people: Entity[];
   names: Map<string, Entity>;
+  lists?: TodoList[]; // todas, la principal primero
+  target?: TodoList | null; // donde cae lo que se escribe sin /lista; null si solo hay una lista
   today: ISODate;
   kbOpen: boolean;
   inputRef: { current: HTMLInputElement | null };
   onAdd: (lines: ParsedLine[]) => Promise<void>;
 }
 
-export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd }: Props) {
+/** Una opción del desplegable: lo que se muestra, su etiqueta y lo que se inserta al aceptarla. */
+interface Option {
+  key: string;
+  display: string;
+  hint: string;
+  insert: string;
+}
+
+const NO_LISTS: TodoList[] = [];
+
+export function Capture({ topics, people, names, lists = NO_LISTS, target = null, today, kbOpen, inputRef, onAdd }: Props) {
   const [value, setValue] = useState('');
   const [caret, setCaret] = useState(0);
   const [sel, setSel] = useState(0);
@@ -60,13 +74,21 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
   const lines = useMemo(() => (value.trim() ? parseBlock(value) : []), [value, today]);
   const parsed = lines[lines.length - 1];
   const active = useMemo(() => activeToken(value, caret), [value, caret]);
-  const suggestions = useMemo(() => {
+  const suggestions = useMemo<Option[]>(() => {
     if (!active) return [];
+    if (active.type === 'list') {
+      return listSuggestions(lists, active.prefix).map((l) => ({
+        key: l.id, display: `/${l.name}`, hint: tr('lista', 'list'), insert: listInsertText(l.name),
+      }));
+    }
+    const sym = active.type === 'topic' ? '#' : '@';
     const pool = active.type === 'topic' ? topics : people;
     const p = normalizeKey(active.prefix);
-    const hits = pool.filter((e) => e.key.startsWith(p) && e.key !== p);
-    return hits.slice(0, 6);
-  }, [active, topics, people]);
+    const hits = pool.filter((e) => e.key.startsWith(p) && e.key !== p).slice(0, 6);
+    return hits.map((e) => ({
+      key: e.key, display: sym + e.name, hint: active.type === 'topic' ? tr('tema', 'topic') : tr('persona', 'person'), insert: sym + e.name,
+    }));
+  }, [active, topics, people, lists]);
 
   const sync = (el: HTMLInputElement) => {
     setValue(el.value);
@@ -74,15 +96,31 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
     setSel(0);
   };
 
-  const accept = (e: Entity) => {
+  /** Sustituye el token activo por `text` y deja el cursor tras él (y un espacio). */
+  const insert = (text: string) => {
     if (!active) return;
-    const sym = active.type === 'topic' ? '#' : '@';
-    const next = value.slice(0, active.start) + sym + e.name + ' ' + value.slice(active.end).replace(/^[^\s<]*\s?/, '');
-    const pos = active.start + sym.length + e.name.length + 1;
+    const next = value.slice(0, active.start) + text + ' ' + value.slice(active.end).replace(/^[^\s<]*\s?/, '');
+    const pos = active.start + text.length + 1;
     setValue(next);
     setCaret(pos);
     requestAnimationFrame(() => inputRef.current?.setSelectionRange(pos, pos));
   };
+
+  const accept = (o: Option) => insert(o.insert);
+
+  // La lista de destino de la línea, si escribe /lista distinta de la de target.
+  const destination = parsed?.list ? lists.find((l) => listKey(l.name) === parsed.list) : undefined;
+  const showDestination = !!destination && !!target && destination.id !== target.id;
+
+  // Guía de sintaxis: /lista solo aparece si hay más de una lista.
+  const guide = [
+    tr('#tema', '#topic'),
+    tr('@persona', '@person'),
+    ...(lists.length > 1 ? [tr('/lista', '/list')] : []),
+    tr('!prioridad', '!priority'),
+    tr('fecha', 'date'),
+    tr('<subtarea', '<subtask'),
+  ].join(' ');
 
   const submit = async () => {
     const captured = validateCapture(lines);
@@ -141,8 +179,8 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
             {suggestions.map((s, i) => (
               <li class={i === sel ? 'on' : ''} key={s.key}>
                 <button onMouseDown={(e) => { e.preventDefault(); accept(s); }}>
-                  {active!.type === 'topic' ? '#' : '@'}{s.name}
-                  <small>{active!.type === 'topic' ? tr('tema', 'topic') : tr('persona', 'person')}</small>
+                  {s.display}
+                  <small>{s.hint}</small>
                 </button>
               </li>
             ))}
@@ -154,7 +192,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           value={value}
           disabled={busy}
           placeholder={tr('Viaje <Billetes mañana !alta #ocio @ana', 'Trip <Tickets tomorrow !high #fun @ana')}
-          aria-label={tr('Nueva tarea', 'New task')}
+          aria-label={target ? tr(`Nueva tarea en ${target.name}`, `New task in ${target.name}`) : tr('Nueva tarea', 'New task')}
           aria-describedby="capture-guide"
           autocomplete="off"
           enterkeyhint="enter" // la tecla azul dice "intro": no se confunde con el ✓ de iOS, que solo cierra el teclado
@@ -175,7 +213,7 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
           </button>
         )}
         </div>
-        <div id="capture-guide" class="capture-guide">{tr('#tema @persona !prioridad fecha <subtarea', '#topic @person !priority date <subtask')}</div>
+        <div id="capture-guide" class="capture-guide">{guide}</div>
         {error && <p class="err" role="alert">{error}</p>}
         <div class="preview">
           {parsed && parsed.tokens.length > 0 && (
@@ -189,6 +227,11 @@ export function Capture({ topics, people, names, today, kbOpen, inputRef, onAdd 
               names={withTyped(names, parsed)}
               today={today}
             />
+          )}
+          {showDestination && (
+            <span class="chip" title={tr(`Va a la lista ${destination!.name}`, `Goes to list ${destination!.name}`)}>
+              → {destination!.name}
+            </span>
           )}
         </div>
       </div>
