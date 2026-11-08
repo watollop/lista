@@ -193,6 +193,40 @@ export interface PairingRow {
   expires_at: string;
 }
 
+// ---------- listas compartidas: servidor (supabase/migrations/20261108_listas.sql, docs/plan-listas.md §4.3) ----------
+
+export type ListRole = 'owner' | 'member';
+
+/** Una membresía del usuario actual (fila de list_members). */
+export interface ListMembership {
+  list_id: ID; // el mismo id que la lista local
+  role: ListRole;
+  joined_at: string;
+}
+
+/** Un miembro de una lista, con su email y nombre de Google (RPC list_members_info). */
+export interface ListMemberInfo {
+  user_id: string;
+  role: ListRole;
+  joined_at: string;
+  email: string | null;
+  name: string | null;
+}
+
+/** Invitación tal como la ven los miembros. Nunca incluye token_hash ni wrapped. */
+export interface ListInviteInfo {
+  id: string;
+  list_id: ID;
+  created_by: string | null;
+  created_at: string;
+  expires_at: string;
+  used_by: string | null;
+  used_at: string | null;
+}
+
+/** Motivos por los que accept_invite rechaza un enlace. */
+export type InviteErrorCode = 'invite_invalid' | 'invite_expired' | 'invite_used' | 'list_full';
+
 export type EncryptionState = 'off' | 'on' | 'locked' | 'migrating';
 
 // ---------- interfaces de módulo ----------

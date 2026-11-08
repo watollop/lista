@@ -166,6 +166,8 @@ La cobertura incluye todo `src/` y genera informes LCOV y JSON en `coverage/`, e
 
 **Límites del servidor:** ejecuta la [migración de límites](supabase/migrations/20261101_limites.sql) en el SQL editor, o vuelve a ejecutar el esquema. Añade un tope de 64 KiB por registro y borra cada 15 minutos los enlaces entre dispositivos caducados (con pg_cron, si el proyecto lo tiene disponible).
 
+**Listas compartidas:** ejecuta la [migración de listas](supabase/migrations/20261108_listas.sql) en el SQL editor, o vuelve a ejecutar el esquema. Crea las tablas de listas, miembros e invitaciones, con permisos por miembro; el contenido va cifrado con la clave de cada lista y el servidor no lo puede leer. Sin ella, todo lo demás funciona igual.
+
 La apariencia guardada en el dispositivo se migra una sola vez, sin sobrescribir una elección ya sincronizada. Si varios dispositivos tenían elecciones antiguas distintas, convergen en la aceptada por el servidor. Al actualizar, la base local fuerza una descarga completa para recuperar preferencias que una versión anterior pudo ignorar.
 
 </details>

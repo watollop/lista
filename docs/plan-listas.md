@@ -41,7 +41,11 @@
 - **Compartir lista** (en la hoja o la barra, y en Ajustes → Listas) crea un **enlace de invitación** de un solo uso, válido 7 días, y abre el menú de compartir del sistema (WhatsApp, Mensajes…) o lo copia. Hace falta haber entrado con Google.
 - Quien recibe el enlace lo abre, entra con Google si no lo había hecho y ve «Te han invitado a «Compra»» con **Unirme**. La lista aparece en sus dispositivos.
 - Las listas compartidas llevan un pequeño icono de personas. En sus ajustes se ve con quién se comparte.
-- Cualquier miembro puede editar tareas, renombrar la lista e invitar. Quien la creó puede **quitar** a alguien y **borrar la lista para todos**. Los demás pueden **salir**: la lista desaparece de sus dispositivos y sigue para el resto.
+- Cualquier miembro puede editar tareas, renombrar la lista e invitar. Quien la creó puede **quitar** a alguien y **borrar la lista para todos**. Cualquiera puede **salir**: la lista desaparece de sus dispositivos y sigue para el resto.
+- Si quien la creó sale o borra su cuenta, la lista **pasa al miembro más antiguo**, que hereda quitar y borrar. Solo desaparece cuando no queda nadie.
+- **Personal no se comparte:** se comparten las demás listas. Si solo tienes Personal, **Compartir** propone crear una lista nueva.
+- Al compartir una lista se van con ella todas sus tareas, también las completadas.
+- No se muestra quién añadió o completó cada tarea (se puede añadir más adelante).
 - **Mover** una tarea entre una lista compartida y otra cambia quién la ve: el editor lo avisa.
 
 ## 3. Modelo de datos (fase 1)
@@ -70,6 +74,11 @@
 | Dónde viven los datos de la lista | Tabla nueva `list_items`, una fila por registro **y lista** (no por usuario) | Una sola copia que ven todos los miembros, con el mismo LWW. |
 | Mover entre espacios | **Copiar con id nuevo y borrar el original** | El tombstone del espacio de origen y la tarea viva del de destino nunca chocan en el mismo id local. Lo mismo al compartir una lista que ya tenía tareas. |
 | Quitar a alguien | Se le quita el acceso (RLS). **Sin rotar la LK** en esta fase | Rotar exige poder dar la clave nueva a los demás sin la vieja (claves de identidad, ver §4.7). |
+| Enlaces | **Uno por persona:** un solo uso, 7 días | Si alguien se adelanta al invitado, entra una sola persona y se ve en Miembros. Decidido con el usuario (2026-11-08). |
+| Permisos | Todos editan, renombran e invitan; **quitar y borrar para todos, solo el owner** | Evita que cualquiera vacíe una lista de grupo. Decidido con el usuario. |
+| Si el owner se va | **Pasa al miembro más antiguo** (también al borrar la cuenta) | Tu pareja no pierde la lista de la compra porque tú borres la cuenta. Decidido con el usuario. |
+| Autor de cada tarea | **No se muestra** en esta fase | Las tareas se ven igual que en las listas propias. Añadirlo después no exige migrar nada. |
+| Personal | **No se comparte** | Las capturas externas y las tareas sin lista van a Personal: compartirla mezclaría lo privado. |
 
 ### 4.2 Modelo criptográfico
 - **LK:** AES-256-GCM aleatoria, una por lista compartida.
@@ -82,16 +91,25 @@
 - **Registro personal de cada miembro** (`kind 'list'`, cifrado con su DK): `{ id, order, shared: { lk } }`. El nombre de una lista compartida sale de su `meta`.
 - **Temas y personas** que usan las tareas de una lista compartida viajan también en ella (`topic`/`person` en `list_items`). Al llegar se crean en local si no existían, con ese nombre; si ya existían, se conserva el nombre local.
 
-### 4.3 Servidor (`supabase/migrations/…_listas.sql` y `schema.sql`)
-- `lists (id uuid pk, created_by uuid default auth.uid(), created_at)`.
-- `list_members (list_id → lists on delete cascade, user_id → auth.users on delete cascade, role 'owner'|'member', joined_at, pk (list_id, user_id))`.
-- `list_items (list_id → lists on delete cascade, kind, id, data jsonb, updated_at bigint, deleted bool, synced_at, pk (list_id, kind, id))`, con el mismo trigger LWW, el mismo límite de 64 KiB y `check (kind = 'enc')`.
-- `list_invites (id uuid pk, list_id, created_by, token_hash, wrapped, expires_at default now() + 7 días, used_by, used_at)`.
-- `is_member(list_id)`: función `security definer` para las políticas (evita la recursión de RLS sobre `list_members`).
-- **RLS**: `list_items` para todo si `is_member`; `list_members` select si `is_member`, delete si es uno mismo (salir) o si se es `owner`; `lists` delete solo `created_by`; `list_invites` insert/select/delete por miembros.
-- **RPC `accept_invite(invite_id, auth)`** (`security definer`): comprueba hash, caducidad y que no esté usada; inserta al llamante como `member`, marca la invitación como usada y devuelve `{ list_id, wrapped }`. Errores claros: caducada, usada, ya eres miembro.
-- **RPC `list_members_info(list_id)`**: emails y nombres de Google de los miembros, solo para miembros.
-- `delete_account` borra también las listas que creó el usuario (para todos) y sus membresías.
+### 4.3 Servidor (`supabase/migrations/20261108_listas.sql` y `schema.sql`) ✅
+- `lists (id uuid pk, created_by → auth.users on delete set null, created_at)`. El id es **el mismo que el de la lista local**.
+- `list_members (list_id → lists on delete cascade, user_id → auth.users on delete cascade, role 'owner'|'member', joined_at, pk (list_id, user_id))`. Índice único parcial: un solo `owner` por lista.
+- `list_items (list_id → lists on delete cascade, kind, id, data jsonb, updated_at bigint, deleted bool, synced_at, pk (list_id, kind, id))`, con su trigger LWW (`list_items_lww`, igual que `items_lww`), el mismo límite de 64 KiB y `check (kind = 'enc')`.
+- `list_invites (id uuid pk generado por el cliente, list_id, created_by, token_hash hex 64, wrapped ≤ 4 KiB, created_at, expires_at default now() + 7 días, used_by, used_at)`.
+- `is_member(list_id)` e `is_list_owner(list_id)`: `security definer` para las políticas (evita la recursión de RLS sobre `list_members`).
+- **RLS** (solo `authenticated`):
+  - `lists`: select si miembro; delete si owner. Sin insert ni update: se crean con `create_list`.
+  - `list_members`: select si miembro; delete de la propia fila (salir) o de cualquiera si owner. Sin insert ni update: se entra con `create_list` o `accept_invite`.
+  - `list_items`: select, insert y update si miembro. **Sin delete**: los borrados son tombstones.
+  - `list_invites`: select y delete si miembro; insert si miembro, a su nombre, sin usar y con 7 días como mucho.
+- **Trigger `list_members_after_delete`** (al salir, ser quitado o borrar la cuenta): anula las invitaciones sin usar de esa persona (no puede volver con un enlace suyo), pasa el owner al miembro más antiguo y, si no queda nadie, borra la lista con todo.
+- **RPC `create_list(p_list)`**: crea la lista y al llamante como owner. Devuelve `{ created }`: `false` si ya existía y ya era miembro (reintento u otro de sus dispositivos), y entonces el cliente **no usa la LK que acaba de generar**. Error `list_exists` si es de otro; `too_many_lists` a partir de 200.
+- **RPC `accept_invite(p_invite, p_auth)`**: `p_auth` = authKey en hex. Comprueba **primero el secreto** (sin él no se sabe si la invitación existe, está usada o caducada), después uso y caducidad; inserta al llamante como `member`, marca la invitación como usada y devuelve `{ list_id, wrapped }`. Idempotente para quien ya la usó y sigue dentro. Si ya era miembro no gasta la invitación. Errores: `invite_invalid`, `invite_used`, `invite_expired`, `list_full` (50 miembros).
+- **RPC `list_members_info(p_list)`**: email y nombre de Google de los miembros, solo para miembros.
+- `delete_account` sale primero de sus listas (el trigger traspasa o borra) y borra sus invitaciones.
+- `purge_old_invites` (pg_cron, diaria): caducadas sin usar a partir de 1 día, usadas a los 30 días.
+- **Cliente** en `src/sync/listapi.ts`: un 404 (falta la migración) lanza `SharingUnavailableError`; los rechazos de invitación, `InviteRejectedError` con su código.
+- **Probado** en un Postgres en memoria (PGlite) que imita Supabase: 59 casos de permisos, traspaso y borrado, tanto con `schema.sql` (dos veces) como con la migración sobre el esquema anterior (dos veces).
 
 ### 4.4 Sincronización
 - Cada sync pide **mis membresías** (`list_members` del usuario). Con eso y los registros `list` personales sabe qué listas compartidas tiene y con qué LK.
@@ -102,7 +120,7 @@
 
 ### 4.5 Flujos
 **Compartir una lista** (con sesión y el dispositivo desbloqueado)
-1. Generar LK; crear `lists` y mi fila `owner` en `list_members`.
+1. Generar LK y llamar a `create_list`. Si devuelve `created: false`, esperar al sync del registro personal y usar la LK que traiga.
 2. Mover sus tareas al espacio compartido (id nuevo, §4.1) y escribir `meta`.
 3. Guardar `{ shared: { lk } }` en mi registro personal de la lista.
 4. Crear la invitación y abrir el menú de compartir con el enlace.
@@ -118,8 +136,8 @@
 ### 4.6 Casos límite
 - Enlace usado por otra persona antes que el invitado: el invitado ve «Este enlace ya se usó» y el creador ve un miembro que no esperaba y puede quitarlo.
 - Dos miembros editan la misma tarea a la vez: LWW, como entre dispositivos.
-- Quien creó la lista no puede salir sin borrarla (en esta fase no hay traspaso).
-- Borrar la cuenta borra las listas que creaste para todos: Ajustes lo avisa.
+- Si el owner sale o borra su cuenta, pasa a serlo el miembro más antiguo; la lista solo se borra cuando no queda nadie. Ajustes lo explica al borrar la cuenta.
+- Quien sale o es quitado no puede volver con un enlace que creó él: sus invitaciones sin usar se anulan.
 - Una invitación caducada o usada no revela nada: `wrapped` solo lo devuelve `accept_invite`.
 
 ### 4.7 Límites
@@ -134,7 +152,7 @@
 |---|---|---|
 | 1 ✅ | Listas propias: datos, sync del nuevo tipo, parser `/lista`, interfaz en escritorio y móvil, Novedades, bienvenida, Ajustes, atajos y README | Con una lista, todo igual. Tests verdes. |
 | 2A ✅ | Cripto de listas e invitaciones (`src/sync/listcrypto.ts`) + tests de ataque | Sin tocar nada más. |
-| 2B | Servidor (migración SQL) y capa de API | Suite intacta. Hay que ejecutar la migración en Supabase. |
+| 2B ✅ | Servidor (migración SQL) y capa de API (`src/sync/listapi.ts`) | Suite intacta. Hay que ejecutar la migración en Supabase. |
 | 2C | Sync multiespacio (cursores por lista, reparto, membresía perdida) | Dos usuarios simulados comparten una lista. |
 | 2D | Interfaz de compartir, unirse, miembros, salir y quitar; Novedades y bienvenida | Flujos de §4.5 en escritorio y móvil. |
 | 2E | Validación real con dos cuentas de Google, en iPhone, Android y ordenador | Sin pérdida de datos. |
