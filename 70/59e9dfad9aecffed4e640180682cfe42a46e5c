@@ -1,0 +1,31 @@
+src/data/repo.test.ts
+  s_1a113f72a038c4::t_fcec05d942f2c3 19
+src/lib/text.ts
+  s_1a113f72a038c4::t_03301ad46213ea 16-21
+src/sync/account.test.ts
+  s_1a113f72a038c4::t_918d39761570e8 39
+src/sync/encryption.test.ts
+  s_1a113f72a038c4::t_8aa19ef9044a4e 247
+src/sync/link.test.ts
+  s_1a113f72a038c4::t_dbfcb3b2efc9e0 315
+src/types.ts
+  s_1a113f72a038c4::t_6f5db43c0d8b9e 36-38,41-53,93,111-113,119-121,129,135,140,145-146,206-207,210-215,230-240,251,254,268,275
+docs/plan-listas.md
+  s_1a113f72a038c4::t_cebfc0dc095756 1-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7059e9dfad9aecffed4e640180682cfe42a46e5c",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
