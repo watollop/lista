@@ -3,8 +3,11 @@ import type {
   EncEnvelope,
   EncRow,
   EncryptionState,
+  ID,
   KeyRowData,
   LinkState,
+  ListMemberInfo,
+  ListMembership,
   RemoteItem,
   Repo,
   Sync,
@@ -52,9 +55,26 @@ import {
   unwrapWithRecovery,
   wrapWithRecovery,
 } from './crypto';
+import {
+  LOST_KEY,
+  MEMBERSHIPS_KEY,
+  createInviteLink,
+  deferredMark,
+  deleteShared,
+  joinWithLink,
+  leaveShared,
+  personalPending,
+  removeSharedMember,
+  shareListLocal,
+  sharedIds,
+  sharedMembers,
+  syncSharedSpaces,
+} from './shared';
+import type { SharedCtx } from './shared';
 import { tr } from '../i18n';
 
 export type { SyncConfig } from './auth';
+export { InviteRejectedError, SharingUnavailableError } from './listapi';
 
 export interface SyncDeps {
   fetch?: typeof fetch;
@@ -62,6 +82,8 @@ export interface SyncDeps {
   now?: () => number;
   /** Solo para los tests del transporte (cursor, LWW, paginación): sincroniza en claro, sin activar el cifrado. */
   unencrypted?: boolean;
+  /** Origen de los enlaces de invitación (por defecto location.origin). */
+  origin?: string;
 }
 
 const CURSOR_KEY = 'sync.cursor';
@@ -253,9 +275,13 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     return dkFrom(await repo.getMeta<string>(dkKey(userId)), row);
   }
 
-  /** Sube los pendientes cifrados. Lo que se sube es lo mismo que en claro, con otro envoltorio. */
+  /**
+   * Sube los pendientes cifrados del espacio personal: todo salvo las tareas de las listas compartidas, que suben a
+   * su lista (shared.ts). Lo que se sube es lo mismo que en claro, con otro envoltorio.
+   */
   async function pushCipher(c: SyncConfig, s: Session, dk: CryptoKey): Promise<void> {
-    const pending = await repo.pendingChanges();
+    const shared = sharedIds(await repo.listLists());
+    const pending = personalPending(await repo.pendingChanges(), shared);
     if (pending.length === 0) return;
     lastActivity = now();
     const rows: EncRow[] = [];
@@ -268,8 +294,18 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     }
     if (rows.length === 0) return;
     await pushItems(c, s, rows, fetchImpl);
-    await repo.markPushed(sent); // con los originales: markPushed compara updatedAt
+    // Con los originales: markPushed compara updatedAt. Los registros de listas compartidas los marca su lista.
+    await repo.markPushed(sent.filter((it) => !deferredMark(it, shared)));
   }
+
+  const sharedCtx = (c: SyncConfig, s: Session): SharedCtx => ({
+    cfg: c,
+    session: s,
+    repo,
+    fetchImpl,
+    overlapSince,
+    tooLarge,
+  });
 
   /** Aplica una bajada: descifra las filas 'enc' y aplica las que están en claro. Devuelve estas últimas. */
   async function ingest(dk: CryptoKey, items: RemoteItem[]): Promise<{ plain: RemoteItem[]; skipped: number }> {
@@ -349,6 +385,8 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
       return 'locked';
     }
 
+    // Pendientes al empezar: la fase compartida sube su parte de esta foto (docs/plan-listas.md §4.4).
+    const snapshot = await repo.pendingChanges();
     const migrating = (await repo.getMeta<boolean>(migKey(s.userId))) === true;
     encState = migrating ? 'migrating' : 'on';
     if (migrating) {
@@ -363,6 +401,10 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
       const since = typeof stored === 'string' && stored ? overlapSince(stored) : null;
       await syncCipher(c, s, dk, since);
     }
+    // Listas compartidas: después de la bajada personal, que trae las LK de mis otros dispositivos.
+    const shared = await syncSharedSpaces(sharedCtx(c, s), snapshot);
+    if (shared.pulled > 0) lastActivity = now();
+    if (shared.again) again = true; // retomó un «compartir»: lo nuevo sube en la vuelta siguiente
     return 'ok';
   }
 
@@ -940,6 +982,92 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     }
   }
 
+  // ---------- listas compartidas (docs/plan-listas.md §4.5, shared.ts) ----------
+
+  /** Sesión y cifrado listos para compartir. Antes del primer sync no se sabe: se sincroniza una vez. */
+  async function readyForSharing(): Promise<SharedCtx> {
+    if (cfg && session && encState === 'off') await runSyncLoop();
+    const c = cfg;
+    const s = session;
+    if (!c || !s) throw new Error(tr('Inicia sesión primero', 'Sign in first'));
+    if (encState !== 'on' && encState !== 'migrating')
+      throw new Error(tr('Este dispositivo aún no tiene la clave de cifrado. Enlázalo primero.', 'This device doesn’t have the encryption key yet. Link it first.'));
+    return sharedCtx(c, s);
+  }
+
+  const inviteOrigin = (): string => deps.origin ?? (typeof location !== 'undefined' ? location.origin : '');
+
+  /** exclusive() que además devuelve el resultado de fn. */
+  function exclusiveValue<T>(fn: () => Promise<T>): Promise<T> {
+    let out: T;
+    return exclusive(async () => {
+      out = await fn();
+    }).then(() => out);
+  }
+
+  function shareList(listId: ID): Promise<{ link: string; expiresAt: string }> {
+    return exclusiveValue(async () => {
+      const ctx = await readyForSharing();
+      await shareListLocal(ctx, listId);
+      await runSyncLoop(); // sube la lista y sus tareas antes de invitar a nadie
+      return createInviteLink(ctx, listId, inviteOrigin());
+    });
+  }
+
+  function createInviteFn(listId: ID): Promise<{ link: string; expiresAt: string }> {
+    return exclusiveValue(async () => createInviteLink(await readyForSharing(), listId, inviteOrigin()));
+  }
+
+  function joinList(link: string): Promise<{ listId: ID; name: string }> {
+    return exclusiveValue(async () => {
+      const joined = await joinWithLink(await readyForSharing(), link);
+      await runSyncLoop();
+      return joined;
+    });
+  }
+
+  function leaveListFn(listId: ID): Promise<void> {
+    return exclusive(async () => {
+      await leaveShared(await readyForSharing(), listId);
+      await runSyncLoop();
+    });
+  }
+
+  function deleteSharedListFn(listId: ID): Promise<void> {
+    return exclusive(async () => {
+      await deleteShared(await readyForSharing(), listId);
+      await runSyncLoop();
+    });
+  }
+
+  async function removeMemberFn(listId: ID, userId: string): Promise<void> {
+    try {
+      await removeSharedMember(await readyForSharing(), listId, userId);
+    } catch (e) {
+      throw friendly(e);
+    }
+  }
+
+  async function listMembersFn(listId: ID): Promise<ListMemberInfo[]> {
+    try {
+      return await sharedMembers(await readyForSharing(), listId);
+    } catch (e) {
+      throw friendly(e);
+    }
+  }
+
+  async function membershipsFn(): Promise<ListMembership[]> {
+    const v = await repo.getMeta<ListMembership[]>(MEMBERSHIPS_KEY);
+    return Array.isArray(v) ? v : [];
+  }
+
+  async function takeLostLists(): Promise<string[]> {
+    const v = await repo.getMeta<string[]>(LOST_KEY);
+    if (!Array.isArray(v) || v.length === 0) return [];
+    await repo.setMeta(LOST_KEY, []);
+    return v;
+  }
+
   return {
     getState: () => state,
     subscribe(cb) {
@@ -964,5 +1092,14 @@ export function createSync(repo: Repo, cfg: SyncConfig | null, deps: SyncDeps = 
     startLink: startLinkFn,
     cancelLink: cancelLinkFn,
     confirmLink: confirmLinkFn,
+    shareList,
+    createInvite: createInviteFn,
+    joinList,
+    leaveList: leaveListFn,
+    deleteSharedList: deleteSharedListFn,
+    removeMember: removeMemberFn,
+    listMembers: listMembersFn,
+    memberships: membershipsFn,
+    takeLostLists,
   };
 }
