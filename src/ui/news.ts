@@ -6,6 +6,14 @@ export interface NewsItem { id: string; title: () => string; text: () => string 
 /** Novedades, la más reciente primero. */
 export const NEWS: NewsItem[] = [
   {
+    id: '2026-11-monedas',
+    title: () => tr('Nuevo: monedas', 'New: coins'),
+    text: () => tr(
+      'Cada tarea que completas hoy suma una moneda en la pantalla de Hoy (en el móvil, en Filtrar). A ver cuántas juntas.',
+      'Every task you complete today adds a coin on the Today screen (on the phone, under Filter). See how many you can collect.',
+    ),
+  },
+  {
     id: '2026-11-pestanas',
     title: () => tr('Las listas, en pestañas', 'Lists, now in tabs'),
     text: () => tr(
