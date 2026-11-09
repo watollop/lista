@@ -50,7 +50,7 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
           <Language repo={repo} />
         </section>
         <section class="group" aria-labelledby="ajustes-orden">
-          <h2 class="group-title" id="ajustes-orden">{tr('Organización', 'Organization')}</h2>
+          <h2 class="group-title" id="ajustes-orden">{tr('Temas y personas', 'Topics and people')}</h2>
           <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
           {editing && editEnt && (
             <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
@@ -73,7 +73,6 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
               {onShortcuts && <button class="btn kbd-only" onClick={onShortcuts}>{tr('Atajos de teclado', 'Keyboard shortcuts')}</button>}
             </div>
             <TipsFold sharing={sharing} />
-            <CaptureFold />
           </section>
         </section>
       </div>
@@ -251,7 +250,6 @@ function EntitiesSection({ topics, people, pending, onEdit }: {
   };
   return (
     <section>
-      <span class="label">{tr('Temas y personas', 'Topics and people')}</span>
       {topics.length || people.length
         ? <>{group(tr('Temas', 'Topics'), 'topic', topics)}{group(tr('Personas', 'People'), 'person', people)}</>
         : <p>{tr('Aún no hay temas ni personas. Aparecen al escribir #tema o @persona en una tarea.', 'No topics or people yet. They appear when you write #topic or @person in a task.')}</p>}
@@ -336,22 +334,6 @@ function TipsFold({ sharing }: { sharing: boolean }) {
         {sharing && (isEn()
           ? <p><strong>Share a list.</strong> Tap its tab again and <em>Share</em>. One link per person, valid for 7 days, and everything stays encrypted.</p>
           : <p><strong>Compartir una lista.</strong> Toca otra vez su pestaña y <em>Compartir</em>. Un enlace por persona, vale 7 días y todo va cifrado.</p>)}
-      </div>}
-    </div>
-  );
-}
-
-/** Apuntar desde Android con «Compartir» (share_target): plegado dentro de Ayuda. */
-function CaptureFold() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div class="help-fold">
-      <button class={`ent-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>{tr('Compartir desde Android', 'Share from Android')}</span>
-        <span class="ent-head-count"><span class="caret" aria-hidden="true" /></span>
-      </button>
-      {open && <div class="fold-body">
-        <p>{tr('Desde cualquier app, «Compartir» → Lista y el contenido se apunta como tarea. Hace falta tener Lista instalada en el móvil.', 'From any app, “Share” → Lista and the content is saved as a task. Lista needs to be installed on your phone.')}</p>
       </div>}
     </div>
   );

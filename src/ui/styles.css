@@ -472,8 +472,10 @@ button.chip { min-height: 22px; }
   overflow-y: auto;
   animation: fade .18s ease;
   padding: var(--sat) calc(var(--gutter) + var(--sar)) calc(40px + var(--sab)) calc(var(--gutter) + var(--sal));
+  /* Columna: si Ajustes cabe en la pantalla, el contenido crece y la firma queda abajo del todo (si no, la firma es sticky). */
+  display: flex; flex-direction: column;
 }
-.sheet-inner { max-width: 560px; margin: 0 auto; }
+.sheet-inner { max-width: 560px; width: 100%; margin: 0 auto; flex: 1 0 auto; }
 .sheet section { border-top: 1px solid var(--line); padding: 20px 0 26px; }
 .sheet section > .label { color: var(--faint); display: block; margin-bottom: 14px; }
 /* Grupos de Ajustes (Cuenta, Apariencia, Tus datos, Ayuda): encabezado de grupo; las subsecciones van dentro. */
@@ -1187,22 +1189,9 @@ section.droppable.drop-on .section { color: var(--fg); }
 @media (hover: hover) { .week-days button:not(.on):hover { background: var(--bg); } }
 /* Día filtrado: tecla encendida */
 .week-days .on, .week-days .on .week-n, .week-days .on .week-c, .week-days .on .week-d { background: var(--fg); color: var(--bg); }
-.top .week { margin: 4px 0 12px; } /* móvil: dentro de la cabecera, sobre la búsqueda */
+.top .week { margin: 4px 0 12px; } /* móvil: dentro de la cabecera, al final del panel de Filtrar */
 
-/* Novedades: tarjeta al principio de la lista (no flota: no tapa la cabecera ni la captura) */
-.news-card {
-  display: flex; align-items: center; gap: 12px;
-  margin: 0 0 20px; padding: 14px 16px;
-  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
-}
-.news-card-copy { flex: 1; min-width: 0; }
-.news-card-copy strong { display: block; font-weight: 500; color: var(--fg); margin-bottom: 2px; }
-.news-card-copy p { margin: 0; font-size: 14px; color: var(--muted); }
-.news-card-acts { display: flex; flex: none; gap: 8px; }
-@media (max-width: 480px) {
-  .news-card { flex-direction: column; align-items: stretch; gap: 4px; }
-  .news-card-acts { justify-content: flex-end; }
-}
+/* Novedades: hoja (al entrar si hay alguna sin ver, o desde Ajustes) */
 .news-sheet { max-height: calc(100dvh - 32px); overflow-y: auto; }
 .news-sheet .label { display: block; margin-bottom: 16px; }
 .news-item + .news-item { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; }
@@ -1311,6 +1300,9 @@ section.droppable.drop-on .section { color: var(--fg); }
   transition: background .15s, color .15s;
 }
 .lt-tab.on { background: var(--fg); color: var(--bg); }
+/* Con una sola lista no hay nada que distinguir: su pestaña es texto, sin relleno, y la fila pesa poco. */
+.lt-tab.on.solo { background: none; color: var(--muted); padding-left: 0; }
+@media (hover: hover) { .lt-tab.on.solo:hover { color: var(--fg); } }
 .lt-tab.drop-on { background: var(--surface); color: var(--fg); }
 @media (hover: hover) { .lt-tab:not(.on):hover { background: var(--surface); color: var(--fg); } }
 .lt-name { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; }
@@ -1329,9 +1321,10 @@ section.droppable.drop-on .section { color: var(--fg); }
 .lt-menu button { min-height: 44px; padding: 0 16px; text-align: left; font-size: 15px; color: var(--fg); }
 .lt-menu button.danger { color: var(--warn); }
 @media (hover: hover) { .lt-menu button:hover { background: var(--surface); } }
-.app.wide .bar { display: grid; grid-template-columns: 240px minmax(0, 1fr) auto; column-gap: 72px; }
-.app.wide .bar .list-tabs { align-self: center; }
-.app.wide .lt-row { margin: 0; padding: 0; }
+.app.wide > .top > .bar { display: grid; grid-template-columns: 240px minmax(0, 1fr) auto; column-gap: 72px; }
+.app.wide > .top > .bar .list-tabs { align-self: center; }
+.top > .list-tabs .lt-row { border-bottom: 1px solid var(--line); } /* móvil: la fila cierra la cabecera */
+.app.wide .lt-row { margin: 0; padding: 0; border-bottom: 0; }
 .app.wide .lt-menu { top: calc(100% + 6px); }
 .app.wide .lt-error { position: absolute; top: 100%; margin: 4px 0 0; }
 
@@ -1355,3 +1348,21 @@ section.droppable.drop-on .section { color: var(--fg); }
   .row.sub { --check-x: 48px; }
   .row.sub.sel { --check-x: 58px; }
 }
+
+/* ---------- Filtros en el móvil (FilterBar): panel de «Filtrar» y fila con lo que filtra ---------- */
+.filter-panel {
+  max-height: calc(100dvh - 220px); overflow-y: auto; overscroll-behavior: contain;
+  padding-bottom: 8px; border-bottom: 1px solid var(--line); animation: fade .15s ease;
+}
+.filter-panel .search { margin-bottom: 4px; }
+.filter-group { padding-top: 12px; }
+.filter-week { padding-top: 16px; }
+.top .filter-week .week { margin: 0; }
+.filter-label { display: flex; align-items: center; justify-content: space-between; min-height: 24px; }
+.filter-label .link { min-height: 24px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+.filter-group .menu { padding: 8px 0 4px; border-bottom: 0; animation: none; }
+.filter-summary { justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.filter-summary .link { flex: none; }
+.filter-now { display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.filter-now::-webkit-scrollbar { display: none; }
+.filter-now .chip { flex: none; height: 28px; padding: 0 10px; font-size: 13px; }
