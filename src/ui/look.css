@@ -200,6 +200,14 @@
 :where([data-look="industrial"]) .week-head { color: rgb(241 240 234 / .55); }
 :where([data-look="industrial"]) .week-big { font-family: var(--dots); font-weight: 700; font-size: 64px; line-height: .85; }
 :where([data-look="industrial"]) .week-late { color: var(--accent); }
+:where([data-look="industrial"]) .week-coin-n { font-family: var(--dots); font-weight: 700; font-size: 26px; color: rgb(241 240 234 / .35); }
+:where([data-look="industrial"]) .week-coins.has .week-coin-n { color: var(--screen-fg); }
+:where([data-look="industrial"]) .week-coin-label { color: rgb(241 240 234 / .55); }
+:where([data-look="industrial"]) .coin-plus { font-family: var(--mono); }
+:where([data-look="industrial"]) .coin-rim { fill: var(--accent); }
+:where([data-look="industrial"]) .coin-face { fill: color-mix(in srgb, var(--accent) 55%, #ffd36b); }
+:where([data-look="industrial"]) .coin-shine { fill: #fff6d8; }
+:where([data-look="industrial"]) .coin-slot { fill: color-mix(in srgb, var(--accent) 75%, #000); }
 :where([data-look="industrial"]) .week-days { border-top-color: rgb(255 255 255 / .1); }
 :where([data-look="industrial"]) .week-days button { color: rgb(241 240 234 / .35); font-family: var(--mono); }
 :where([data-look="industrial"]) .week-n { font-family: var(--dots); font-weight: 700; font-size: 15px; }

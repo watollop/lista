@@ -246,7 +246,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const load = useMemo(() => dayLoad(tasks, today), [tasks, today]);
   // Tocar un día del mini calendario muestra solo ese día (sustituye a los filtros de Fecha); tocarlo otra vez lo quita.
   const pickDay = (d: string) => setFilter({ ...filter, dates: [], day: filter.day === d ? undefined : d });
-  const week = <Week today={tally.today} overdue={tally.overdue} open={tally.open} days={load} day={filter.day} onPick={pickDay} />;
+  const week = <Week today={tally.today} overdue={tally.overdue} open={tally.open} done={doneToday.size} scopeKey={data.ready ? scope : ''}
+    days={load} day={filter.day} onPick={pickDay} />;
 
 
   // ---------- acciones ----------

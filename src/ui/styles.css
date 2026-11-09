@@ -1177,9 +1177,44 @@ section.droppable.drop-on .section { color: var(--fg); }
 /* ---------- pantalla de Hoy: pendientes de hoy y los próximos 7 días (barra lateral; en móvil, al abrir Buscar) ---------- */
 .week { display: grid; gap: 12px; padding: 16px 16px 12px; margin-bottom: 18px; border-radius: var(--radius); background: var(--surface); }
 .week-head { display: flex; justify-content: space-between; gap: 8px; color: var(--faint); font-size: 10px; }
-.week-now { display: flex; align-items: baseline; gap: 10px; }
+.week { container-type: inline-size; } /* la barra lateral es estrecha: ahí las vencidas van bajo el número */
+.week-now { display: flex; align-items: flex-end; gap: 10px; }
+.week-score { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+@container (max-width: 250px) { .week-score { flex-direction: column; align-items: flex-start; gap: 6px; } }
 .week-big { font-size: 48px; font-weight: 600; line-height: .9; font-variant-numeric: tabular-nums; }
-.week-late { color: var(--warn); font-size: 10px; }
+.week-late { color: var(--warn); font-size: 10px; white-space: nowrap; }
+/* Hechas hoy: contador de monedas a la derecha del número grande (Week.tsx, Coins). */
+.week-coins { margin-left: auto; align-self: end; display: grid; justify-items: end; gap: 4px; }
+.week-coin-row { display: flex; align-items: center; gap: 6px; }
+.week-coin-n { font-size: 20px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--faint); }
+.week-coins.has .week-coin-n { color: var(--fg); }
+.week-coin-label { font-size: 9px; color: var(--faint); white-space: nowrap; }
+.coin-box { position: relative; display: block; width: 16px; height: 20px; }
+.coin { display: block; }
+/* Clásico: en blanco y negro, como todo lo demás; Industrial la pinta en su naranja (look.css). */
+.coin-rim, .coin-slot { fill: var(--fg); }
+.coin-face, .coin-shine { fill: var(--bg); }
+.week-coins:not(.has) .coin { opacity: .35; filter: grayscale(1); }
+/* Al sumar una: salta girando, como la que sale de un bloque, y sube un +1 (pasos: pinta de píxel). */
+.coin-box.pop .coin { animation: coin-pop .6s steps(8, end); }
+.coin-plus {
+  position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%);
+  font-size: 11px; font-weight: 600; color: var(--accent); white-space: nowrap; pointer-events: none;
+  opacity: 0; animation: coin-plus .8s steps(8, end);
+}
+@keyframes coin-pop {
+  0% { transform: translateY(0) scaleX(1); }
+  20% { transform: translateY(-10px) scaleX(.15); }
+  40% { transform: translateY(-16px) scaleX(1); }
+  60% { transform: translateY(-14px) scaleX(.15); }
+  80% { transform: translateY(-6px) scaleX(1); }
+  100% { transform: translateY(0) scaleX(1); }
+}
+@keyframes coin-plus {
+  0% { opacity: 1; transform: translate(-50%, 0); }
+  70% { opacity: 1; transform: translate(-50%, -14px); }
+  100% { opacity: 0; transform: translate(-50%, -18px); }
+}
 .week-days { list-style: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; padding-top: 10px; border-top: 1px solid var(--line); }
 .week-days button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 0 8px; border-radius: 9px; font-size: 10px; color: var(--faint); font-variant-numeric: tabular-nums; transition: background .12s, color .12s; }
 .week-n { font-size: 13px; }

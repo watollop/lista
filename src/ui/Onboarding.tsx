@@ -31,7 +31,7 @@ const SLIDES = (): Slide[] => [
     Demo: CoverDemo,
   },
   { title: tr('Escribe en una línea', 'Write it in one line'), text: () => tr('Fecha, tema, prioridad y repetición se detectan al escribir. Las tareas que se repiten vuelven solas.', 'Date, topic, priority and repeat are picked up as you type. Repeating tasks come back on their own.'), Demo: TypingDemo },
-  { title: tr('Completa y filtra', 'Complete and filter'), text: () => tr('Desliza a la derecha para completar. Toca una persona o un tema y verás solo sus tareas. Las vencidas siempre están arriba.', 'Swipe right to complete. Tap a person or a topic to see only their tasks. Overdue tasks are always at the top.'), Demo: SwipeDemo },
+  { title: tr('Completa y filtra', 'Complete and filter'), text: () => tr('Desliza a la derecha para completar: cada una suma una moneda en la pantalla de Hoy. Toca una persona o un tema y verás solo sus tareas. Las vencidas siempre están arriba.', 'Swipe right to complete: each one adds a coin on the Today screen. Tap a person or a topic to see only their tasks. Overdue tasks are always at the top.'), Demo: SwipeDemo },
   {
     title: tr('Más listas, si las necesitas', 'More lists, if you need them'),
     text: () => tr(`Empiezas con una: Personal. Crea otra para la compra o el trabajo ${createHow()} y compártela si quieres editarla con alguien. Y escribe /compra para apuntar en ella sin cambiar de lista.`,
