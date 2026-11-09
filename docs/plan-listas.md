@@ -227,7 +227,7 @@ Si la app se cierra a medias, el siguiente sync retoma desde `pendingShare`. `cr
 | 2B ✅ | Servidor (migración SQL) y capa de API (`src/sync/listapi.ts`) | Suite intacta. Hay que ejecutar la migración en Supabase. |
 | 2C ✅ | Sync multiespacio (`src/sync/shared.ts`): cursores por lista, reparto, membresía perdida, compartir, unirse, salir, quitar y borrar | Dos usuarios simulados comparten una lista (`src/sync/shared.test.ts`, contra `src/sync/fakeSupabase.ts`). |
 | 2D ✅ | Interfaz de compartir, unirse, miembros, salir y quitar (`Share.tsx`, `sharing.ts`); Novedades, bienvenida, Ajustes y README | Flujos de §4.5 en escritorio y móvil. |
-| 2E | Validación real con dos cuentas de Google, en iPhone, Android y ordenador | Sin pérdida de datos. |
+| 2E | Validación real con dos cuentas de Google, en iPhone, Android y ordenador. Ensayada en local contra Supabase real (§6) | Sin pérdida de datos. |
 
 ## 6. Tests
 - Repo: crear, renombrar (también la principal), duplicados por listKey, borrar con tareas y deshacer, mover familias, subtareas heredan lista, copia v2, sync de `list`, purga.
@@ -240,3 +240,5 @@ Si la app se cierra a medias, el siguiente sync retoma desde `pendingShare`. `cr
   - **Cambios entre miembros:** añadir, completar, borrar y renombrar llegan a todos sin retroceder; mover entre espacios no duplica ni pierde tareas.
   - **Salir, quitar y borrar:** quitar o salir borra solo en local y avisa (`takeLostLists`); borrar para todos desaparece en todos los dispositivos; si el owner sale, la lista pasa al siguiente.
   - **Casos raros:** un «compartir» cortado se termina en el siguiente sync; sin la migración, lo personal sincroniza igual.
+- Contra Supabase real (`src/sync/shared.supabase.test.ts`, `npm run test:supabase`): los mismos flujos con Postgres, Auth y PostgREST en Docker y `schema.sql`, para que `fakeSupabase.ts` no se separe de la migración. Incluye borrar la cuenta siendo owner (la lista pasa al siguiente miembro).
+- Ensayo de la 2E (9 nov): con ese servidor local y dos navegadores (escritorio y móvil), Ana comparte, Bea abre el enlace y se une, editan las dos, Ana ve a los miembros y quita a Bea, y a Bea se le avisa. Sin errores. Falta la prueba con Google en dispositivos reales.

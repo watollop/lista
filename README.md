@@ -171,9 +171,12 @@ Sin configurar nada más, funciona en local sin sincronización.
 npm test
 npm run test:coverage
 npm run build
+npm run test:supabase   # listas compartidas contra un Supabase real en Docker
 ```
 
 La cobertura incluye todo `src/` y genera informes LCOV y JSON en `coverage/`, excluidos de Git.
+
+`npm run test:supabase` levanta un Supabase local con `supabase/schema.sql` (necesita Docker o Colima) y repite los flujos de compartir con cuentas de prueba. Nunca toca producción. Para pararlo: `npm run test:supabase -- stop`.
 
 </details>
 
