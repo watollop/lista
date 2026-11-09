@@ -13,14 +13,15 @@ interface Props {
   onRename: (id: ID, name: string) => Promise<void>;
   onDelete: (id: ID) => void; // la confirmación la gestiona App
   onShare: (id: ID) => void; // abre el diálogo de compartir (o de personas, si ya está compartida)
+  onLeave: (id: ID) => void; // salir de una lista compartida (App pide confirmación)
 }
 
 const MENU_W = 200; // ancho del menú de la pestaña activa (styles.css: .lt-menu)
 
 /**
  * Pestañas de listas (docs/plan-listas.md, «Pestañas»): cambiar de lista con un toque, el único sitio donde se gestionan.
- * La activa lleva ▾: tocarla otra vez abre su menú (renombrar, compartir, borrar). «+» crea una lista en línea.
- * «Todas» solo con más de una. En escritorio, doble clic renombra y soltar una tarea en una pestaña la mueve allí.
+ * La activa lleva ▾: tocarla otra vez abre su menú (renombrar, compartir, borrar o, si es compartida, salir). «+» crea una lista en línea.
+ * «Todas», la primera, solo con más de una. En escritorio, doble clic renombra y soltar una tarea en una pestaña la mueve allí.
  */
 export function ListTabs(p: Props) {
   const navRef = useRef<HTMLElement>(null);
@@ -100,6 +101,13 @@ export function ListTabs(p: Props) {
   return (
     <nav class="list-tabs" aria-label={tr('Listas', 'Lists')} ref={navRef}>
       <div class="lt-row" ref={scrollRef}>
+        {/* «Todas» va primero y solo con más de una lista: con una sería lo mismo que Personal. */}
+        {p.lists.length > 1 && (
+          <button class={`lt-tab ${p.scope === 'all' ? 'on' : ''}`} aria-current={p.scope === 'all' ? 'page' : undefined}
+            onClick={(e) => tap('all', e)}>
+            <span class="lt-name">{tr('Todas', 'All')}</span>
+          </button>
+        )}
         {p.lists.map((l) => {
           const on = l.id === p.scope;
           if (renaming === l.id) return <span key={l.id} class="lt-tab on lt-editing">{field(tr('Nombre de la lista', 'List name'))}</span>;
@@ -114,12 +122,6 @@ export function ListTabs(p: Props) {
             </button>
           );
         })}
-        {p.lists.length > 1 && (
-          <button class={`lt-tab ${p.scope === 'all' ? 'on' : ''}`} aria-current={p.scope === 'all' ? 'page' : undefined}
-            onClick={(e) => tap('all', e)}>
-            <span class="lt-name">{tr('Todas', 'All')}</span>
-          </button>
-        )}
         {creating
           ? <span class="lt-tab lt-editing">{field(tr('Nombre de la lista nueva', 'New list name'), tr('Nueva lista', 'New list'))}</span>
           : <button class="lt-tab lt-add" aria-label={tr('Nueva lista', 'New list')} title={tr('Nueva lista', 'New list')} onClick={startCreate}>+</button>}
@@ -133,6 +135,9 @@ export function ListTabs(p: Props) {
           )}
           {active.id !== MAIN_LIST && !active.shared && (
             <button role="menuitem" class="danger" onClick={() => { setMenu(null); p.onDelete(active.id); }}>{tr('Borrar lista', 'Delete list')}</button>
+          )}
+          {p.sharing && !!active.shared && (
+            <button role="menuitem" class="danger" onClick={() => { setMenu(null); p.onLeave(active.id); }}>{tr('Salir de la lista', 'Leave the list')}</button>
           )}
         </div>
       )}

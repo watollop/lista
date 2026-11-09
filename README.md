@@ -71,12 +71,12 @@ La principal lleva un icono de ramas con los pasos hechos (`1/2`): púlsalo para
 
 Empiezas con una, **Personal**. Puedes renombrarla, pero no borrarla. Para separar la compra o el trabajo, crea otras:
 
-- **Cambiar.** Las listas son pestañas, bajo la cabecera en el móvil y junto al logo en el ordenador: **Personal · Compra · Todas · +**. Toca una para cambiar de lista.
+- **Cambiar.** Las listas son pestañas, bajo la cabecera en el móvil y junto al logo en el ordenador: **Todas · Personal · Compra · +**. Toca una para cambiar de lista.
 - **Crear.** Pulsa **+**, escribe el nombre y Enter.
 - **Renombrar, compartir, borrar.** Toca la pestaña de la lista activa (tiene un ▾) para abrir su menú. En el ordenador, doble clic en una pestaña la renombra.
 - **Escribir en otra.** `Leche /compra` apunta la tarea en Compra aunque estés en otra lista, sin cambiar de lista. Si la tarea va a otra, el aviso lo dice y **Ver** te lleva allí.
 - **Mover una tarea.** En su editor, **Mover a…** (con más de una lista) elige la nueva. En el ordenador, al pasar el ratón por una tarea aparece el asa ⠿ a la izquierda de la casilla: arrástrala a otra pestaña o a otro día.
-- **Ver todo junto.** **Todas** mezcla todas las listas (aparece con dos o más). Cada tarea lleva una etiqueta con su lista; tocarla abre esa lista.
+- **Ver todo junto.** **Todas**, la primera pestaña, mezcla todas las listas (solo aparece si tienes dos o más). Cada tarea lleva una etiqueta con su lista; tocarla abre esa lista.
 - **Con teclado**, **l** pasa a la siguiente lista.
 
 <details>
@@ -97,7 +97,7 @@ Una lista puede ser de varias personas: la compra con tu pareja, las tareas de c
 - **Compartir.** Toca otra vez la pestaña de la lista y elige **Compartir**. Si ya está compartida, ahí ves a sus miembros e invitas a más. **Enviar** abre el menú de compartir del sistema, o **Copiar** si el dispositivo no lo tiene. **Personal no se comparte.**
 - **Unirse.** El enlace se envía por WhatsApp, Mensajes… (o se copia) y sirve para una sola persona: caduca en 7 días. Quien lo abre entra con Google y pulsa **Unirme**.
 - **En iPhone.** Si el enlace se abre en Safari y no en Lista, pulsa **Copiar enlace** y pégalo en la app, en la caja donde escribes las tareas: Lista lo reconoce y muestra el diálogo para unirte (no crea ninguna tarea).
-- **Quién manda.** Todos los miembros editan tareas, renombran la lista e invitan. Quien la creó —o quien la herede— quita a personas y **borra la lista para todos**. Cualquiera puede **salir**: la lista desaparece de sus dispositivos y sigue para los demás.
+- **Quién manda.** Todos los miembros editan tareas, renombran la lista e invitan. Quien la creó —o quien la herede— quita a personas y **borra la lista para todos**. Cualquiera puede **salir** desde el menú de la pestaña (**Salir de la lista**): la lista desaparece de sus dispositivos y sigue para los demás.
 - **Si quien la creó se va.** Si sale o borra su cuenta, la lista pasa al miembro más antiguo, que hereda quitar y borrar.
 - **Qué ve el servidor.** Solo quién comparte con quién, cuántas tareas tiene cada lista y cuándo hay actividad. Nunca los títulos ni los nombres: el contenido va cifrado con la clave de cada lista.
 

@@ -91,7 +91,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const closeNews = () => { markAllNewsSeen(); setNewsSheet(null); };
   // Listas compartidas (docs/plan-listas.md, «Interfaz de compartir»): diálogo de una lista y diálogo de unirse.
   // Unirse: link = el enlace que abrió la app (#unirse=…, guardado por captureJoinLink en main.tsx) o el pegado en la captura.
-  const [shareFor, setShareFor] = useState<ID | null>(null);
+  const [shareFor, setShareFor] = useState<{ id: ID; leave?: boolean } | null>(null);
   const [join, setJoin] = useState<{ link: string } | null>(() => {
     const link = pendingJoin();
     return link ? { link } : null;
@@ -145,7 +145,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-  const openShare = (id: ID) => { setListSheet(null); setSettings(false); setShareFor(id); };
+  const openShare = (id: ID, leave = false) => { setListSheet(null); setSettings(false); setShareFor({ id, leave }); };
   // Enlace pegado (o escrito) en la caja de tareas: con sincronización abre el diálogo de unirse; sin ella, se explica.
   const joinFromCapture = (text: string) => {
     if (!sharing) { showToast(tr('Para unirte a una lista compartida hace falta la sincronización.', 'Joining a shared list needs sync.')); return; }
@@ -411,9 +411,9 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     if (sheet) await moveToList(sheet.taskId, list.id, list.name);
   };
   const renameList = (id: ID, name: string) => repo.renameList(id, name).then(() => undefined);
-  // Tecla l: la pestaña siguiente (las listas y, con más de una, Todas), y vuelta a empezar.
+  // Tecla l: la pestaña siguiente (con más de una lista, Todas primero; luego las listas), y vuelta a empezar.
   const nextScope = (): ListScope => {
-    const order: ListScope[] = [...data.lists.map((l) => l.id), ...(data.lists.length > 1 ? (['all'] as const) : [])];
+    const order: ListScope[] = [...(data.lists.length > 1 ? (['all'] as const) : []), ...data.lists.map((l) => l.id)];
     return order[(order.indexOf(scope) + 1) % order.length] ?? MAIN_LIST;
   };
   // Borrar: primero se pregunta (con cuántas tareas se lleva consigo).
@@ -586,7 +586,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   // Pestañas de listas (docs/plan-listas.md, «Pestañas»): el único sitio donde se cambian, crean, renombran, comparten y borran.
   const tabs = (
     <ListTabs lists={data.lists} scope={scope} sharing={sharing} onPick={changeScope} onCreate={createList}
-      onRename={renameList} onDelete={askDeleteList} onShare={openShare} />
+      onRename={renameList} onDelete={askDeleteList} onShare={(id) => openShare(id)} onLeave={(id) => openShare(id, true)} />
   );
 
   return (
@@ -707,10 +707,11 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       )}
       {/* Después de la bienvenida: quien llega con un enlace de invitación lo ve encima. */}
       {sharing && shareFor && (() => {
-        const list = data.lists.find((l) => l.id === shareFor);
+        const list = data.lists.find((l) => l.id === shareFor.id);
         if (!list) return null;
         return (
-          <LazyShareDialog list={list} sync={sync} state={syncState} toast={showToast} onClose={() => setShareFor(null)}
+          <LazyShareDialog key={`${list.id}:${shareFor.leave ? 'leave' : ''}`} list={list} leave={shareFor.leave}
+            sync={sync} state={syncState} toast={showToast} onClose={() => setShareFor(null)}
             onGone={(id, name) => {
               if (scope === id) changeScope(MAIN_LIST);
               showToast(tr(`«${name}» ya no está en tus listas`, `“${name}” is no longer in your lists`));
