@@ -1,0 +1,23 @@
+src/ui/ListTabs.tsx
+  s_1a113f72a038c4::t_bd93f40b8fd46f 127,147-155
+src/ui/look.css
+  s_1a113f72a038c4::t_388c4dd4d46f6b 107
+src/ui/styles.css
+  s_1a113f72a038c4::t_2fcc3dc913be74 223-228,275,296,336,404,548,649-650,1352-1353,1381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5ee7e9a5ce7930a6348de79e9f635efa942998eb",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
