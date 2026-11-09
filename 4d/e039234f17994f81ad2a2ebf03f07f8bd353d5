@@ -1,0 +1,19 @@
+src/sync/shared.supabase.test.ts
+  s_1a113f72a038c4::t_28ead5499da513 15-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4de039234f17994f81ad2a2ebf03f07f8bd353d5",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
