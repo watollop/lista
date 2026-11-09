@@ -19,8 +19,8 @@ const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-
 /** En táctil (móvil) se dice "este móvil"; con ratón (ordenador) "este ordenador". */
 const isPhone = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 const device = () => (isPhone() ? tr('móvil', 'phone') : tr('ordenador', 'computer'));
-/** Cómo se crea una lista en este dispositivo: el móvil toca el nombre de arriba; el ordenador usa la barra lateral. */
-const createHow = () => (isPhone() ? tr('tocando el nombre de arriba', 'by tapping the name at the top') : tr('desde la barra lateral', 'from the sidebar'));
+/** Cómo se crea una lista: igual en móvil y ordenador, con el + de las pestañas. */
+const createHow = () => tr('con el + junto a tus listas', 'with the + next to your lists');
 
 // Funciones, no constantes: los textos dependen del idioma, que se fija al arrancar (después de importar los módulos).
 const SLIDES = (): Slide[] => [
@@ -54,7 +54,7 @@ const hasKeyboard = () => typeof matchMedia !== 'undefined' && matchMedia('(hove
 const EXTRA = (): Slide[] => [
   { title: tr('Fechas como las dirías', 'Dates the way you’d say them'), text: () => tr('Escribe el día con palabras o con números. Los periodos vencen al final: la semana, el viernes.', 'Write the day in words or numbers. Periods are due at their end: a week, on Friday.'), Demo: DatesDemo },
   { title: tr('Prioridad y repetición', 'Priority and repeat'), text: () => tr('Marca lo importante con !alta, !media o !baja. Con «cada» la tarea vuelve sola al completarla; «cada 2 martes» empieza el próximo martes y sigue cada dos semanas.', 'Mark what matters with !high, !medium or !low. With “every” the task comes back when you complete it; “every 2 tuesdays” starts next Tuesday and repeats every two weeks.'), Demo: PrioRepeatDemo },
-  { title: tr('Compartir una lista', 'Share a list'), text: () => tr('Invita a quien quieras con un enlace: uno por persona, caduca en 7 días. La editáis juntos, cada uno desde sus dispositivos, y todo va cifrado. Hace falta entrar con Google.', 'Invite anyone you like with a link: one per person, it expires in 7 days. You edit it together, each from your own devices, and everything is encrypted. You need to sign in with Google.'), Demo: ShareDemo },
+  { title: tr('Compartir una lista', 'Share a list'), text: () => tr('Desde la pestaña de la lista, elige Compartir: invita a quien quieras con un enlace, uno por persona, que caduca en 7 días. La editáis juntos y todo va cifrado. Hace falta entrar con Google.', 'From the list’s tab, choose Share: invite anyone you like with a link, one per person, that expires in 7 days. You edit it together and everything is encrypted. You need to sign in with Google.'), Demo: ShareDemo },
   { title: tr('Atajos de teclado', 'Keyboard shortcuts'), text: () => tr('Sin soltar el teclado: escribe, muévete por la lista, completa, pasa a mañana y filtra.', 'Without leaving the keyboard: write, move through the list, complete, move to tomorrow and filter.'), Demo: KeysDemo, keyboard: true },
 ];
 
@@ -346,7 +346,7 @@ function ListsDemo() {
   const text = sent ? '' : TEXT.slice(0, n);
   return (
     <div class={`lists ${reduced() ? 'still' : ''}`}>
-      <div class="lists-head">{tr('Personal', 'Personal')} <span class="lists-arrow">▾</span></div>
+      <div class="lists-head lists-tabs"><span class="on">{tr('Personal', 'Personal')}</span><span>{tr('Compra', 'Shopping')}</span><span>+</span></div>
       <div class="lists-rows">
         <span class="lists-line"><i /><b /></span>
         <span class="lists-line l1"><i /><b /></span>

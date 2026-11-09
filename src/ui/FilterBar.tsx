@@ -165,7 +165,7 @@ export function FilterBar(p: Props) {
             </>
           ) : (
             <>
-              <button class="link" onClick={() => { setFilter(emptyFilter()); setMenu(null); }}>{tr('Limpiar', 'Clear')} ×</button>
+              <button class="link" onClick={() => { setFilter(emptyFilter()); setMenu(null); }}>{tr('Quitar filtros', 'Clear filters')} ×</button>
               {!current && !f.day && <button class="link" onClick={() => setNaming(true)}>{tr('Guardar filtro', 'Save filter')}</button>}
             </>
           )}

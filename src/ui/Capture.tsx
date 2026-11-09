@@ -19,7 +19,11 @@ interface Props {
   kbOpen: boolean;
   inputRef: { current: HTMLInputElement | null };
   onAdd: (lines: ParsedLine[]) => Promise<void>;
+  /** Un enlace de invitación (#unirse=…) pegado o escrito aquí no es una tarea: abre el diálogo de unirse. */
+  onJoinLink?: (link: string) => void;
 }
+
+const JOIN_MARK = '#unirse=';
 
 /** Una opción del desplegable: lo que se muestra, su etiqueta y lo que se inserta al aceptarla. */
 interface Option {
@@ -31,7 +35,7 @@ interface Option {
 
 const NO_LISTS: TodoList[] = [];
 
-export function Capture({ topics, people, names, lists = NO_LISTS, target = null, today, kbOpen, inputRef, onAdd }: Props) {
+export function Capture({ topics, people, names, lists = NO_LISTS, target = null, today, kbOpen, inputRef, onAdd, onJoinLink }: Props) {
   const [value, setValue] = useState('');
   const [caret, setCaret] = useState(0);
   const [sel, setSel] = useState(0);
@@ -148,6 +152,7 @@ export function Capture({ topics, people, names, lists = NO_LISTS, target = null
     }
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (onJoinLink && value.includes(JOIN_MARK)) { onJoinLink(value.trim()); setValue(''); setError(''); return; }
       if (value.trim()) void submit().catch((e: Error) => setError(e.message));
     }
     if (e.key === 'Escape') {
@@ -158,6 +163,7 @@ export function Capture({ topics, people, names, lists = NO_LISTS, target = null
 
   const onPaste = async (e: ClipboardEvent) => {
     const text = e.clipboardData?.getData('text') ?? '';
+    if (onJoinLink && text.includes(JOIN_MARK)) { e.preventDefault(); onJoinLink(text.trim()); return; }
     if (!text.includes('\n')) return;
     e.preventDefault();
     if (busy) {

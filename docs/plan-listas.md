@@ -16,12 +16,11 @@
 ### Listas propias (fase 1)
 - **La principal** se llama «Personal» por defecto, se puede renombrar y no se puede borrar. Las tareas que ya existen están en ella sin migrar nada.
 - **Lista actual.** Cada dispositivo recuerda la última que abriste (`localStorage`, no se sincroniza): el portátil del trabajo abre Trabajo y el móvil, Personal.
-- **Todas las listas.** Vista que mezcla todas. Cada tarea lleva una etiqueta pequeña con su lista; tocarla abre esa lista.
+- **Todas.** Vista que mezcla todas las listas (aparece con dos o más). Cada tarea lleva una etiqueta pequeña con su lista; tocarla abre esa lista.
 - **Todo se calcula en la lista actual:** bloques (Hoy, Mañana…), contadores, mini calendario, temas y personas con pendientes, búsqueda y filtros. Los temas, las personas y los filtros guardados son comunes a todas las listas.
-- **Escritorio:** sección **Listas** arriba de la barra lateral (encima del mini calendario), con pendientes por lista, **Todas las listas** y **+ Nueva lista**. Lápiz y papelera al pasar el ratón, como los temas. Con una sola lista, la sección no aparece: solo un discreto **+ Nueva lista** al final de la barra. Una tarea se mueve **arrastrándola** (asa ⠿ del editor) a una lista de la barra. Tecla **l**: abre el selector de listas.
-- **Móvil:** el nombre de la cabecera («Lista») pasa a ser el nombre de la lista actual, con ▾ cuando hay más de una. Al tocarlo se abre la hoja de listas: listas con pendientes, **Todas las listas** y **+ Nueva lista**; el lápiz de cada lista la renombra o la borra. En la cabecera, la vista conjunta se llama «Todas».
+- **Escritorio:** las listas son pestañas en la cabecera, junto al logo «LISTA»: **Personal · Compra · Todas · +**. Siempre se ven, aunque solo haya una lista. Tocar una pestaña cambia de lista; tocar la activa (con ▾) abre su menú: **Renombrar**, **Compartir** y **Borrar lista**. Doble clic en una pestaña la renombra. Una tarea se mueve **arrastrándola** a su pestaña, desde el asa ⠿ que aparece a la izquierda de la casilla al pasar el ratón. **+** crea una lista con un campo de nombre (Enter). Tecla **l**: siguiente lista.
+- **Móvil:** las mismas pestañas van bajo la cabecera, encima de los filtros (Fecha, Tema, Persona, Prioridad), con el mismo comportamiento: tocar cambia de lista y tocar la activa abre su menú. **+** crea una lista. La cabecera muestra siempre el logo «LISTA».
 - **Editor de tarea:** junto a **+ Subtarea**, **Calendario** y **Borrar**, el botón **Mover a…** (solo con más de una lista) abre la hoja de listas para elegir destino. Es el equivalente táctil de arrastrar a la barra.
-- **Ajustes → Listas:** crear, renombrar y borrar, en los dos tamaños de pantalla.
 - **Borrar una lista** borra también sus tareas, tras confirmar («Compra tiene 12 tareas. Se borrarán con ella.»), y ofrece **Deshacer**.
 
 ### Escribir en otra lista
@@ -29,7 +28,7 @@
 - **Solo se reconocen listas que existen** (si no, `/xyz` se queda como texto): una errata no crea una lista.
 - Solo cuenta al principio de una palabra, así que `15/11`, `y/o` y las URL no cambian.
 - La clave ignora mayúsculas, tildes, espacios y guiones (`listKey` en `src/lib/text.ts`): «La compra» se escribe `/la-compra` o `/lacompra`. El autocompletado inserta `/La-compra`.
-- Lo que escribes en **Todas las listas**, lo que llega por **Compartir con Lista** y `?nueva=` va a la principal, salvo que lleve `/lista`.
+- Lo que escribes en **Todas**, lo que llega por **Compartir con Lista** y `?nueva=` va a la principal, salvo que lleve `/lista`.
 - Si la tarea va a otra lista, el aviso lo dice: «Añadida a Compra», con **Ver** para ir a esa lista.
 - Al editar una tarea, escribir `/trabajo` la mueve (con sus subtareas). No escribir ninguna lista no la cambia.
 
@@ -38,9 +37,9 @@
 - **Bienvenida:** una slide sobre las listas, con su demo, y la mención a `/lista` en la referencia de lo que se puede escribir.
 
 ### Listas compartidas (fase 2)
-- **Compartir lista** (en la hoja o la barra, y en Ajustes → Listas) crea un **enlace de invitación** de un solo uso, válido 7 días, y abre el menú de compartir del sistema (WhatsApp, Mensajes…) o lo copia. Hace falta haber entrado con Google.
+- **Compartir** (en el menú de la pestaña de la lista) crea un **enlace de invitación** de un solo uso, válido 7 días, y abre el menú de compartir del sistema (WhatsApp, Mensajes…) o lo copia. Hace falta haber entrado con Google.
 - Quien recibe el enlace lo abre, entra con Google si no lo había hecho y ve «Te han invitado a «Compra»» con **Unirme**. La lista aparece en sus dispositivos.
-- Las listas compartidas llevan un pequeño icono de personas. En sus ajustes se ve con quién se comparte.
+- Una lista compartida lleva un pequeño icono de personas en su pestaña, y su diálogo muestra con quién se comparte.
 - Cualquier miembro puede editar tareas, renombrar la lista e invitar. Quien la creó puede **quitar** a alguien y **borrar la lista para todos**. Cualquiera puede **salir**: la lista desaparece de sus dispositivos y sigue para el resto.
 - Si quien la creó sale o borra su cuenta, la lista **pasa al miembro más antiguo**, que hereda quitar y borrar. Solo desaparece cuando no queda nadie.
 - **Personal no se comparte:** se comparten las demás listas. Si solo tienes Personal, **Compartir** propone crear una lista nueva.
@@ -49,24 +48,28 @@
 - **Mover** una tarea entre una lista compartida y otra cambia quién la ve: el editor lo avisa.
 
 ### Interfaz de compartir (fase 2D)
-- **Dónde está.** Igual en escritorio y en móvil:
-  - **Barra lateral (escritorio):** al pasar el ratón sobre una lista propia (no Personal) aparece el icono de personas, junto al lápiz.
-  - **Hoja de listas (móvil):** al editar una lista con el lápiz, botón **Compartir**.
-  - **Ajustes → Listas:** botón **Compartir**.
-  - En las tres, una lista ya compartida lleva el icono de personas fijo y su botón dice **Compartida**. Todos abren el mismo diálogo.
+- **Dónde está.** Igual en escritorio y en móvil: el menú de la pestaña activa (▾) → **Compartir**. Si ya está compartida, el mismo diálogo muestra a sus miembros. Personal no tiene esa opción.
 - **Diálogo «Compartir «Compra»».**
   - **Si falta algo:** sin sesión, explica y ofrece **Entrar con Google**; con el dispositivo bloqueado, remite a enlazarlo.
   - **Si no está compartida:** explica qué pasa (todos ven y editan sus tareas, todo va cifrado) y ofrece **Compartir**.
-  - **Al compartir o al invitar:** muestra el enlace con **Enviar** (menú de compartir del sistema) y **Copiar**, y avisa de que sirve para una persona y caduca en 7 días.
+  - **Al compartir o al invitar:** muestra el enlace con un solo botón, **Enviar** (menú de compartir del sistema) si el dispositivo lo tiene, o **Copiar** si no, y avisa de que sirve para una persona y caduca en 7 días.
   - **Si ya está compartida:** muestra los miembros (nombre o email, «tú», quién la administra) y **Invitar a alguien**. Quien administra puede **Quitar** a cada persona y **Borrar para todos**. Todos pueden **Salir**; si sale quien administra, dice a quién pasa.
 - **Unirse.**
   - **Al abrir el enlace:** Lista guarda `#unirse=…` en `sessionStorage` y lo quita de la barra antes de nada, porque el regreso de Google también usa el fragmento. Luego muestra «Te han invitado a una lista compartida» con **Unirme**; sin sesión, **Entrar con Google** primero.
   - **Al terminar:** cambia a esa lista y avisa «Te has unido a «Compra»».
   - **En iPhone, en Safari y sin sesión:** ofrece **Copiar enlace** para pegarlo en la app.
-  - **Pegar el enlace a mano:** **Unirse con un enlace**, en la hoja de listas, la barra lateral y Ajustes → Listas.
+  - **Pegar el enlace a mano:** basta con pegarlo en la caja donde se escriben las tareas. Lista lo reconoce, muestra el diálogo para unirse y no crea tarea. No hay botón «Unirse con un enlace».
 - **Al mover una tarea:** en **Mover a…**, las listas compartidas llevan el icono y una línea avisa de que lo que muevas ahí lo verán sus miembros.
 - **Avisos.** «Ya no formas parte de «Compra»» cuando el sync quita una lista. Al borrar la cuenta, Ajustes avisa de que tus listas compartidas pasan a la persona más antigua de cada una.
 - **Sin sincronización configurada** (`status: 'disabled'`): no aparece nada de compartir.
+
+### Pestañas (9 nov 2026)
+- **Qué cambió.** Las listas son pestañas (**Personal · Compra · Todas · +**) en la cabecera, en vez de la sección de la barra lateral, la hoja de listas del móvil y «Ajustes → Listas». Ajustes → Organización queda con Temas y Personas.
+- **Por qué.** Un solo sitio para gestionar las listas, sin entradas repetidas: cambiar, renombrar, compartir y borrar se hacen desde la pestaña donde se ven. «Todas» solo aparece con dos o más listas.
+- **Unirse.** El enlace basta: se abre y listo. Se quitaron los botones «Unirse con un enlace». En iPhone, si el enlace se abre en Safari, «Copiar enlace» y pegarlo en la caja donde se escriben las tareas cubre el caso.
+- **Invitar.** El panel tiene un solo botón: **Enviar** si el dispositivo tiene menú de compartir, o **Copiar** si no.
+- **Barra lateral.** Sin «Todas»: repetía los pendientes de la pantalla de Hoy y chocaba con la pestaña «Todas». Con un filtro puesto aparece **Quitar filtros**.
+- **Arrastrar (escritorio).** Al pasar el ratón por una tarea, el asa ⠿ aparece a la izquierda de la casilla: se arrastra a otro día o a otra pestaña sin abrir el editor.
 
 ## 3. Modelo de datos (fase 1)
 
@@ -203,7 +206,7 @@ Si la app se cierra a medias, el siguiente sync retoma desde `pendingShare`. `cr
 1. El enlace abre Lista con `#unirse=…`. El fragmento se guarda en `sessionStorage` antes de nada, porque el regreso de Google también usa el fragmento.
 2. Sin sesión: «Te han invitado a una lista» y **Entrar con Google**. Con el dispositivo bloqueado: primero enlazarlo (cifrado).
 3. `accept_invite` → desenvolver con `wrapKey` → guardar la LK en el registro personal → sync.
-4. **iPhone:** la app instalada no comparte datos con Safari. Si el enlace se abre en Safari y ahí no hay sesión, la página ofrece **Copiar enlace** para pegarlo en la app: hoja de listas → **Unirse con un enlace**.
+4. **iPhone:** la app instalada no comparte datos con Safari. Si el enlace se abre en Safari y ahí no hay sesión, la página ofrece **Copiar enlace** para pegarlo en la app: en la caja donde se escriben las tareas, Lista reconoce el enlace y muestra el diálogo para unirse (no crea tarea).
 
 ### 4.6 Casos límite
 - Enlace usado por otra persona antes que el invitado: el invitado ve «Este enlace ya se usó» y el creador ve un miembro que no esperaba y puede quitarlo.

@@ -1,4 +1,4 @@
-// Icono de lista compartida: módulo aparte y diminuto, porque lo usan la cabecera, la barra y la hoja de listas,
+// Icono de lista compartida: módulo aparte y diminuto, porque lo usan las pestañas y la hoja «Mover a…»,
 // mientras que los diálogos de compartir (Share.tsx) se cargan solo al abrirlos.
 /** Icono de lista compartida (dos personas). Con title se anuncia; sin él es decorativo. */
 export function PeopleIcon({ title }: { title?: string }) {

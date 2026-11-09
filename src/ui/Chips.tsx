@@ -22,7 +22,7 @@ interface Props {
   hideDue?: boolean; // el bloque de la lista ya indica la fecha (Hoy, Mañana, Esta semana)
 }
 
-/** Etiqueta con el nombre de la lista de una tarea (vista «Todas las listas»). Tocarla abre esa lista, sin abrir el editor. */
+/** Etiqueta con el nombre de la lista de una tarea (vista «Todas» (todas las listas)). Tocarla abre esa lista, sin abrir el editor. */
 export function ListChip({ name, onTap }: { name: string; onTap: () => void }) {
   const label = tr(`Abrir la lista ${name}`, `Open list ${name}`);
   return (

@@ -1,14 +1,12 @@
 import { useState } from 'preact/hooks';
-import { MAIN_LIST, type DateFilter, type Entity, type EntityKind, type Filter, type ID, type ListScope, type Priority, type SavedFilter, type TodoList } from '../types';
+import type { DateFilter, Entity, EntityKind, Filter, ID, Priority, SavedFilter } from '../types';
 import { emptyFilter, isEmptyFilter, toggleIn } from '../filters';
-import { listDrop } from '../lib/reschedule';
 import { sameFilter } from './FilterBar';
 import { PriorityName } from './Priority';
 import { EntityEditor } from './EntityEditor';
 import { SEARCH_FROM, byUse } from './byUse';
 import { fold } from '../lib/text';
 import { tr } from '../i18n';
-import { PeopleIcon } from './PeopleIcon';
 
 interface Props {
   filter: Filter;
@@ -26,19 +24,6 @@ interface Props {
   onDeleteSaved: (id: ID) => void;
   onRename: (kind: EntityKind, key: string, name: string) => void;
   onDelete: (kind: EntityKind, key: string) => void;
-  // Listas (docs/plan-listas.md). Con una sola lista, la barra solo ofrece «+ Nueva lista» al final.
-  lists: TodoList[];
-  scope: ListScope; // lista actual, o 'all'
-  listPending: Map<ID, number>; // pendientes por lista
-  total: number; // pendientes de todas las listas
-  onPickList: (scope: ListScope) => void;
-  onCreateList: (name: string) => Promise<void>; // lanza Error si no se puede (se muestra en la barra)
-  onRenameList: (id: ID, name: string) => Promise<void>;
-  onDeleteList: (id: ID) => void; // la confirmación la gestiona App
-  // Compartir (docs/plan-listas.md, fase 2D). Con sharing false no aparece nada de compartir.
-  sharing?: boolean; // hay sincronización configurada (state.status !== 'disabled')
-  onShareList?: (id: ID) => void; // abre el diálogo de compartir de esa lista
-  onJoinList?: () => void; // «Unirse con un enlace»
 }
 
 const DATES = (): Array<[DateFilter, string]> => [
@@ -46,7 +31,11 @@ const DATES = (): Array<[DateFilter, string]> => [
   ['overdue', tr('Vencidas', 'Overdue')], ['nodate', tr('Sin fecha', 'No date')],
 ];
 
-/** Pantallas anchas: todos los filtros a la vista, con recuento de pendientes. Misma lógica que FilterBar. */
+/**
+ * Pantallas anchas: todos los filtros a la vista, con recuento de pendientes. Misma lógica que FilterBar. Las listas
+ * no están aquí: son las pestañas de la cabecera (ListTabs). Los pendientes ya los dice la pantalla de Hoy de arriba,
+ * así que no hay «Todas»: con un filtro puesto aparece «Quitar filtros».
+ */
 export function Sidebar(p: Props) {
   const { filter: f, setFilter } = p;
   const set = (patch: Partial<Filter>) => setFilter({ ...f, ...patch });
@@ -62,29 +51,14 @@ export function Sidebar(p: Props) {
 
   return (
     <aside class="side" aria-label={tr('Filtros', 'Filters')}>
-      {p.lists.length > 1 && (
-        <section class="side-group side-lists">
-          <h3 class="label">{tr('Listas', 'Lists')}</h3>
-          <ul class="side-list">
-            {p.lists.map((l) => (
-              <ListEntry key={l.id} list={l} on={p.scope === l.id} count={p.listPending.get(l.id)}
-                onPick={() => p.onPickList(l.id)} onRename={p.onRenameList} onDelete={p.onDeleteList}
-                sharing={!!p.sharing} onShare={p.onShareList} />
-            ))}
-            <Item on={p.scope === 'all'} count={p.total} onClick={() => p.onPickList('all')}>{tr('Todas las listas', 'All lists')}</Item>
-            <NewListItem onCreate={p.onCreateList} />
-            {p.sharing && p.onJoinList && <JoinListItem onJoin={p.onJoinList} />}
-          </ul>
-        </section>
-      )}
       {p.week}
       <input ref={p.searchRef} class="side-search" type="search" placeholder={tr('Buscar', 'Search')} value={f.text} aria-label={tr('Buscar', 'Search')}
         onInput={(e) => set({ text: e.currentTarget.value })}
         onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }} />
 
-      <ul class="side-list">
-        <Item on={isEmptyFilter(f)} count={p.counts.open} onClick={() => setFilter(emptyFilter())}>{tr('Todas', 'All')}</Item>
-      </ul>
+      {!isEmptyFilter(f) && (
+        <button class="link side-clear" onClick={() => setFilter(emptyFilter())}>{tr('Quitar filtros', 'Clear filters')} ×</button>
+      )}
 
       <Group title={tr('Fecha', 'Date')}>
         {DATES().map(([d, l]) => (
@@ -138,117 +112,8 @@ export function Sidebar(p: Props) {
           )}
         </Group>
       )}
-
-      {p.lists.length <= 1 && (
-        <section class="side-group">
-          <ul class="side-list">
-            <NewListItem onCreate={p.onCreateList} />
-            {p.sharing && p.onJoinList && <JoinListItem onJoin={p.onJoinList} />}
-          </ul>
-        </section>
-      )}
     </aside>
   );
-}
-
-/** Una lista en la barra: lápiz (renombrar en línea) y papelera (no en la principal) al pasar el ratón; soltar tareas aquí las mueve. */
-function ListEntry({ list, on, count, onPick, onRename, onDelete, sharing, onShare }: {
-  list: TodoList; on: boolean; count?: number; onPick: () => void;
-  onRename: (id: ID, name: string) => Promise<void>; onDelete: (id: ID) => void;
-  sharing: boolean; onShare?: (id: ID) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(list.name);
-  const [err, setErr] = useState('');
-  const isMain = list.id === MAIN_LIST;
-  const shared = sharing && !!list.shared; // una lista compartida no se borra desde aquí: eso pasa en el diálogo de compartir
-  const startEdit = () => { setName(list.name); setErr(''); setEditing(true); };
-  const cancel = () => { setEditing(false); setErr(''); };
-  const save = () => {
-    const n = name.trim();
-    if (!n || n === list.name) { cancel(); return; }
-    onRename(list.id, n).then(() => cancel(), (e: unknown) => setErr(e instanceof Error ? e.message : tr('No se pudo renombrar la lista.', 'Couldn’t rename the list.')));
-  };
-
-  if (editing) {
-    return (
-      <li class="side-ent">
-        <input autoFocus class="side-search side-filter" value={name} aria-label={tr('Nombre de la lista', 'List name')}
-          onInput={(e) => setName(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); save(); }
-            if (e.key === 'Escape') { e.stopPropagation(); cancel(); }
-          }} />
-        {err && <p class="side-err" role="alert">{err}</p>}
-      </li>
-    );
-  }
-
-  return (
-    <li class="side-ent" data-drop={listDrop(list.id)}>
-      {/* detail > 1: el segundo clic del doble clic no vuelve a elegir la lista; el doble clic abre la edición. */}
-      <button class={`side-item ${on ? 'on' : ''}`} aria-pressed={on}
-        onClick={(e) => { if (e.detail < 2) onPick(); }} onDblClick={startEdit}>
-        <span>{list.name}</span>
-        {shared && <PeopleIcon title={tr('Compartida', 'Shared')} />}
-        {count ? <span class="side-count">{count}</span> : null}
-      </button>
-      <span class="side-acts">
-        <button class="side-act" aria-label={tr(`Editar ${list.name}`, `Edit ${list.name}`)} title={tr('Editar', 'Edit')} onClick={startEdit}>
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
-            <path d="M3 13l.6-2.6 7.4-7.4 2 2-7.4 7.4z" /><path d="M9.5 4.5l2 2" />
-          </svg>
-        </button>
-        {sharing && onShare && !isMain && (
-          <button class="side-act" aria-label={shared ? tr(`Compartida: ${list.name}`, `Shared: ${list.name}`) : tr(`Compartir ${list.name}`, `Share ${list.name}`)}
-            title={shared ? tr('Compartida', 'Shared') : tr('Compartir', 'Share')} onClick={() => onShare(list.id)}>
-            <PeopleIcon />
-          </button>
-        )}
-        {!isMain && !shared && (
-          <button class="side-act del" aria-label={tr(`Borrar ${list.name}`, `Delete ${list.name}`)} title={tr('Borrar', 'Delete')} onClick={() => onDelete(list.id)}>
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
-              <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" />
-            </svg>
-          </button>
-        )}
-      </span>
-    </li>
-  );
-}
-
-/** «+ Nueva lista» en línea, como «+ Guardar filtro actual». Enter crea; Esc o dejarlo vacío lo cancela. */
-function NewListItem({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
-  const [naming, setNaming] = useState(false);
-  const [name, setName] = useState('');
-  const [err, setErr] = useState('');
-  const cancel = () => { setNaming(false); setName(''); setErr(''); };
-  const create = () => {
-    const n = name.trim();
-    if (!n) { cancel(); return; }
-    onCreate(n).then(() => cancel(), (e: unknown) => setErr(e instanceof Error ? e.message : tr('No se pudo crear la lista.', 'Couldn’t create the list.')));
-  };
-
-  if (!naming) {
-    return <li><button class="side-item side-add" onClick={() => setNaming(true)}>{tr('+ Nueva lista', '+ New list')}</button></li>;
-  }
-  return (
-    <li>
-      <input autoFocus class="side-search" placeholder={tr('Nombre de la lista', 'List name')} value={name} aria-label={tr('Nombre de la lista nueva', 'New list name')}
-        onInput={(e) => setName(e.currentTarget.value)}
-        onBlur={() => { if (!name.trim()) cancel(); }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); create(); }
-          if (e.key === 'Escape') { e.stopPropagation(); cancel(); }
-        }} />
-      {err && <p class="side-err" role="alert">{err}</p>}
-    </li>
-  );
-}
-
-/** «Unirse con un enlace» al final de las listas: discreto, como «+ Nueva lista». Abre la misma entrada que la hoja y Ajustes. */
-function JoinListItem({ onJoin }: { onJoin: () => void }) {
-  return <li><button class="side-item side-add" onClick={onJoin}>{tr('Unirse con un enlace', 'Join with a link')}</button></li>;
 }
 
 function Group({ title, children }: { title: string; children: preact.ComponentChildren }) {

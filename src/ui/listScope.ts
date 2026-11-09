@@ -38,14 +38,3 @@ export function listName(lists: TodoList[], id: ID): string {
   if (found) return found;
   return id === MAIN_LIST ? tr('Personal', 'Personal') : '';
 }
-
-/** Tareas pendientes (vivas y no hechas) de cada lista. Las tareas sin listId cuentan en la principal. */
-export function openByList(tasks: Task[]): Map<ID, number> {
-  const m = new Map<ID, number>();
-  for (const t of tasks) {
-    if (t.deleted || t.done) continue;
-    const id = t.listId ?? MAIN_LIST;
-    m.set(id, (m.get(id) ?? 0) + 1);
-  }
-  return m;
-}
