@@ -12,9 +12,10 @@ import type { Session } from './auth';
 import { createSync } from './index';
 import { InviteRejectedError } from './listapi';
 
-const URL_ = process.env.LISTA_SUPABASE_URL ?? '';
-const ANON = process.env.LISTA_SUPABASE_ANON ?? '';
-const SERVICE = process.env.LISTA_SUPABASE_SERVICE ?? '';
+const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+const URL_ = env.LISTA_SUPABASE_URL ?? '';
+const ANON = env.LISTA_SUPABASE_ANON ?? '';
+const SERVICE = env.LISTA_SUPABASE_SERVICE ?? '';
 const CFG = { url: URL_, anonKey: ANON };
 const ORIGIN = 'https://lista.test';
 const RUN = Date.now().toString(36);
