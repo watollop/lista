@@ -1,0 +1,67 @@
+README.md
+  s_1a113f72a038c4::t_7de87b80d9f015 74-76,78-80,86,97,99,122
+docs/plan-listas.md
+  s_1a113f72a038c4::t_77332d05e9a730 19,21-22,31,40,42,51,55,61,66-73,209
+src/lib/reschedule.ts
+  s_1a113f72a038c4::t_cd1c44215cfad5 9
+src/ui/App.tsx
+  s_1a113f72a038c4::t_583b21be28e20d 26,29,34,88,90,144-148,387,389,393-394,396,405-406,409-413,562,581-585,591-592,603,625,693-694
+src/ui/Capture.tsx
+  s_1a113f72a038c4::t_c67093e4497dd0 22-23,26-27,38,155,166
+src/ui/Chips.tsx
+  s_1a113f72a038c4::t_98e3683bfa71d2 25
+src/ui/FilterBar.tsx
+  s_1a113f72a038c4::t_51c60f464011f8 168
+src/ui/ListTabs.tsx
+  s_1a113f72a038c4::t_93b741069f833e 1-141
+src/ui/Lists.tsx
+  s_1a113f72a038c4::t_1a3393cdda792c 2,11-13,15,19-20,23-25,31,63,69,78,81,83,96-99,101-102,106,130
+src/ui/PeopleIcon.tsx
+  s_1a113f72a038c4::t_37f33ddf2b7beb 1
+src/ui/Settings.tsx
+  s_1a113f72a038c4::t_a2cb4bcebcfacf 1-2,29,331-332,334-335,337-338
+src/ui/Share.tsx
+  s_1a113f72a038c4::t_beb20eb7ae4756 147,187-190,304-305,322,343-344,351-352,357,359-360,363-364,375
+src/ui/Sidebar.tsx
+  s_1a113f72a038c4::t_ed282570c3981a 2,34-38,59-61
+src/ui/TaskList.tsx
+  s_1a113f72a038c4::t_b031b8436b3224 36,182,207-213,218,267,474-483
+src/ui/drag.ts
+  s_1a113f72a038c4::t_fc3565a17896eb 12-14
+src/ui/listScope.test.ts
+  s_1a113f72a038c4::t_2977395c10bf23 4
+src/ui/look.css
+  s_1a113f72a038c4::t_79125ae56afd36 97-98
+src/ui/news.ts
+  s_1a113f72a038c4::t_82d6865f702d47 8-15,20-21,28-29
+src/ui/shortcuts.ts
+  s_1a113f72a038c4::t_8abe4f1cfe8905 14
+src/ui/styles.css
+  s_1a113f72a038c4::t_a7caeb5e67dca2 730-733,1214,1297-1357
+src/ui/Onboarding.tsx
+  s_72bef93af79eae::t_0c80dbb69c868c 22-23,57,349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "29be4ae2e33726d7571df78c4475bc12161e7937",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    },
+    "s_72bef93af79eae": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af3bf84f5ced5db9d",
+        "model": "unknown"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
