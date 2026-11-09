@@ -584,8 +584,8 @@ kbd {
   position: sticky;
   /* Su primer elemento queda a la altura de la captura, con la página arriba o desplazada:
      --side-top + --side-pad = donde se queda la captura al pegarse; --side-pad = su separación sin desplazar. */
-  --side-pad: 9px;
-  --side-top: calc(79px + var(--sat));
+  --side-pad: 8px;
+  --side-top: calc(80px + var(--sat));
   top: var(--side-top);
   align-self: start;
   /* Sin desplazar, la barra empieza donde acaba la cabecera (88 px + 8 px de margen): si su altura máxima se

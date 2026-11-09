@@ -179,13 +179,13 @@
 /* Escritorio */
 @media (min-width: 900px) {
   :where([data-look="industrial"]) .brand { font-size: 32px; }
-  :where([data-look="industrial"]) .capture { border-bottom: 0; margin-top: 18px; }
+  :where([data-look="industrial"]) .capture { border-bottom: 0; margin-top: 0; } /* la pantalla ya lleva su relleno: sin el margen de escritorio, a la altura de Clásico */
   :where([data-look="industrial"]) .capture input { height: 54px; }
   :where([data-look="industrial"]) .capture input { font-size: 18px; }
 }
 :where([data-look="industrial"]) .app.wide .top { border-bottom: 0; background: var(--bg); }
-/* La captura de Industrial baja 18 px (margen) y su pantalla 8 px más (relleno): la barra lateral la acompaña */
-:where([data-look="industrial"]) .side { --side-pad: 26px; --side-top: calc(70px + var(--sat)); }
+/* La pantalla de la captura de Industrial baja 8 px (relleno): la barra lateral la acompaña, sin desplazar y pegada. */
+:where([data-look="industrial"]) .side { --side-pad: 8px; --side-top: calc(88px + var(--sat)); }
 /* Barra lateral: cada grupo es un módulo, como una lista agrupada */
 :where([data-look="industrial"]) .side-group { margin-top: 22px; }
 :where([data-look="industrial"]) .side-group > .label { color: var(--muted); font-size: 10px; padding: 0 var(--side-in); margin-bottom: 8px; }
