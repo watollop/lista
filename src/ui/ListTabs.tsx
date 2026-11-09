@@ -124,7 +124,7 @@ export function ListTabs(p: Props) {
         })}
         {creating
           ? <span class="lt-tab lt-editing">{field(tr('Nombre de la lista nueva', 'New list name'), tr('Nueva lista', 'New list'))}</span>
-          : <button class="lt-tab lt-add" aria-label={tr('Nueva lista', 'New list')} title={tr('Nueva lista', 'New list')} onClick={startCreate}>+</button>}
+          : <button class="lt-tab lt-add" aria-label={tr('Nueva lista', 'New list')} title={tr('Nueva lista', 'New list')} onClick={startCreate}><PlusIcon /></button>}
       </div>
       {error && <p class="lt-error" role="alert">{error}</p>}
       {menu !== null && active && (
@@ -142,5 +142,14 @@ export function ListTabs(p: Props) {
         </div>
       )}
     </nav>
+  );
+}
+
+/** «+» dibujado: el carácter + de la fuente queda unos 2 px por debajo del centro de las pestañas. */
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+      <path d="M6 1v10M1 6h10" />
+    </svg>
   );
 }
