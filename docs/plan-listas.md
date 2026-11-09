@@ -16,9 +16,9 @@
 ### Listas propias (fase 1)
 - **La principal** se llama «Personal» por defecto, se puede renombrar y no se puede borrar. Las tareas que ya existen están en ella sin migrar nada.
 - **Lista actual.** Cada dispositivo recuerda la última que abriste (`localStorage`, no se sincroniza): el portátil del trabajo abre Trabajo y el móvil, Personal.
-- **Todas.** Vista que mezcla todas las listas (aparece con dos o más). Cada tarea lleva una etiqueta pequeña con su lista; tocarla abre esa lista.
+- **Todas.** Primera pestaña: mezcla todas las listas (solo aparece con dos o más). Cada tarea lleva una etiqueta pequeña con su lista; tocarla abre esa lista.
 - **Todo se calcula en la lista actual:** bloques (Hoy, Mañana…), contadores, mini calendario, temas y personas con pendientes, búsqueda y filtros. Los temas, las personas y los filtros guardados son comunes a todas las listas.
-- **Escritorio:** las listas son pestañas en la cabecera, junto al logo «LISTA»: **Personal · Compra · Todas · +**. Siempre se ven, aunque solo haya una lista. Tocar una pestaña cambia de lista; tocar la activa (con ▾) abre su menú: **Renombrar**, **Compartir** y **Borrar lista**. Doble clic en una pestaña la renombra. Una tarea se mueve **arrastrándola** a su pestaña, desde el asa ⠿ que aparece a la izquierda de la casilla al pasar el ratón. **+** crea una lista con un campo de nombre (Enter). Tecla **l**: siguiente lista.
+- **Escritorio:** las listas son pestañas en la cabecera, junto al logo «LISTA»: **Todas · Personal · Compra · +**. Siempre se ven, aunque solo haya una lista. Tocar una pestaña cambia de lista; tocar la activa (con ▾) abre su menú: **Renombrar**, **Compartir** y **Borrar lista**. Doble clic en una pestaña la renombra. Una tarea se mueve **arrastrándola** a su pestaña, desde el asa ⠿ que aparece a la izquierda de la casilla al pasar el ratón. **+** crea una lista con un campo de nombre (Enter). Tecla **l**: siguiente lista.
 - **Móvil:** las mismas pestañas van bajo la cabecera, encima de los filtros (Fecha, Tema, Persona, Prioridad), con el mismo comportamiento: tocar cambia de lista y tocar la activa abre su menú. **+** crea una lista. La cabecera muestra siempre el logo «LISTA».
 - **Editor de tarea:** junto a **+ Subtarea**, **Calendario** y **Borrar**, el botón **Mover a…** (solo con más de una lista) abre la hoja de listas para elegir destino. Es el equivalente táctil de arrastrar a la barra.
 - **Borrar una lista** borra también sus tareas, tras confirmar («Compra tiene 12 tareas. Se borrarán con ella.»), y ofrece **Deshacer**.
@@ -40,7 +40,7 @@
 - **Compartir** (en el menú de la pestaña de la lista) crea un **enlace de invitación** de un solo uso, válido 7 días, y abre el menú de compartir del sistema (WhatsApp, Mensajes…) o lo copia. Hace falta haber entrado con Google.
 - Quien recibe el enlace lo abre, entra con Google si no lo había hecho y ve «Te han invitado a «Compra»» con **Unirme**. La lista aparece en sus dispositivos.
 - Una lista compartida lleva un pequeño icono de personas en su pestaña, y su diálogo muestra con quién se comparte.
-- Cualquier miembro puede editar tareas, renombrar la lista e invitar. Quien la creó puede **quitar** a alguien y **borrar la lista para todos**. Cualquiera puede **salir**: la lista desaparece de sus dispositivos y sigue para el resto.
+- Cualquier miembro puede editar tareas, renombrar la lista e invitar. Quien la creó puede **quitar** a alguien y **borrar la lista para todos**. Cualquiera puede **salir** (menú de la pestaña → **Salir de la lista**): la lista desaparece de sus dispositivos y sigue para el resto.
 - Si quien la creó sale o borra su cuenta, la lista **pasa al miembro más antiguo**, que hereda quitar y borrar. Solo desaparece cuando no queda nadie.
 - **Personal no se comparte:** se comparten las demás listas. Si solo tienes Personal, **Compartir** propone crear una lista nueva.
 - Al compartir una lista se van con ella todas sus tareas, también las completadas.
@@ -53,7 +53,7 @@
   - **Si falta algo:** sin sesión, explica y ofrece **Entrar con Google**; con el dispositivo bloqueado, remite a enlazarlo.
   - **Si no está compartida:** explica qué pasa (todos ven y editan sus tareas, todo va cifrado) y ofrece **Compartir**.
   - **Al compartir o al invitar:** muestra el enlace con un solo botón, **Enviar** (menú de compartir del sistema) si el dispositivo lo tiene, o **Copiar** si no, y avisa de que sirve para una persona y caduca en 7 días.
-  - **Si ya está compartida:** muestra los miembros (nombre o email, «tú», quién la administra) y **Invitar a alguien**. Quien administra puede **Quitar** a cada persona y **Borrar para todos**. Todos pueden **Salir**; si sale quien administra, dice a quién pasa.
+  - **Si ya está compartida:** muestra los miembros (nombre o email, «tú», quién la administra) y **Invitar a alguien**. Quien administra puede **Quitar** a cada persona y **Borrar para todos**. **Salir de la lista** está en el menú de la pestaña (abre este diálogo en esa confirmación); si sale quien administra, dice a quién pasa.
 - **Unirse.**
   - **Al abrir el enlace:** Lista guarda `#unirse=…` en `sessionStorage` y lo quita de la barra antes de nada, porque el regreso de Google también usa el fragmento. Luego muestra «Te han invitado a una lista compartida» con **Unirme**; sin sesión, **Entrar con Google** primero.
   - **Al terminar:** cambia a esa lista y avisa «Te has unido a «Compra»».
@@ -64,7 +64,7 @@
 - **Sin sincronización configurada** (`status: 'disabled'`): no aparece nada de compartir.
 
 ### Pestañas (9 nov 2026)
-- **Qué cambió.** Las listas son pestañas (**Personal · Compra · Todas · +**) en la cabecera, en vez de la sección de la barra lateral, la hoja de listas del móvil y «Ajustes → Listas». En Ajustes, el grupo pasa a llamarse **Temas y personas**.
+- **Qué cambió.** Las listas son pestañas (**Todas · Personal · Compra · +**) en la cabecera, en vez de la sección de la barra lateral, la hoja de listas del móvil y «Ajustes → Listas». En Ajustes, el grupo pasa a llamarse **Temas y personas**.
 - **Por qué.** Un solo sitio para gestionar las listas, sin entradas repetidas: cambiar, renombrar, compartir y borrar se hacen desde la pestaña donde se ven. «Todas» solo aparece con dos o más listas.
 - **Unirse.** El enlace basta: se abre y listo. Se quitaron los botones «Unirse con un enlace». En iPhone, si el enlace se abre en Safari, «Copiar enlace» y pegarlo en la caja donde se escriben las tareas cubre el caso.
 - **Invitar.** El panel tiene un solo botón: **Enviar** si el dispositivo tiene menú de compartir, o **Copiar** si no.

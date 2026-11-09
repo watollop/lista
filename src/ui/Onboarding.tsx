@@ -346,7 +346,7 @@ function ListsDemo() {
   const text = sent ? '' : TEXT.slice(0, n);
   return (
     <div class={`lists ${reduced() ? 'still' : ''}`}>
-      <div class="lists-head lists-tabs"><span class="on">{tr('Personal', 'Personal')}</span><span>{tr('Compra', 'Shopping')}</span><span>+</span></div>
+      <div class="lists-head lists-tabs"><span>{tr('Todas', 'All')}</span><span class="on">{tr('Personal', 'Personal')}</span><span>{tr('Compra', 'Shopping')}</span><span>+</span></div>
       <div class="lists-rows">
         <span class="lists-line"><i /><b /></span>
         <span class="lists-line l1"><i /><b /></span>

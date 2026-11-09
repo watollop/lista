@@ -1,5 +1,5 @@
 // Compartir listas (docs/plan-listas.md, «Interfaz de compartir (fase 2D)»): el diálogo de una lista (compartir,
-// invitar, miembros, quitar, salir y borrar para todos), el de unirse con un enlace y el icono de lista compartida.
+// invitar, miembros, quitar, salir —se abre desde el menú de la pestaña— y borrar para todos) y el de unirse.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { MAIN_LIST, type ID, type ListMemberInfo, type ListRole, type Sync, type SyncState, type TodoList } from '../types';
 import { tr } from '../i18n';
@@ -64,18 +64,22 @@ export interface ShareDialogProps {
   toast: (msg: string) => void;
   /** Tras salir o borrar para todos: la lista ya no está en este dispositivo. */
   onGone: (listId: ID, name: string) => void;
+  /** Abierto desde «Salir de la lista» (menú de la pestaña): empieza en esa confirmación y Cancelar cierra. */
+  leave?: boolean;
 }
 
 type Confirm = { kind: 'remove'; member: ListMemberInfo } | { kind: 'leave' } | { kind: 'delete' };
 
-export function ShareDialog({ list, sync, state, onClose, toast, onGone }: ShareDialogProps) {
+export function ShareDialog({ list, sync, state, onClose, toast, onGone, leave: leaving = false }: ShareDialogProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [invite, setInvite] = useState<{ link: string; expiresAt: string } | null>(null);
   const [members, setMembers] = useState<ListMemberInfo[] | null>(null);
   const [loadError, setLoadError] = useState('');
   const [myRole, setMyRole] = useState<ListRole | null>(null);
-  const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [confirm, setConfirmRaw] = useState<Confirm | null>(leaving ? { kind: 'leave' } : null);
+  // Si se abrió para salir, cancelar esa confirmación cierra el diálogo (no hay nada más que hacer en él).
+  const setConfirm = (c: Confirm | null) => { if (!c && leaving && confirm?.kind === 'leave') onClose(); else setConfirmRaw(c); };
   const { ref, onBackdrop } = useDialog(onClose, busy);
 
   const shared = !!list.shared;
@@ -143,7 +147,8 @@ export function ShareDialog({ list, sync, state, onClose, toast, onGone }: Share
     else setError(tr('No se pudo copiar. Selecciona el enlace y cópialo.', 'Couldn’t copy. Select the link and copy it.'));
   };
 
-  const title = shared ? `«${list.name}»` : tr(`Compartir «${list.name}»`, `Share “${list.name}”`);
+  const title = leaving ? tr(`¿Salir de «${list.name}»?`, `Leave “${list.name}”?`)
+    : shared ? `«${list.name}»` : tr(`Compartir «${list.name}»`, `Share “${list.name}”`);
   const canShare = typeof navigator.share === 'function';
 
   const body = () => {
@@ -220,13 +225,14 @@ export function ShareDialog({ list, sync, state, onClose, toast, onGone }: Share
     const heir = nextOwner(members ?? [], me?.user_id);
     return (
       <>
-        <span class="label share-sub">{tr('Personas', 'People')}</span>
-        {members === null && !loadError && <p>{tr('Cargando…', 'Loading…')}</p>}
-        {loadError && (
+        {/* Desde «Salir de la lista» solo se pregunta: la lista de personas sobra (los datos se cargan igual para decir a quién pasa). */}
+        {!leaving && <span class="label share-sub">{tr('Personas', 'People')}</span>}
+        {!leaving && members === null && !loadError && <p>{tr('Cargando…', 'Loading…')}</p>}
+        {!leaving && loadError && (
           <p class="share-error" role="alert">{loadError}{' '}
             <button class="link" onClick={() => void load()}>{tr('Reintentar', 'Retry')}</button></p>
         )}
-        {members && (
+        {!leaving && members && (
           <ul class="share-members">
             {members.map((m) => (
               <li class="share-member" key={m.user_id}>
@@ -273,12 +279,12 @@ export function ShareDialog({ list, sync, state, onClose, toast, onGone }: Share
               </button>
               <button class="btn" onClick={onClose} disabled={busy}>{tr('Cerrar', 'Close')}</button>
             </div>
-            <div class="share-foot">
-              <button class="link danger" onClick={() => setConfirm({ kind: 'leave' })} disabled={busy}>{tr('Salir de la lista', 'Leave the list')}</button>
-              {owner && others.length > 0 && (
+            {/* Salir está en el menú de la pestaña; aquí solo lo que es cosa de quien administra. */}
+            {owner && others.length > 0 && (
+              <div class="share-foot">
                 <button class="link danger" onClick={() => setConfirm({ kind: 'delete' })} disabled={busy}>{tr('Borrar para todos', 'Delete for everyone')}</button>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </>
