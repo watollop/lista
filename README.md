@@ -71,17 +71,19 @@ La principal lleva un icono de ramas con los pasos hechos (`1/2`): púlsalo para
 
 Empiezas con una, **Personal**. Puedes renombrarla, pero no borrarla. Para separar la compra o el trabajo, crea otras:
 
-- **Crear.** En el móvil, toca el nombre de arriba y luego **+ Nueva lista**. En el ordenador, **+ Nueva lista** en la barra lateral. En los dos, también en **Ajustes → Listas**.
+- **Cambiar.** Las listas son pestañas, bajo la cabecera en el móvil y junto al logo en el ordenador: **Personal · Compra · Todas · +**. Toca una para cambiar de lista.
+- **Crear.** Pulsa **+**, escribe el nombre y Enter.
+- **Renombrar, compartir, borrar.** Toca la pestaña de la lista activa (tiene un ▾) para abrir su menú. En el ordenador, doble clic en una pestaña la renombra.
 - **Escribir en otra.** `Leche /compra` apunta la tarea en Compra aunque estés en otra lista, sin cambiar de lista. Si la tarea va a otra, el aviso lo dice y **Ver** te lleva allí.
-- **Mover una tarea.** En su editor, **Mover a…** (con más de una lista) elige la nueva. En el ordenador, también puedes arrastrarla a la lista de la barra lateral.
-- **Ver todo junto.** **Todas las listas** mezcla todas. Cada tarea lleva una etiqueta con su lista; tocarla abre esa lista.
-- **Con teclado**, **l** cambia de lista.
+- **Mover una tarea.** En su editor, **Mover a…** (con más de una lista) elige la nueva. En el ordenador, al pasar el ratón por una tarea aparece el asa ⠿ a la izquierda de la casilla: arrástrala a otra pestaña o a otro día.
+- **Ver todo junto.** **Todas** mezcla todas las listas (aparece con dos o más). Cada tarea lleva una etiqueta con su lista; tocarla abre esa lista.
+- **Con teclado**, **l** pasa a la siguiente lista.
 
 <details>
 <summary>Más sobre las listas</summary>
 
 - Solo cuentan las listas que existen: una errata no crea una lista. Para nombres con espacios, escribe `/la-compra`.
-- Al editar una tarea, escribir `/trabajo` la mueve con sus subtareas. Lo que escribes en **Todas las listas** va a Personal, salvo que lleve `/lista`.
+- Al editar una tarea, escribir `/trabajo` la mueve con sus subtareas. Lo que escribes en **Todas** va a Personal, salvo que lleve `/lista`.
 - Cada dispositivo recuerda la última lista que abriste: el del trabajo puede abrir Trabajo y el móvil, Personal.
 - Contadores, mini calendario, búsqueda y filtros son de la lista actual. Los temas, las personas y los filtros guardados son comunes a todas.
 - Borrar una lista borra también sus tareas, tras confirmar. **Deshacer** las recupera.
@@ -92,9 +94,9 @@ Empiezas con una, **Personal**. Puedes renombrarla, pero no borrarla. Para separ
 
 Una lista puede ser de varias personas: la compra con tu pareja, las tareas de casa. Compártela y la editáis juntos, cada uno desde sus dispositivos. Hace falta entrar con **Google** y el servidor de sincronización, con su migración (ver «Sincronización con Supabase», más abajo).
 
-- **Compartir.** En el móvil, toca el lápiz de una lista en la hoja de listas y **Compartir**; también en **Ajustes → Listas**. En el ordenador, el icono de personas de la barra lateral, junto al lápiz. **Personal no se comparte.**
+- **Compartir.** Toca otra vez la pestaña de la lista y elige **Compartir**. Si ya está compartida, ahí ves a sus miembros e invitas a más. **Enviar** abre el menú de compartir del sistema, o **Copiar** si el dispositivo no lo tiene. **Personal no se comparte.**
 - **Unirse.** El enlace se envía por WhatsApp, Mensajes… (o se copia) y sirve para una sola persona: caduca en 7 días. Quien lo abre entra con Google y pulsa **Unirme**.
-- **En iPhone.** Si el enlace se abre en Safari y no en Lista, pulsa **Copiar enlace** y pégalo en la app: toca el nombre de arriba → **Unirse con un enlace** (en el ordenador está en la barra lateral, y en los dos en **Ajustes → Listas**).
+- **En iPhone.** Si el enlace se abre en Safari y no en Lista, pulsa **Copiar enlace** y pégalo en la app, en la caja donde escribes las tareas: Lista lo reconoce y muestra el diálogo para unirte (no crea ninguna tarea).
 - **Quién manda.** Todos los miembros editan tareas, renombran la lista e invitan. Quien la creó —o quien la herede— quita a personas y **borra la lista para todos**. Cualquiera puede **salir**: la lista desaparece de sus dispositivos y sigue para los demás.
 - **Si quien la creó se va.** Si sale o borra su cuenta, la lista pasa al miembro más antiguo, que hereda quitar y borrar.
 - **Qué ve el servidor.** Solo quién comparte con quién, cuántas tareas tiene cada lista y cuándo hay actividad. Nunca los títulos ni los nombres: el contenido va cifrado con la clave de cada lista.
@@ -117,7 +119,7 @@ Una lista puede ser de varias personas: la compra con tu pareja, las tareas de c
 - **Cada cosa en su día.** Las tareas se agrupan en Vencidas, Hoy, Mañana, Esta semana y Próximas. Las vencidas se ven siempre arriba, filtres por la fecha que filtres.
 - **Si el filtro esconde lo que acabas de añadir, te avisa.** Vale para una tarea, para varias (con subtareas o pegadas) y para lo que llega con «Compartir con Lista»: el aviso lo dice y **Ver todo** quita el filtro.
 - **Tu semana de un vistazo.** Arriba de los filtros (en el móvil, al tocar **Buscar**) verás cuántas tareas tienes hoy, las vencidas y cuántas tienes cada uno de los próximos 7 días, todo de la lista actual. Toca un día para ver solo sus tareas (y las vencidas); tócalo otra vez (o vuelve a abrir Lista) para verlas todas.
-- **Cambia de planes.** Toca una tarea para editarla: se guarda sola al pulsar Enter o al salir. Mientras la editas, la casilla se convierte en el asa ⠿: arrástrala a otro bloque (Hoy, Mañana, Esta semana…) para cambiarla de día. Debajo tienes **+ Subtarea**, **Calendario**, **Mover a…** (con más de una lista) y **Borrar**. Con teclado, **M** la pasa a mañana.
+- **Cambia de planes.** Toca una tarea para editarla: se guarda sola al pulsar Enter o al salir. Mientras la editas, la casilla se convierte en el asa ⠿: arrástrala a otro bloque (Hoy, Mañana, Esta semana…) para cambiarla de día. En el ordenador no hace falta abrirla: el asa aparece a la izquierda de la casilla al pasar el ratón. Debajo tienes **+ Subtarea**, **Calendario**, **Mover a…** (con más de una lista) y **Borrar**. Con teclado, **M** la pasa a mañana.
 - **Deshacer con el teclado.** **⌘Z** (Ctrl+Z en Windows) deshace el último cambio de la lista —completar, borrar, mover—, y repetido, los anteriores. Dentro de un campo de texto sigue deshaciendo lo escrito.
 - **Para mañana.** Arrastra la tarea al bloque **Mañana** (en ordenador, también **m** con la tarea seleccionada); **Deshacer** la devuelve a su fecha anterior.
 - **Abre los enlaces.** Una dirección web en una tarea se muestra corta; tócala para abrirla.

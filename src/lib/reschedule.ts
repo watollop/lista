@@ -6,7 +6,7 @@ import { lang } from '../i18n';
 /** Bloques de la lista donde se puede soltar una tarea arrastrada (Vencidas no: no se mueve al pasado). */
 export type DropTarget = 'today' | 'tomorrow' | 'week' | 'next' | 'nodate';
 
-/** Lista de la barra lateral donde se suelta una tarea para moverla a ella (data-drop="list:<id>"). */
+/** Pestaña de una lista donde se suelta una tarea para moverla a ella (data-drop="list:<id>"). */
 export type ListDrop = `list:${string}`;
 export const listDrop = (id: string): ListDrop => `list:${id}`;
 /** Id de la lista si el destino es una lista; null si es un bloque de fecha. */

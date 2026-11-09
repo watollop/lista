@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAIN_LIST, type Task, type TodoList } from '../types';
-import { SCOPE_KEY, inScope, listName, loadScope, openByList, resolveScope, saveScope } from './listScope';
+import { SCOPE_KEY, inScope, listName, loadScope, resolveScope, saveScope } from './listScope';
 
 const list = (id: string, name: string, order = 1): TodoList => ({ id, name, order, updatedAt: 0, deleted: 0, dirty: 0 });
 const MAIN = list(MAIN_LIST, 'Personal', 0);
@@ -87,32 +87,5 @@ describe('listName', () => {
 
   it('una lista desconocida da cadena vacía', () => {
     expect(listName([MAIN], 'nope')).toBe('');
-  });
-});
-
-describe('openByList', () => {
-  it('cuenta pendientes vivas por lista', () => {
-    const m = openByList([
-      task({ listId: 'c1' }),
-      task({ listId: 'c1' }),
-      task({ listId: null }),
-      task(),
-    ]);
-    expect(m.get('c1')).toBe(2);
-    expect(m.get(MAIN_LIST)).toBe(2);
-  });
-
-  it('ignora las hechas y las borradas', () => {
-    const m = openByList([
-      task({ listId: 'c1', done: 1 }),
-      task({ listId: 'c1', deleted: 1 }),
-      task({ listId: 'c1' }),
-    ]);
-    expect(m.get('c1')).toBe(1);
-  });
-
-  it('una lista sin pendientes no aparece', () => {
-    expect(openByList([task({ listId: 'c1', done: 1 })]).has('c1')).toBe(false);
-    expect(openByList([]).size).toBe(0);
   });
 });

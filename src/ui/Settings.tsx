@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { MAIN_LIST, type Entity, type EntityKind, type ID, type Repo, type Sync, type SyncState, type TodoList } from '../types';
+import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
+import type { Entity, EntityKind, Repo, Sync, SyncState } from '../types';
 import { saveAppearance } from './appearanceSync';
 import { NewsSheet } from './WhatsNew';
 import { EncryptionSection } from './Encryption';
@@ -10,7 +10,6 @@ import { BUILD, buildLabel } from '../lib/build';
 import { EntityEditor } from './EntityEditor';
 import { isEn, langPref, tr, type LangPref } from '../i18n';
 import { chooseLang } from './langSync';
-import { PeopleIcon } from './PeopleIcon';
 
 interface Props {
   repo: Repo;
@@ -24,18 +23,10 @@ interface Props {
   pending: Map<string, number>; // '#clave' | '@clave' -> pendientes
   onRename: (kind: EntityKind, key: string, name: string) => void;
   onDelete: (kind: EntityKind, key: string) => void;
-  lists: TodoList[]; // la principal primero
-  listPending: Map<ID, number>; // pendientes por lista
-  onCreateList: (name: string) => Promise<void>; // lanza Error con mensaje si el nombre no vale
-  onRenameList: (id: ID, name: string) => Promise<void>;
-  onDeleteList: (id: ID) => void; // App pide confirmación y ofrece Deshacer
-  onShareList?: (id: ID) => void; // abre el diálogo de compartir de esa lista (App)
-  onJoinList?: () => void; // «Unirse con un enlace» (App)
   onShortcuts?: () => void; // abre la hoja de atajos de teclado (solo se ve con teclado y ratón)
 }
 
-export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, people, pending, onRename, onDelete,
-  lists, listPending, onCreateList, onRenameList, onDeleteList, onShareList, onJoinList, onShortcuts }: Props) {
+export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, people, pending, onRename, onDelete, onShortcuts }: Props) {
   const [editing, setEditing] = useState<{ kind: EntityKind; key: string } | null>(null);
   const [news, setNews] = useState(false);
   const sharing = state.status !== 'disabled'; // sin sincronización no hay listas compartidas
@@ -60,8 +51,6 @@ export function Settings({ repo, sync, state, onClose, toast, onIntro, topics, p
         </section>
         <section class="group" aria-labelledby="ajustes-orden">
           <h2 class="group-title" id="ajustes-orden">{tr('Organización', 'Organization')}</h2>
-          <ListsSection lists={lists} listPending={listPending} onCreate={onCreateList} onRename={onRenameList} onDelete={onDeleteList}
-            sharing={sharing} onShare={onShareList} onJoin={onJoinList} />
           <EntitiesSection topics={topics} people={people} pending={pending} onEdit={(kind, key) => setEditing({ kind, key })} />
           {editing && editEnt && (
             <EntityEditor kind={editing.kind} entity={editEnt} entities={editing.kind === 'topic' ? topics : people}
@@ -215,123 +204,6 @@ function Appearance({ repo, toast }: { repo: Repo; toast: (msg: string) => void 
   );
 }
 
-/** Listas (docs/plan-listas.md): una fila por lista con sus pendientes, como Temas y Personas. Al tocarla se abre en su
- *  sitio para renombrarla, compartirla o borrarla (igual que el lápiz de la hoja de listas). Una compartida no se borra
- *  aquí: eso es salir o borrar para todos, en su diálogo. Al final, alta en línea y «Unirse con un enlace». */
-function ListsSection({ lists, listPending, onCreate, onRename, onDelete, sharing, onShare, onJoin }: {
-  lists: TodoList[]; listPending: Map<ID, number>;
-  onCreate: (name: string) => Promise<void>; onRename: (id: ID, name: string) => Promise<void>; onDelete: (id: ID) => void;
-  sharing: boolean; onShare?: (id: ID) => void; onJoin?: () => void;
-}) {
-  const [open, setOpen] = useState<ID | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const cancel = () => { setOpen(null); setAdding(false); setError(null); };
-  const openRow = (l: TodoList) => { setAdding(false); setOpen(l.id); setDraft(l.name); setError(null); };
-  const startAdd = () => { setOpen(null); setAdding(true); setDraft(''); setError(null); };
-
-  // id null = alta; si no, renombrar. Un nombre sin cambios cierra sin llamar a App.
-  const save = async (id: ID | null) => {
-    if (busy) return;
-    const name = draft.trim();
-    if (!name) { setError(tr('Escribe un nombre.', 'Write a name.')); return; }
-    if (id && lists.find((l) => l.id === id)?.name === name) { cancel(); return; }
-    setBusy(true);
-    try {
-      if (id) await onRename(id, name); else await onCreate(name);
-      cancel();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : tr('No se pudo guardar la lista.', 'Couldn’t save the list.'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const field = (id: ID | null) => (
-    <ListNameField id={id} value={draft} error={error}
-      onInput={(v) => { setDraft(v); setError(null); }}
-      onSubmit={() => void save(id)} onCancel={cancel} />
-  );
-  const tasks = (n: number) => (n ? (isEn() ? `${n} ${n === 1 ? 'task' : 'tasks'}` : `${n} ${n === 1 ? 'tarea' : 'tareas'}`) : tr('sin tareas', 'no tasks'));
-
-  return (
-    <section>
-      <span class="label">{tr('Listas', 'Lists')}</span>
-      <p class="look-hint">{lists.length > 1
-        ? tr('Escribe /nombre para apuntar en otra lista sin cambiar de lista.', 'Type /name to add to another list without switching lists.')
-        : tr('Separa la compra, el trabajo o lo de casa en listas.', 'Keep shopping, work or home in separate lists.')}</p>
-      <ul class="ent-list">
-        {lists.map((l) => {
-          const shared = sharing && !!l.shared;
-          if (open === l.id) {
-            return (
-              <li key={l.id} class="list-open">
-                {field(l.id)}
-                <div class="edit-actions">
-                  <button class="link" onClick={() => void save(l.id)} disabled={busy}>{tr('Guardar', 'Save')}</button>
-                  <button class="link" onClick={cancel}>{tr('Cancelar', 'Cancel')}</button>
-                  {sharing && onShare && l.id !== MAIN_LIST && (
-                    <button class="link" onClick={() => onShare(l.id)}>{shared ? tr('Compartida', 'Shared') : tr('Compartir', 'Share')}</button>
-                  )}
-                  {l.id !== MAIN_LIST && !shared && (
-                    <button class="link danger" onClick={() => onDelete(l.id)}>{tr('Borrar lista', 'Delete list')}</button>
-                  )}
-                </div>
-              </li>
-            );
-          }
-          const n = listPending.get(l.id) ?? 0;
-          return (
-            <li key={l.id}>
-              <button class={`ent-row ${n ? '' : 'zero'}`} aria-expanded={false} onClick={() => openRow(l)}
-                title={tr('Renombrar, compartir o borrar', 'Rename, share or delete')}>
-                <span class="ent-name">{l.name}{shared && <PeopleIcon title={tr('Compartida', 'Shared')} />}</span>
-                <span class="ent-count">{tasks(n)}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      {adding
-        ? <div class="list-new">{field(null)}</div>
-        : (
-          <div class="row-btns lists-btns">
-            <button class="btn" onClick={startAdd}>{tr('+ Nueva lista', '+ New list')}</button>
-            {sharing && onJoin && <button class="btn" onClick={onJoin}>{tr('Unirse con un enlace', 'Join with a link')}</button>}
-          </div>
-        )}
-    </section>
-  );
-}
-
-/** Campo en línea de Listas: se enfoca al abrirse (al renombrar, con el nombre seleccionado). Enter guarda;
- *  Esc cancela y no cierra Ajustes (se corta la propagación). El error de App va bajo el campo. */
-function ListNameField({ id, value, error, onInput, onSubmit, onCancel }: {
-  id: ID | null; value: string; error: string | null;
-  onInput: (v: string) => void; onSubmit: () => void; onCancel: () => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.focus();
-    if (id) el.select();
-  }, []);
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
-      <input ref={ref} type="text" value={value} autoComplete="off"
-        aria-label={id ? tr('Nuevo nombre de la lista', 'New list name') : tr('Nombre de la lista nueva', 'New list name')}
-        placeholder={id ? undefined : tr('Nombre de la lista', 'List name')}
-        onInput={(e) => onInput(e.currentTarget.value)}
-        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onCancel(); } }} />
-      {error && <p class="err">{error}</p>}
-    </form>
-  );
-}
-
 /** Temas y personas: dos filas plegadas; se abre una cada vez. Dentro, los más usados arriba y búsqueda si hay muchos. */
 function EntitiesSection({ topics, people, pending, onEdit }: {
   topics: Entity[]; people: Entity[]; pending: Map<string, number>;
@@ -456,14 +328,14 @@ function TipsFold({ sharing }: { sharing: boolean }) {
       </button>
       {open && <div class="fold-body">
         {isEn()
-          ? <p><strong>Tomorrow.</strong> Drag a task to the Tomorrow block using the ⠿ handle in its editor (with a keyboard, <kbd>m</kbd>).</p>
-          : <p><strong>A mañana.</strong> Arrastra la tarea al bloque Mañana desde el asa ⠿ de su editor (con teclado, <kbd>m</kbd>).</p>}
+          ? <p><strong>Tomorrow.</strong> Drag a task to the Tomorrow block by its ⠿ handle: in its editor, or with a mouse, left of the box when you hover (with a keyboard, <kbd>m</kbd>).</p>
+          : <p><strong>A mañana.</strong> Arrastra la tarea al bloque Mañana por su asa ⠿: en su editor o, con ratón, a la izquierda de la casilla al pasar por encima (con teclado, <kbd>m</kbd>).</p>}
         {isEn()
-          ? <p><strong>Another list.</strong> <em>Move to…</em> in its editor, or drag it to a list in the sidebar (with a keyboard, <kbd>l</kbd> opens the lists).</p>
-          : <p><strong>A otra lista.</strong> <em>Mover a…</em> en su editor, o arrástrala a una lista de la barra lateral (con teclado, <kbd>l</kbd> abre las listas).</p>}
+          ? <p><strong>Another list.</strong> <em>Move to…</em> in its editor, or drag it onto the list’s tab.</p>
+          : <p><strong>A otra lista.</strong> <em>Mover a…</em> en su editor, o arrástrala a la pestaña de la lista.</p>}
         {sharing && (isEn()
-          ? <p><strong>Share a list.</strong> On the phone, its pencil and <em>Share</em>; on a computer, the people icon. One link per person, valid for 7 days, and everything stays encrypted.</p>
-          : <p><strong>Compartir una lista.</strong> En el móvil, su lápiz y <em>Compartir</em>; en el ordenador, el icono de personas. Un enlace por persona, vale 7 días y todo va cifrado.</p>)}
+          ? <p><strong>Share a list.</strong> Tap its tab again and <em>Share</em>. One link per person, valid for 7 days, and everything stays encrypted.</p>
+          : <p><strong>Compartir una lista.</strong> Toca otra vez su pestaña y <em>Compartir</em>. Un enlace por persona, vale 7 días y todo va cifrado.</p>)}
       </div>}
     </div>
   );

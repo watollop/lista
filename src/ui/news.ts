@@ -6,19 +6,27 @@ export interface NewsItem { id: string; title: () => string; text: () => string 
 /** Novedades, la más reciente primero. */
 export const NEWS: NewsItem[] = [
   {
+    id: '2026-11-pestanas',
+    title: () => tr('Las listas, en pestañas', 'Lists, now in tabs'),
+    text: () => tr(
+      'Tus listas están en pestañas, arriba. Toca otra vez la activa para renombrarla, compartirla o borrarla, y + crea otra. En el ordenador, al pasar el ratón por una tarea aparece el asa ⠿: arrástrala a otro día o a otra pestaña.',
+      'Your lists are now tabs at the top. Tap the active one again to rename, share or delete it, and + creates another. On a computer, hover over a task to see the ⠿ handle: drag it to another day or tab.',
+    ),
+  },
+  {
     id: '2026-11-listas-compartidas',
     title: () => tr('Nuevo: listas compartidas', 'New: shared lists'),
     text: () => tr(
-      'Comparte una lista, la compra con tu pareja o las tareas de casa, y editadla juntos desde cada móvil u ordenador. Todo va cifrado. En el móvil, toca el nombre de arriba, el lápiz de una lista y Compartir; en el ordenador, el icono de personas de la barra lateral.',
-      'Share a list, the shopping with your partner or the housework, and edit it together from each phone or computer. Everything is encrypted. On the phone, tap the name at the top, the pencil on a list and Share; on the computer, the people icon in the sidebar.',
+      'Comparte una lista, la compra con tu pareja o las tareas de casa, y editadla juntos desde cada móvil u ordenador. Todo va cifrado. Para compartirla, toca otra vez su pestaña y elige Compartir.',
+      'Share a list, the shopping with your partner or the housework, and edit it together from each phone or computer. Everything is encrypted. To share it, tap its tab again and choose Share.',
     ),
   },
   {
     id: '2026-11-listas',
     title: () => tr('Nuevo: listas', 'New: lists'),
     text: () => tr(
-      'Separa la compra, el trabajo y lo personal. Crea una lista desde la barra lateral o tocando el nombre de arriba, y escribe /compra para apuntar en ella.',
-      'Keep shopping, work and personal apart. Create a list from the sidebar or by tapping the name at the top, and type /shopping to add to it.',
+      'Separa la compra, el trabajo y lo personal. Crea una lista con el + junto a tus listas, y escribe /compra para apuntar en ella sin cambiar de lista.',
+      'Keep shopping, work and personal apart. Create a list with the + next to your lists, and type /shopping to add to it without switching lists.',
     ),
   },
 ];

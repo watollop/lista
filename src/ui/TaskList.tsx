@@ -33,7 +33,7 @@ interface Props {
   onMove: (id: ID, target: DropTarget | ListDrop) => void; // tarea arrastrada a otro bloque o a una lista de la barra
   onAddSubtasks: (id: ID, lines: ParsedLine[]) => Promise<void>;
   lists: TodoList[]; // todas las listas, la principal primero
-  showList: boolean; // vista «Todas las listas»: cada tarea principal muestra su lista
+  showList: boolean; // vista «Todas» (todas las listas): cada tarea principal muestra su lista
   onPickList: (listId: ID) => void; // tocar la etiqueta de lista: abre esa lista
   onMoveTo: (id: ID) => void; // botón «Mover a…» del editor
 }
@@ -179,7 +179,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   const isEditing = editing === task.id;
   const ref = useRef<HTMLLIElement>(null);
   const swipe = useSwipe(() => onToggle(task.id), () => onDelete(task.id), !isEditing);
-  const drag = useDrag(task.id, isEditing && !task.done, () => onDragStart(task.id), (target) => {
+  const drag = useDrag(task.id, !task.done, () => onDragStart(task.id), (target) => {
     onDragEnd();
     onEdit(null);
     if (target) onMove(task.id, target);
@@ -204,14 +204,18 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
       onClickCapture={clickCapture}
     >
       {sub && onAddSubtask && <AddSubtaskButton onClick={onAddSubtask} />}
+      {/* Con ratón: asa ⠿ a la izquierda de la casilla, visible al pasar por la fila (styles.css .grip-hover). */}
+      {!isEditing && !task.done && (
+        <button class="grip-hover" aria-label={tr('Arrastrar a otro día o lista', 'Drag to another day or list')} title={tr('Arrastra a otro día o a otra lista', 'Drag to another day or list')}
+          tabIndex={-1} onMouseDown={(e) => e.preventDefault()} onPointerDown={drag.start}>
+          <Grip />
+        </button>
+      )}
       {isEditing && !task.done ? (
         // Editando, la casilla deja sitio al asa: se arrastra a otro bloque (Hoy, Mañana…) para cambiar de día.
         <button class="check move" aria-label={tr('Mover a otro día', 'Move to another day')} title={tr('Arrastra para cambiar de día', 'Drag to change the day')}
           onMouseDown={(e) => e.preventDefault()} onTouchStart={(e) => e.preventDefault()} onPointerDown={drag.start}>
-          <svg class="grip" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
-            <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" /><circle cx="5.5" cy="8" r="1.4" />
-            <circle cx="10.5" cy="8" r="1.4" /><circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
-          </svg>
+          <Grip />
         </button>
       ) : (
         <button class="check" aria-pressed={!!task.done}
@@ -260,7 +264,7 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
               )}
             </div>
             <div class="meta">
-              {/* Vista «Todas las listas»: la etiqueta de la lista va en las principales; las subtareas siguen a su principal. */}
+              {/* Vista «Todas» (todas las listas): la etiqueta de la lista va en las principales; las subtareas siguen a su principal. */}
               {showList && !sub && (() => {
                 const list = lists.find((l) => l.id === (task.listId ?? MAIN_LIST));
                 return list && <ListChip name={list.name} onTap={() => onPickList(list.id)} />;
@@ -464,6 +468,16 @@ function CalendarIcon() {
     <svg class="cal-icon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor"
       stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" /><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3" />
+    </svg>
+  );
+}
+
+/** Icono ⠿ del asa de arrastrar (editor y, con ratón, al pasar por la fila). */
+function Grip() {
+  return (
+    <svg class="grip" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
+      <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" /><circle cx="5.5" cy="8" r="1.4" />
+      <circle cx="10.5" cy="8" r="1.4" /><circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
     </svg>
   );
 }

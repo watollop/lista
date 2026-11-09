@@ -9,9 +9,9 @@ const EDGE = 90; // px desde el borde que hacen scroll automático
 const GRAB = 48; // px máximos entre el borde izquierdo de la tarea arrastrada y el cursor
 
 /**
- * Arrastrar una tarea a otro bloque de la lista desde el asa «Mover» del editor (así no compite con
- * seleccionar texto, el scroll o deslizar). Los destinos son elementos con data-drop="today|tomorrow|week|next|nodate"
- * o, en la barra lateral, data-drop="list:<id>" (mover a esa lista).
+ * Arrastrar una tarea a otro bloque de la lista desde un asa ⠿: la del editor o, con ratón, la que aparece a la
+ * izquierda de la casilla al pasar por la fila (así no compite con seleccionar texto, el scroll o deslizar). Los
+ * destinos son elementos con data-drop="today|tomorrow|week|next|nodate" o, en las pestañas, data-drop="list:<id>".
  */
 export function useDrag(id: ID, enabled: boolean, onStart: () => void, onEnd: (target: DropTarget | ListDrop | null) => void) {
   const [d, setD] = useState({ x: 0, y: 0 });

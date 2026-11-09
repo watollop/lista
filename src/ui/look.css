@@ -65,10 +65,6 @@
 /* Marca en tipografía de puntos con el punto naranja */
 :where([data-look="industrial"]) .brand { font-family: var(--dots); font-weight: 700; font-size: 26px; letter-spacing: .04em; text-transform: uppercase; }
 :where([data-look="industrial"]) .brand::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: 2px; }
-/* Con varias listas, el ▾ naranja sustituye al punto (no se juntan los dos) */
-:where([data-look="industrial"]) .brand-btn:has(.brand-caret)::after { display: none; }
-:where([data-look="industrial"]) .brand-caret { color: var(--accent); font-size: 14px; }
-
 :where([data-look="industrial"]) .tab.on { border-bottom-color: var(--accent); }
 :where([data-look="industrial"]) .tab sup { font-family: var(--mono); }
 
@@ -98,6 +94,8 @@
 :where([data-look="industrial"]) .row:last-child { background: none; }
 :where([data-look="industrial"]) .row::before, :where([data-look="industrial"]) .row::after { margin: 0 -20px; padding: 0 20px; border-radius: var(--r); font-family: var(--mono); }
 :where([data-look="industrial"]) .row.sel { box-shadow: inset 2px 0 0 var(--accent); }
+/* El asa ⠿ (con ratón) cabe en el margen de la tarjeta, sin pisar su borde. */
+@media (hover: hover) and (pointer: fine) { :where([data-look="industrial"]) .row > .grip-hover { left: calc(var(--check-x, 0px) - 19px); width: 16px; } }
 
 /* Casilla: punto */
 :where([data-look="industrial"]) .check i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--faint); transition: border-color .12s; }

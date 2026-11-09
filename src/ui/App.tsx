@@ -23,15 +23,15 @@ import { Week } from './Week';
 import { byUse } from './byUse';
 import { tr } from '../i18n';
 import { ConfirmDialog, ListSheet } from './Lists';
+import { ListTabs } from './ListTabs';
 import { NewsCard, NewsSheet } from './WhatsNew';
 import { markAllNewsSeen, markNewsSeen, unseenNews, type NewsItem } from './news';
-import { inScope, listName, loadScope, openByList, resolveScope, saveScope } from './listScope';
-import { PeopleIcon } from './PeopleIcon';
+import { inScope, listName, loadScope, resolveScope, saveScope } from './listScope';
 import { captureJoinLink, clearPendingJoin, pendingJoin } from './sharing';
 
 interface Toast { msg: string; action?: { label: string; run: () => void } }
 // Hoja de listas: 'pick' cambia de lista; 'move' elige destino para la tarea del editor.
-type ListSheetState = { mode: 'pick' } | { mode: 'move'; taskId: ID };
+type ListSheetState = { taskId: ID }; // hoja «Mover a…» de una tarea
 
 const FILTER_KEY = 'lista.filter';
 const PAST_DAYS = 30;
@@ -85,9 +85,9 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const [news, setNews] = useState<NewsItem[]>(() => (intro ? [] : unseenNews()));
   const [newsSheet, setNewsSheet] = useState(false);
   // Listas compartidas (docs/plan-listas.md, «Interfaz de compartir»): diálogo de una lista y diálogo de unirse.
-  // Unirse: link = el enlace que abrió la app (#unirse=…, guardado por captureJoinLink en main.tsx) o null para pegarlo.
+  // Unirse: link = el enlace que abrió la app (#unirse=…, guardado por captureJoinLink en main.tsx) o el pegado en la captura.
   const [shareFor, setShareFor] = useState<ID | null>(null);
-  const [join, setJoin] = useState<{ link: string | null } | null>(() => {
+  const [join, setJoin] = useState<{ link: string } | null>(() => {
     const link = pendingJoin();
     return link ? { link } : null;
   });
@@ -141,7 +141,11 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
   const openShare = (id: ID) => { setListSheet(null); setSettings(false); setShareFor(id); };
-  const openJoin = () => { setListSheet(null); setSettings(false); setJoin({ link: null }); };
+  // Enlace pegado (o escrito) en la caja de tareas: con sincronización abre el diálogo de unirse; sin ella, se explica.
+  const joinFromCapture = (text: string) => {
+    if (!sharing) { showToast(tr('Para unirte a una lista compartida hace falta la sincronización.', 'Joining a shared list needs sync.')); return; }
+    setJoin({ link: text.slice(text.indexOf('#unirse=')).split(/\s/)[0] });
+  };
 
   // El sync quitó una lista compartida (me quitaron, se borró para todos o salí desde otro dispositivo): se avisa.
   const lastSync = syncState.status === 'idle' ? syncState.lastSync : null;
@@ -175,10 +179,6 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
   // Tareas de la lista actual: contadores, bloques, temas y personas, navegación. Las de otras listas no cuentan.
   const tasks = useMemo(() => data.tasks.filter((t) => inScope(t, scope)), [data.tasks, scope]);
-  // Pendientes por lista (todas, para la hoja y la barra). Sin listId cuenta en la principal.
-  const listPending = useMemo(() => openByList(data.tasks), [data.tasks]);
-  const openTotal = useMemo(() => [...listPending.values()].reduce((a, b) => a + b, 0), [listPending]);
-
   // Tareas pendientes por etiqueta ('#clave', '@clave', '!prioridad').
   const pending = useMemo(() => {
     const m = new Map<string, number>();
@@ -384,20 +384,16 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   };
 
   // ---------- listas (hoja, barra y diálogo de borrado) ----------
-  const openMove = (id: ID) => setListSheet({ mode: 'move', taskId: id });
+  const openMove = (id: ID) => setListSheet({ taskId: id });
   const taskListOf = (id: ID): ID => data.tasks.find((x) => x.id === id)?.listId ?? MAIN_LIST;
-  // Elegir una lista en la hoja: en 'move' mueve la tarea (y cierra el editor); en 'pick' cambia de lista.
+  // Elegir una lista en «Mover a…»: mueve la tarea y cierra el editor.
   const pickFromSheet = (s: ListScope) => {
     const sheet = listSheet;
     setListSheet(null);
-    if (sheet?.mode === 'move') {
-      setEditing(null);
-      if (s !== 'all') void moveToList(sheet.taskId, s);
-      return;
-    }
-    changeScope(s);
+    setEditing(null);
+    if (sheet && s !== 'all') void moveToList(sheet.taskId, s);
   };
-  // Crear una lista (barra o hoja). Lanza Error si el nombre no vale: lo muestra quien lo pidió.
+  // Crear una lista (pestañas o «Mover a…»). Lanza Error si el nombre no vale: lo muestra quien lo pidió.
   const createList = async (name: string) => {
     const list = await repo.createList(name);
     changeScope(list.id);
@@ -406,14 +402,15 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     const list = await repo.createList(name);
     const sheet = listSheet;
     setListSheet(null);
-    if (sheet?.mode === 'move') {
-      setEditing(null);
-      await moveToList(sheet.taskId, list.id, list.name);
-      return;
-    }
-    changeScope(list.id);
+    setEditing(null);
+    if (sheet) await moveToList(sheet.taskId, list.id, list.name);
   };
   const renameList = (id: ID, name: string) => repo.renameList(id, name).then(() => undefined);
+  // Tecla l: la pestaña siguiente (las listas y, con más de una, Todas), y vuelta a empezar.
+  const nextScope = (): ListScope => {
+    const order: ListScope[] = [...data.lists.map((l) => l.id), ...(data.lists.length > 1 ? (['all'] as const) : [])];
+    return order[(order.indexOf(scope) + 1) % order.length] ?? MAIN_LIST;
+  };
   // Borrar: primero se pregunta (con cuántas tareas se lleva consigo).
   const askDeleteList = (id: ID) => setConfirmDel(id);
   const openTasksIn = (id: ID) => data.tasks.filter((t) => !t.parentId && (t.listId ?? MAIN_LIST) === id).length;
@@ -562,7 +559,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       else if (key === 'm' && selected) run(() => void tomorrow(selected));
       else if ((key === 'Backspace' || key === 'Delete') && selected) run(() => remove(selected));
       else if (key === '?') run(() => setShortcuts(true));
-      else if (key === 'l') run(() => setListSheet({ mode: 'pick' }));
+      else if (key === 'l') run(() => changeScope(nextScope()));
       else if (key === 'h') run(() => setFilter({ ...emptyFilter(), dates: ['today'] }));
       else if (key === 's') run(() => setFilter({ ...emptyFilter(), dates: ['week'] }));
       else if (key === 'v') run(() => setFilter({ ...emptyFilter(), dates: ['overdue'] }));
@@ -580,20 +577,19 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
   const syncDot = syncState.status === 'error' || syncState.status === 'offline' ? ' ·' : '';
   const link = sync.link?.() ?? null; // el sync de algunos tests no implementa link()
-  // Cabecera: con varias listas, su nombre (o «Todas») con ▾ y se abre la hoja; con una, «Lista» como siempre.
   const multi = data.lists.length > 1;
-  const headLabel = !multi ? 'Lista' : scope === 'all' ? tr('Todas', 'All') : listName(data.lists, scope);
-  const headShared = multi && scope !== 'all' && !!data.lists.find((l) => l.id === scope)?.shared;
+  // Pestañas de listas (docs/plan-listas.md, «Pestañas»): el único sitio donde se cambian, crean, renombran, comparten y borran.
+  const tabs = (
+    <ListTabs lists={data.lists} scope={scope} sharing={sharing} onPick={changeScope} onCreate={createList}
+      onRename={renameList} onDelete={askDeleteList} onShare={openShare} />
+  );
 
   return (
     <div class={`app ${wide ? 'wide' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
       <header class="top">
         <div class="bar">
-          <button class="brand brand-btn" aria-label={tr('Cambiar de lista', 'Switch list')} aria-haspopup="dialog"
-            onClick={() => setListSheet({ mode: 'pick' })}>
-            <span>{headLabel}</span>{headShared && <PeopleIcon title={tr('Compartida', 'Shared')} />}
-            {multi && <span class="brand-caret" aria-hidden="true">▾</span>}
-          </button>
+          <span class="brand">Lista</span>
+          {wide && tabs}
           <span class="bar-right">
             {!wide && (
               <button class={`link ${panel ? 'on' : ''}`} aria-expanded={panel}
@@ -604,6 +600,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
             <button class="link" onClick={() => setSettings(true)} aria-label={tr('Ajustes', 'Settings')}>{tr('Ajustes', 'Settings')}{syncDot}</button>
           </span>
         </div>
+        {!wide && tabs}
         {!wide && (
           <FilterBar
             filter={filter} setFilter={setFilter} saved={data.filters} topics={shownTopics} people={shownPeople}
@@ -620,15 +617,12 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           people={shownPeople} allTopics={data.topics} allPeople={data.people} pending={pending}
           counts={tally} week={week} searchRef={searchRef} onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
           onRename={renameEntity} onDelete={deleteEntity}
-          lists={data.lists} scope={scope} listPending={listPending} total={openTotal}
-          onPickList={changeScope} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList}
-          sharing={sharing} onShareList={openShare} onJoinList={openJoin}
         />
       )}
 
       <Capture
         topics={captureTopics} people={capturePeople} names={names} today={today} kbOpen={kbOpen}
-        inputRef={captureRef} onAdd={add}
+        inputRef={captureRef} onAdd={add} onJoinLink={joinFromCapture}
         lists={data.lists} target={multi ? (data.lists.find((l) => l.id === addTarget()) ?? null) : null}
       />
 
@@ -693,16 +687,11 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           topics={data.topics} people={data.people} pending={pending}
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }}
-          lists={data.lists} listPending={listPending} onCreateList={createList} onRenameList={renameList} onDeleteList={askDeleteList}
-          onShareList={sharing ? openShare : undefined} onJoinList={sharing ? openJoin : undefined}
           onShortcuts={() => { setSettings(false); setShortcuts(true); }} />
       )}
       {listSheet && (
-        <ListSheet mode={listSheet.mode} lists={data.lists} pending={listPending} total={openTotal} scope={scope}
-          current={listSheet.mode === 'move' ? taskListOf(listSheet.taskId) : undefined}
-          onPick={pickFromSheet} onCreate={createFromSheet} onRename={renameList} onDelete={askDeleteList}
-          sharing={sharing} onShare={openShare} onJoin={openJoin}
-          onClose={() => setListSheet(null)} />
+        <ListSheet lists={data.lists} current={taskListOf(listSheet.taskId)} sharing={sharing}
+          onPick={pickFromSheet} onCreate={createFromSheet} onClose={() => setListSheet(null)} />
       )}
       {confirmDel && (
         <ConfirmDialog

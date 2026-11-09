@@ -11,7 +11,7 @@ export const SHORTCUTS = (): Array<[string[], string]> => [
   [['⌫'], tr('borrar', 'delete')],
   [['h', 's', 'v'], tr('hoy · semana · vencidas', 'today · week · overdue')],
   [['1–9'], tr('filtros guardados', 'saved filters')],
-  [['l'], tr('cambiar de lista', 'switch list')],
+  [['l'], tr('siguiente lista', 'next list')],
   [['f'], tr('buscar', 'search')],
   [['esc'], tr('limpiar filtro', 'clear filter')],
   [['?'], tr('estos atajos', 'these shortcuts')],

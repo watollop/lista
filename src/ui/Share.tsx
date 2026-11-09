@@ -144,6 +144,7 @@ export function ShareDialog({ list, sync, state, onClose, toast, onGone }: Share
   };
 
   const title = shared ? `«${list.name}»` : tr(`Compartir «${list.name}»`, `Share “${list.name}”`);
+  const canShare = typeof navigator.share === 'function';
 
   const body = () => {
     if (signedOut) {
@@ -183,8 +184,10 @@ export function ShareDialog({ list, sync, state, onClose, toast, onGone }: Share
           <input class="ls-input share-url" readOnly value={invite.link} aria-label={tr('Enlace de invitación', 'Invite link')}
             onFocus={(e) => e.currentTarget.select()} />
           <div class="row-btns share-link-btns">
-            <button class="btn solid" onClick={() => void send(invite.link)}>{tr('Enviar', 'Send')}</button>
-            <button class="btn" onClick={() => void copy(invite.link)}>{tr('Copiar', 'Copy')}</button>
+            {/* Un solo botón: el menú de compartir del sistema si lo hay (ya ofrece copiar); si no, copiar. */}
+            {canShare
+              ? <button class="btn solid" onClick={() => void send(invite.link)}>{tr('Enviar', 'Send')}</button>
+              : <button class="btn solid" onClick={() => void copy(invite.link)}>{tr('Copiar', 'Copy')}</button>}
           </div>
           <p class="share-hint">{tr(
             `Sirve para una persona y caduca el ${expiry}. Quien tenga el enlace puede unirse: mándalo solo a quien quieras.`,
@@ -298,8 +301,8 @@ export function ShareDialog({ list, sync, state, onClose, toast, onGone }: Share
 // ---------- unirse ----------
 
 export interface JoinDialogProps {
-  /** Enlace con el que se abrió la app (#unirse=…), o null para pegarlo a mano. */
-  link: string | null;
+  /** Enlace de invitación (#unirse=…): el que abrió la app o el que se pegó en la caja de tareas. */
+  link: string;
   sync: Sync;
   state: SyncState;
   onClose: () => void;
@@ -310,14 +313,13 @@ export interface JoinDialogProps {
 const fullLink = (link: string): string => (link.startsWith('#') ? `${location.origin}/${link}` : link);
 
 export function JoinDialog({ link, sync, state, onClose, onJoined }: JoinDialogProps) {
-  const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const { ref, onBackdrop } = useDialog(onClose, busy);
   const signedOut = state.status === 'signedOut';
   const locked = sync.encryption?.() === 'locked';
   const google = useGoogle(sync, signedOut);
-  const value = (link ?? draft).trim();
+  const value = link.trim();
 
   const joinNow = async () => {
     if (!value || busy) return;
@@ -338,38 +340,28 @@ export function JoinDialog({ link, sync, state, onClose, onJoined }: JoinDialogP
     sync.signInWithGoogle();
   };
   const copy = async () => {
-    if (link && !(await copyLink(fullLink(link)))) setError(tr('No se pudo copiar el enlace.', 'Couldn’t copy the link.'));
-    else if (link) setError('');
+    if (!(await copyLink(fullLink(link)))) setError(tr('No se pudo copiar el enlace.', 'Couldn’t copy the link.'));
+    else setError('');
   };
 
   return (
     <div class="dialog-backdrop" onClick={onBackdrop}>
       <div class="dialog share-dialog" role="dialog" aria-modal="true" aria-labelledby="join-title" tabIndex={-1} ref={ref}>
         <h2 class="share-title" id="join-title">{tr('Unirse a una lista', 'Join a list')}</h2>
-        {link ? (
-          <p>{tr('Te han invitado a una lista compartida. Al unirte, la verás en tus dispositivos y podrás editarla con quien te invitó.',
-            'You’ve been invited to a shared list. Once you join, you’ll see it on your devices and can edit it with whoever invited you.')}</p>
-        ) : (
-          <>
-            <p>{tr('Pega aquí el enlace de invitación que te han mandado.', 'Paste the invite link you were sent.')}</p>
-            <input class="ls-input share-url" value={draft} placeholder="https://…/#unirse=…" autoFocus disabled={busy}
-              aria-label={tr('Enlace de invitación', 'Invite link')}
-              onInput={(e) => { setDraft(e.currentTarget.value); setError(''); }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (!signedOut && !locked) void joinNow(); } }} />
-          </>
-        )}
+        <p>{tr('Te han invitado a una lista compartida. Al unirte, la verás en tus dispositivos y podrás editarla con quien te invitó.',
+          'You’ve been invited to a shared list. Once you join, you’ll see it on your devices and can edit it with whoever invited you.')}</p>
 
         {signedOut ? (
           <>
             <p>{tr('Para unirte, entra con tu cuenta de Google.', 'To join, sign in with your Google account.')}</p>
-            {link && iosBrowser() && (
+            {iosBrowser() && (
               <p class="share-hint">{tr(
-                '¿Tienes Lista instalada en la pantalla de inicio? Copia el enlace y pégalo allí: toca el nombre de arriba → Unirse con un enlace.',
-                'Have Lista on your home screen? Copy the link and paste it there: tap the name at the top → Join with a link.')}</p>
+                '¿Tienes Lista en la pantalla de inicio? Copia el enlace, abre Lista y pégalo donde escribes las tareas.',
+                'Have Lista on your home screen? Copy the link, open Lista and paste it where you write tasks.')}</p>
             )}
             <div class="row-btns">
-              {google && <button class="btn solid" onClick={signIn} disabled={!value}>{tr('Entrar con Google', 'Sign in with Google')}</button>}
-              {link && iosBrowser() && <button class="btn" onClick={() => void copy()}>{tr('Copiar enlace', 'Copy link')}</button>}
+              {google && <button class="btn solid" onClick={signIn}>{tr('Entrar con Google', 'Sign in with Google')}</button>}
+              {iosBrowser() && <button class="btn" onClick={() => void copy()}>{tr('Copiar enlace', 'Copy link')}</button>}
               <button class="btn" onClick={onClose}>{tr('Ahora no', 'Not now')}</button>
             </div>
           </>
@@ -380,7 +372,7 @@ export function JoinDialog({ link, sync, state, onClose, onJoined }: JoinDialogP
           </>
         ) : (
           <div class="row-btns">
-            <button class="btn solid" onClick={() => void joinNow()} disabled={busy || !value}>
+            <button class="btn solid" onClick={() => void joinNow()} disabled={busy}>
               {busy ? tr('Uniéndote…', 'Joining…') : tr('Unirme', 'Join')}
             </button>
             <button class="btn" onClick={onClose} disabled={busy}>{error ? tr('Cerrar', 'Close') : tr('Ahora no', 'Not now')}</button>
