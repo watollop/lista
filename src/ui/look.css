@@ -104,7 +104,7 @@
    (o con el foco en ella) y entonces sustituye a la barra, para no pintarse una encima de la otra. */
 @media (hover: hover) and (pointer: fine) {
   :where([data-look="industrial"]) .row.sel:not(.sub):not(:hover) > .grip-hover:not(:focus-visible) { opacity: 0; }
-  :where([data-look="industrial"]) .row.sel:not(.sub):is(:hover, :has(> .grip-hover:focus-visible)) { box-shadow: none; }
+  :where([data-look="industrial"]) .row.sel:not(.sub):has(> .grip-hover):is(:hover, :has(> .grip-hover:focus-visible)) { box-shadow: none; } /* sin asa (editando, hecha), la barra se queda */
 }
 
 /* Casilla: punto */

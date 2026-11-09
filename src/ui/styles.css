@@ -220,7 +220,12 @@ button.chip { min-height: 22px; }
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  padding: 13px 0;
+  /* Relleno vertical y alto de línea del título en variables: la casilla se centra con la primera línea
+     (--row-mid) y el asa ⠿, la papelera y el + de subtarea (absolutos) se centran con la casilla. */
+  --row-pt: 13px;
+  --row-lh: 20px; /* = line-height de .title */
+  --row-mid: calc(var(--row-pt) + var(--row-lh) / 2);
+  padding: var(--row-pt) 0;
   border-bottom: 1px solid var(--line);
   animation: fade .2s ease;
   transition: opacity .25s;
@@ -267,12 +272,11 @@ button.chip { min-height: 22px; }
   .row:hover .trash, .row.sel .trash, .trash:focus-visible { opacity: 1; }
   .trash:hover { color: var(--warn); }
   /* Los botones no reservan hueco: fechas y etiquetas llegan al borde y se apartan solo al pasar o seleccionar la fila. */
-  .row > .trash { position: absolute; right: 0; top: 9px; margin: 0; }
+  .row > .trash { position: absolute; right: 0; top: calc(var(--row-mid) - 14px); margin: 0; } /* 28 px: centrada con la casilla */
   .row > .trash.cal { right: 30px; }
   .row > .body { transition: transform .2s ease, padding .15s ease; }
   .row:has(> .trash):is(:hover, .sel, :focus-within) > .body { padding-right: 34px; }
   .row:has(> .cal):is(:hover, .sel, :focus-within) > .body { padding-right: 64px; }
-  .app.wide .row > .trash { top: 8px; }
   /* Con subtareas, el botón de ramas queda a la izquierda de la papelera desde el principio: si la fila se
      ensanchara al pasar el ratón, el botón se movería bajo el cursor y el clic caería en la papelera. */
   .row.has-subtasks:has(> .trash) > .body { padding-right: 34px; }
@@ -289,7 +293,7 @@ button.chip { min-height: 22px; }
 .check {
   flex: none;
   width: 44px; height: 44px;
-  margin: -12px -12px -12px -13px;
+  margin: calc(var(--row-mid, 23px) - var(--row-pt, 13px) - 22px) -12px -12px -13px; /* centro a media primera línea */
   display: grid; place-items: center;
 }
 .check i {
@@ -329,6 +333,7 @@ button.chip { min-height: 22px; }
 .meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .meta:empty { display: none; }
 .edit {
+  display: block; /* en línea, el campo se asentaba en la línea base y bajaba 1 px respecto al título que sustituye */
   width: 100%;
   font-size: 16px;
   line-height: 20px;
@@ -396,7 +401,7 @@ button.chip { min-height: 22px; }
   color: var(--accent);
 }
 :where(html:not([data-look="industrial"])) .add-subtask-action { color: var(--subtask-color); }
-.add-subtask-icon { position: absolute; left: -13px; top: 1px; }
+.add-subtask-icon { position: absolute; left: -13px; top: calc(var(--row-mid) - 22px); } /* 44 px: centrado con la casilla */
 .row.sub.sel .add-subtask-icon { left: -3px; }
 .subtask-composer .subtask-inputs { padding: 10px 0; }
 .title-line { display: flex; flex: 1; align-items: flex-start; min-width: 0; }
@@ -540,7 +545,7 @@ kbd {
   .preview { padding: 0 0 12px; }
   .suggest { bottom: auto; top: 52px; margin: 0; z-index: 2; }
   .title, .edit { font-size: 17px; line-height: 22px; }
-  .row { padding-top: 15px; padding-bottom: 15px; }
+  .row { --row-pt: 15px; --row-lh: 22px; }
   .toast { bottom: 32px; }
   .chip { font-size: 12px; height: 24px; }
 }
@@ -641,9 +646,8 @@ kbd {
 .app.wide .edit-actions { margin-top: -4px; flex: 1 1 100%; }
 .edit-actions .danger { margin-left: auto; }
 .app.wide .title-line { flex: 1 1 180px; }
-/* Solo vertical: el padding-left lo usa .row.sel para compensar la barra de selección. */
-.app.wide .row { padding-top: 12px; padding-bottom: 12px; }
-.app.wide .add-subtask-icon { top: 0; }
+/* Solo vertical (el padding-left lo usa .row.sel para compensar la barra de selección). */
+.app.wide .row { --row-pt: 12px; }
 .app.wide .section { padding-top: 22px; }
 .app.wide .capture-inner { max-width: none; }
 
@@ -1345,7 +1349,8 @@ section.droppable.drop-on .section { color: var(--fg); }
 .lt-name { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; }
 .lt-tab .shared-ico { margin-left: 0; }
 .lt-caret { font-size: 9px; opacity: .7; }
-.lt-add { min-width: 36px; padding: 0; justify-content: center; font-size: 20px; line-height: 1; }
+.lt-add { min-width: 36px; padding: 0; justify-content: center; }
+.lt-add svg { display: block; }
 .lt-tab.lt-editing { padding: 0 14px; background: var(--surface); color: var(--fg); }
 .lt-input { width: auto; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; outline: none; }
 .lt-error { font-size: 13px; color: var(--warn); margin: -4px 0 10px; }
@@ -1373,7 +1378,7 @@ section.droppable.drop-on .section { color: var(--fg); }
 .grip-hover { display: none; }
 @media (hover: hover) and (pointer: fine) {
   .row > .grip-hover {
-    display: grid; place-items: center; position: absolute; top: 14px; left: calc(var(--check-x, 0px) - 30px);
+    display: grid; place-items: center; position: absolute; top: calc(var(--row-mid) - 12px); left: calc(var(--check-x, 0px) - 30px); /* 24 px: centrada con la casilla */
     width: 24px; height: 24px; color: var(--faint); cursor: grab; touch-action: none;
     z-index: 1; /* por encima de la zona táctil de la casilla, que la pisa por la izquierda */
     opacity: 0; transition: opacity .12s, color .12s;
