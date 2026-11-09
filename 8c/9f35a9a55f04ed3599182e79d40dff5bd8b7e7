@@ -1,0 +1,29 @@
+README.md
+  s_1a113f72a038c4::t_6d21e96a8cf6a7 74,79,100
+docs/plan-listas.md
+  s_1a113f72a038c4::t_356c610d1a6ffb 19,21,43,56,67
+src/ui/App.tsx
+  s_1a113f72a038c4::t_0640f466cf7497 94,148,414,416,589,710,713-714
+src/ui/ListTabs.tsx
+  s_1a113f72a038c4::t_e84aab54ffbc1d 16,23-24,104-110,139-141
+src/ui/Onboarding.tsx
+  s_1a113f72a038c4::t_e1e516eb2b8d95 349
+src/ui/Share.tsx
+  s_1a113f72a038c4::t_4f4d3b287bbb32 2,67-68,73,80-82,150-151,228-231,235,282-284,286-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8c9f35a9a55f04ed3599182e79d40dff5bd8b7e7",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
