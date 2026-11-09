@@ -93,9 +93,19 @@
 :where([data-look="industrial"]) .row { border-bottom: 0; background: linear-gradient(var(--hair), var(--hair)) 34px 100% / calc(100% - 34px) 1px no-repeat; }
 :where([data-look="industrial"]) .row:last-child { background: none; }
 :where([data-look="industrial"]) .row::before, :where([data-look="industrial"]) .row::after { margin: 0 -20px; padding: 0 20px; border-radius: var(--r); font-family: var(--mono); }
+/* Tras las subtareas también hay línea antes de la tarea siguiente (la última subtarea es la última de su grupo, no de la tarjeta). */
+:where([data-look="industrial"]) .subtask-group:not(:last-child) .row:last-child { background: linear-gradient(var(--hair), var(--hair)) 34px 100% / calc(100% - 34px) 1px no-repeat; }
 :where([data-look="industrial"]) .row.sel { box-shadow: inset 2px 0 0 var(--accent); }
+/* La seleccionada se ensancha 10 px a la izquierda para la barra: su línea sigue empezando donde las demás. */
+:where([data-look="industrial"]) .row.sel, :where([data-look="industrial"]) .subtask-group:not(:last-child) .row.sel:last-child { background-position: 44px 100%; background-size: calc(100% - 44px) 1px; }
 /* El asa ⠿ (con ratón) cabe en el margen de la tarjeta, sin pisar su borde. */
 @media (hover: hover) and (pointer: fine) { :where([data-look="industrial"]) .row > .grip-hover { left: calc(var(--check-x, 0px) - 19px); width: 16px; } }
+/* Seleccionada con el teclado, la barra naranja ocupa el hueco del asa: el asa sale solo al pasar el ratón
+   (o con el foco en ella) y entonces sustituye a la barra, para no pintarse una encima de la otra. */
+@media (hover: hover) and (pointer: fine) {
+  :where([data-look="industrial"]) .row.sel:not(.sub):not(:hover) > .grip-hover:not(:focus-visible) { opacity: 0; }
+  :where([data-look="industrial"]) .row.sel:not(.sub):is(:hover, :has(> .grip-hover:focus-visible)) { box-shadow: none; }
+}
 
 /* Casilla: punto */
 :where([data-look="industrial"]) .check i { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--faint); transition: border-color .12s; }

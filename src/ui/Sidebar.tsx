@@ -16,7 +16,8 @@ interface Props {
   people: Entity[];
   allTopics: Entity[]; // todos: para detectar fusiones al editar
   allPeople: Entity[];
-  pending: Map<string, number>; // '#clave' | '@clave' | '!prioridad' -> pendientes
+  pending: Map<string, number>; // '#clave' | '@clave' | '!prioridad' -> pendientes de la lista actual
+  pendingAll: Map<string, number>; // lo mismo en todas las listas: para el aviso de fusión al editar, que cambia todas
   counts: Record<DateFilter | 'open', number>;
   week: preact.ComponentChildren; // pantalla de Hoy con los próximos 7 días
   searchRef: { current: HTMLInputElement | null };
@@ -77,13 +78,13 @@ export function Sidebar(p: Props) {
       </Group>
 
       {p.topics.length > 0 && (
-        <EntityGroup title={tr('Temas', 'Topics')} kind="topic" items={p.topics} all={p.allTopics} pending={p.pending}
+        <EntityGroup title={tr('Temas', 'Topics')} kind="topic" items={p.topics} all={p.allTopics} pending={p.pending} pendingAll={p.pendingAll}
           selected={f.topics} onToggle={(k) => set({ topics: toggleIn(f.topics, k) })}
           onRename={p.onRename} onDelete={p.onDelete} />
       )}
 
       {p.people.length > 0 && (
-        <EntityGroup title={tr('Personas', 'People')} kind="person" items={p.people} all={p.allPeople} pending={p.pending}
+        <EntityGroup title={tr('Personas', 'People')} kind="person" items={p.people} all={p.allPeople} pending={p.pending} pendingAll={p.pendingAll}
           selected={f.people} onToggle={(k) => set({ people: toggleIn(f.people, k) })}
           onRename={p.onRename} onDelete={p.onDelete} />
       )}
@@ -128,8 +129,8 @@ function Group({ title, children }: { title: string; children: preact.ComponentC
 const TOP = 5; // plegado: los seleccionados y los TOP más usados
 
 /** Temas o personas: plegado muestra los seleccionados y los más usados; «Ver todos» despliega la lista con búsqueda. */
-function EntityGroup({ title, kind, items, all, pending, selected, onToggle, onRename, onDelete }: {
-  title: string; kind: EntityKind; items: Entity[]; all: Entity[]; pending: Map<string, number>; selected: string[];
+function EntityGroup({ title, kind, items, all, pending, pendingAll, selected, onToggle, onRename, onDelete }: {
+  title: string; kind: EntityKind; items: Entity[]; all: Entity[]; pending: Map<string, number>; pendingAll: Map<string, number>; selected: string[];
   onToggle: (key: string) => void; onRename: (kind: EntityKind, key: string, name: string) => void;
   onDelete: (kind: EntityKind, key: string) => void;
 }) {
@@ -158,7 +159,7 @@ function EntityGroup({ title, kind, items, all, pending, selected, onToggle, onR
         </li>
       )}
       {shown.map((t) => (
-        <EntityItem key={t.key} kind={kind} ent={t} all={all} pending={pending} on={selected.includes(t.key)}
+        <EntityItem key={t.key} kind={kind} ent={t} all={all} pending={pending} pendingAll={pendingAll} on={selected.includes(t.key)}
           onToggle={() => onToggle(t.key)} onRename={onRename} onDelete={onDelete} />
       ))}
       {open && q && !shown.length && <li class="side-empty">{tr('Sin resultados', 'No results')}</li>}
@@ -174,8 +175,8 @@ function EntityGroup({ title, kind, items, all, pending, selected, onToggle, onR
 }
 
 /** Tema o persona en la barra: al pasar el ratón, lápiz (editar) y papelera (borrar). Doble clic en el nombre también edita. */
-function EntityItem({ kind, ent, all, pending, on, onToggle, onRename, onDelete }: {
-  kind: EntityKind; ent: Entity; all: Entity[]; pending: Map<string, number>; on: boolean;
+function EntityItem({ kind, ent, all, pending, pendingAll, on, onToggle, onRename, onDelete }: {
+  kind: EntityKind; ent: Entity; all: Entity[]; pending: Map<string, number>; pendingAll: Map<string, number>; on: boolean;
   onToggle: () => void;
   onRename: (kind: EntityKind, key: string, name: string) => void;
   onDelete: (kind: EntityKind, key: string) => void;
@@ -187,7 +188,7 @@ function EntityItem({ kind, ent, all, pending, on, onToggle, onRename, onDelete 
   if (editing) {
     return (
       <li class="side-ent">
-        <EntityEditor kind={kind} entity={ent} entities={all} pending={pending} variant="inline"
+        <EntityEditor kind={kind} entity={ent} entities={all} pending={pendingAll} variant="inline"
           onSave={(n) => { setEditing(false); onRename(kind, ent.key, n); }}
           onCancel={() => setEditing(false)} />
       </li>

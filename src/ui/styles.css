@@ -446,7 +446,7 @@ button.chip { min-height: 22px; }
   background: var(--fg);
   color: var(--bg);
   border-radius: var(--radius);
-  padding: 0 6px 0 16px;
+  padding: 0 16px;
   min-height: 44px;
   display: flex; align-items: center; gap: 8px;
   font-size: 14px;
@@ -455,6 +455,8 @@ button.chip { min-height: 22px; }
   animation: rise .2s ease;
 }
 .toast .link { color: var(--bg); opacity: .7; padding: 0 10px; }
+/* Con botón (Deshacer, Recargar), su propio relleno hace de margen derecho; sin él, el texto queda centrado. */
+.toast:has(> .link) { padding-right: 6px; }
 /* Con aviso visible, la lista reserva hueco al final: la última fila se desplaza por encima del aviso. */
 .app:has(> .toast:not(.toast-top)) main { padding-bottom: 72px; }
 /* Móvil con un editor en línea abierto: el aviso sube arriba para no tapar Guardar, Mover o Borrar. */
@@ -1133,7 +1135,7 @@ section.droppable.drop-on .section { color: var(--fg); }
 }
 .dialog p { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
 /* El foco va al contenedor solo para que el lector de pantalla anuncie el diálogo: sin contorno. */
-.dialog:focus { outline: none; }
+.dialog:focus, .intro-card:focus { outline: none; }
 .dialog.shortcuts .label { display: block; margin-bottom: 16px; }
 .dialog.shortcuts .row-btns { margin-top: 20px; }
 .dialog .enc-warn { color: var(--warn); }
