@@ -24,8 +24,8 @@ import { byUse } from './byUse';
 import { tr } from '../i18n';
 import { ConfirmDialog, ListSheet } from './Lists';
 import { ListTabs } from './ListTabs';
-import { NewsCard, NewsSheet } from './WhatsNew';
-import { markAllNewsSeen, markNewsSeen, unseenNews, type NewsItem } from './news';
+import { NewsSheet } from './WhatsNew';
+import { markAllNewsSeen, unseenNews, type NewsItem } from './news';
 import { inScope, listName, loadScope, resolveScope, saveScope } from './listScope';
 import { captureJoinLink, clearPendingJoin, pendingJoin } from './sharing';
 
@@ -76,14 +76,19 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
     setIntro(false);
     try { localStorage.setItem(INTRO_KEY, '1'); } catch { /* modo privado */ }
     markAllNewsSeen(); // quien llega nuevo ve la bienvenida, no las novedades
-    setNews([]);
+    setNewsSheet(null);
   };
   const [toast, setToast] = useState<Toast | null>(null);
   const [listSheet, setListSheet] = useState<ListSheetState | null>(null);
   const [confirmDel, setConfirmDel] = useState<ID | null>(null); // lista a borrar (diálogo de confirmación)
-  // Novedades (src/ui/news.ts): una tarjeta por novedad no vista; con la bienvenida abierta no se muestran.
-  const [news, setNews] = useState<NewsItem[]>(() => (intro ? [] : unseenNews()));
-  const [newsSheet, setNewsSheet] = useState(false);
+  // Novedades (src/ui/news.ts): las no vistas salen en su hoja nada más entrar, una sola vez. Con la bienvenida o un
+  // enlace de invitación pendiente esperan a la próxima vez. Desde Ajustes → Novedades se ven todas.
+  const [newsSheet, setNewsSheet] = useState<NewsItem[] | null>(() => {
+    if (intro || pendingJoin()) return null;
+    const unseen = unseenNews();
+    return unseen.length ? unseen : null;
+  });
+  const closeNews = () => { markAllNewsSeen(); setNewsSheet(null); };
   // Listas compartidas (docs/plan-listas.md, «Interfaz de compartir»): diálogo de una lista y diálogo de unirse.
   // Unirse: link = el enlace que abrió la app (#unirse=…, guardado por captureJoinLink en main.tsx) o el pegado en la captura.
   const [shareFor, setShareFor] = useState<ID | null>(null);
@@ -592,9 +597,8 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
           {wide && tabs}
           <span class="bar-right">
             {!wide && (
-              <button class={`link ${panel ? 'on' : ''}`} aria-expanded={panel}
-                onClick={() => { const next = !panel; setPanel(next); if (next) setTimeout(() => searchRef.current?.focus(), 0); }}>
-                {tr('Buscar', 'Search')}
+              <button class={`link ${panel || !isEmptyFilter(filter) ? 'on' : ''}`} aria-expanded={panel} onClick={() => setPanel(!panel)}>
+                {tr('Filtrar', 'Filter')}
               </button>
             )}
             <button class="link" onClick={() => setSettings(true)} aria-label={tr('Ajustes', 'Settings')}>{tr('Ajustes', 'Settings')}{syncDot}</button>
@@ -629,11 +633,6 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       <main>
         {enc === 'locked' && <LazyLockedPanel sync={sync} onRecovery={() => setSettings(true)} />}
         {/* Novedad no vista: tarjeta al principio de la lista, una a una. Con la bienvenida abierta no se muestra. */}
-        {!intro && news.length > 0 && (
-          <NewsCard item={news[0]}
-            onOpen={() => { markAllNewsSeen(); setNews([]); setNewsSheet(true); }}
-            onClose={() => { markNewsSeen([news[0].id]); setNews((n) => n.slice(1)); }} />
-        )}
         {data.ready && groups.length === 0 ? (
           <div class="empty">
             {isEmptyFilter(filter) ? (
@@ -660,7 +659,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         </div>
       )}
 
-      {newsSheet && <NewsSheet onClose={() => setNewsSheet(false)} />}
+      {newsSheet && <NewsSheet items={newsSheet} onClose={closeNews} />}
 
       {toast && (
         <div class="toast" role="status">

@@ -64,7 +64,7 @@
 - **Sin sincronización configurada** (`status: 'disabled'`): no aparece nada de compartir.
 
 ### Pestañas (9 nov 2026)
-- **Qué cambió.** Las listas son pestañas (**Personal · Compra · Todas · +**) en la cabecera, en vez de la sección de la barra lateral, la hoja de listas del móvil y «Ajustes → Listas». Ajustes → Organización queda con Temas y Personas.
+- **Qué cambió.** Las listas son pestañas (**Personal · Compra · Todas · +**) en la cabecera, en vez de la sección de la barra lateral, la hoja de listas del móvil y «Ajustes → Listas». En Ajustes, el grupo pasa a llamarse **Temas y personas**.
 - **Por qué.** Un solo sitio para gestionar las listas, sin entradas repetidas: cambiar, renombrar, compartir y borrar se hacen desde la pestaña donde se ven. «Todas» solo aparece con dos o más listas.
 - **Unirse.** El enlace basta: se abre y listo. Se quitaron los botones «Unirse con un enlace». En iPhone, si el enlace se abre en Safari, «Copiar enlace» y pegarlo en la caja donde se escriben las tareas cubre el caso.
 - **Invitar.** El panel tiene un solo botón: **Enviar** si el dispositivo tiene menú de compartir, o **Copiar** si no.

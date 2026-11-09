@@ -9,8 +9,8 @@ export const NEWS: NewsItem[] = [
     id: '2026-11-pestanas',
     title: () => tr('Las listas, en pestañas', 'Lists, now in tabs'),
     text: () => tr(
-      'Tus listas están en pestañas, arriba. Toca otra vez la activa para renombrarla, compartirla o borrarla, y + crea otra. En el ordenador, al pasar el ratón por una tarea aparece el asa ⠿: arrástrala a otro día o a otra pestaña.',
-      'Your lists are now tabs at the top. Tap the active one again to rename, share or delete it, and + creates another. On a computer, hover over a task to see the ⠿ handle: drag it to another day or tab.',
+      'Tus listas están en pestañas, arriba: toca otra vez la activa para renombrarla, compartirla o borrarla, y + crea otra. En el móvil, Filtrar reúne la búsqueda y todos los filtros. En el ordenador, arrastra una tarea a otro día o a otra pestaña con el asa ⠿ que aparece al pasar el ratón.',
+      'Your lists are now tabs at the top: tap the active one again to rename, share or delete it, and + creates another. On the phone, Filter gathers search and every filter. On a computer, drag a task to another day or tab by the ⠿ handle that appears on hover.',
     ),
   },
   {

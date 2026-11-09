@@ -104,7 +104,7 @@ export function ListTabs(p: Props) {
           const on = l.id === p.scope;
           if (renaming === l.id) return <span key={l.id} class="lt-tab on lt-editing">{field(tr('Nombre de la lista', 'List name'))}</span>;
           return (
-            <button key={l.id} class={`lt-tab ${on ? 'on' : ''}`} data-drop={listDrop(l.id)}
+            <button key={l.id} class={`lt-tab ${on ? 'on' : ''} ${p.lists.length === 1 ? 'solo' : ''}`} data-drop={listDrop(l.id)}
               aria-current={on ? 'page' : undefined} aria-haspopup={on ? 'menu' : undefined} aria-expanded={on ? menu !== null : undefined}
               title={on ? tr('Opciones de la lista', 'List options') : undefined}
               onClick={(e) => tap(l.id, e)} onDblClick={() => startRename(l)}>
