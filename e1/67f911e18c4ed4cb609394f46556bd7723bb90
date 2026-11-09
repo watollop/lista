@@ -1,0 +1,27 @@
+README.md
+  s_1a113f72a038c4::t_8f70dfdc04355a 174,179-180
+docs/plan-listas.md
+  s_1a113f72a038c4::t_aeb758fdf95efd 230,243-244
+package.json
+  s_1a113f72a038c4::t_dba7606cf404b0 10-11
+scripts/test-supabase.sh
+  s_1a113f72a038c4::t_e22299429b159f 1-22
+src/sync/shared.supabase.test.ts
+  s_1a113f72a038c4::t_be28cc67fd79c2 1-304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e167f911e18c4ed4cb609394f46556bd7723bb90",
+  "prompts": {},
+  "sessions": {
+    "s_1a113f72a038c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30526c6b-6952-4de0-817b-90d1e48dc10b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
