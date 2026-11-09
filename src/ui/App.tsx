@@ -40,6 +40,19 @@ const loadFilter = (): Filter => {
   try { return { ...emptyFilter(), ...JSON.parse(localStorage.getItem(FILTER_KEY) || '{}'), day: undefined }; } catch { return emptyFilter(); }
 };
 
+
+/** Tareas pendientes por etiqueta ('#clave', '@clave', '!prioridad'). */
+function tallyPending(tasks: Task[]): Map<string, number> {
+  const m = new Map<string, number>();
+  const inc = (k: string) => m.set(k, (m.get(k) ?? 0) + 1);
+  for (const t of tasks) {
+    if (t.deleted || t.done) continue;
+    t.topics.forEach((k) => inc('#' + k));
+    t.people.forEach((k) => inc('@' + k));
+    if (t.priority) inc('!' + t.priority);
+  }
+  return m;
+}
 export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
   const data = useData(repo);
   const today = useToday();
@@ -184,18 +197,11 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
   // Tareas de la lista actual: contadores, bloques, temas y personas, navegación. Las de otras listas no cuentan.
   const tasks = useMemo(() => data.tasks.filter((t) => inScope(t, scope)), [data.tasks, scope]);
-  // Tareas pendientes por etiqueta ('#clave', '@clave', '!prioridad').
-  const pending = useMemo(() => {
-    const m = new Map<string, number>();
-    const inc = (k: string) => m.set(k, (m.get(k) ?? 0) + 1);
-    for (const t of tasks) {
-      if (t.deleted || t.done) continue;
-      t.topics.forEach((k) => inc('#' + k));
-      t.people.forEach((k) => inc('@' + k));
-      if (t.priority) inc('!' + t.priority);
-    }
-    return m;
-  }, [tasks]);
+  // Pendientes por etiqueta en la lista actual: filtros y contadores.
+  const pending = useMemo(() => tallyPending(tasks), [tasks]);
+  // En todas las listas: renombrar, unir o borrar un tema o una persona cambia todas, así que Ajustes y el editor cuentan todas
+  // (si no, un tema que solo se usa en otra lista salía «sin tareas»).
+  const pendingAll = useMemo(() => tallyPending(data.tasks), [data.tasks]);
 
   // Lo que se muestra en filtros: solo con pendientes, o los que el filtro activo usa (para no perderlos).
   const shownTopics = useMemo(() => data.topics.filter((e) => pending.has('#' + e.key) || filter.topics.includes(e.key)),
@@ -619,7 +625,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
       {wide && (
         <Sidebar
           filter={filter} setFilter={setFilter} saved={data.filters} topics={shownTopics}
-          people={shownPeople} allTopics={data.topics} allPeople={data.people} pending={pending}
+          people={shownPeople} allTopics={data.topics} allPeople={data.people} pending={pending} pendingAll={pendingAll}
           counts={tally} week={week} searchRef={searchRef} onSave={saveFilter} onDeleteSaved={(id) => repo.deleteFilter(id)}
           onRename={renameEntity} onDelete={deleteEntity}
         />
@@ -675,7 +681,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
         const ent = listOf(sheetEnt.kind).find((e) => e.key === sheetEnt.key);
         if (!ent) return null;
         return (
-          <EntityEditor kind={sheetEnt.kind} entity={ent} entities={listOf(sheetEnt.kind)} pending={pending}
+          <EntityEditor kind={sheetEnt.kind} entity={ent} entities={listOf(sheetEnt.kind)} pending={pendingAll}
             variant="sheet" onCancel={() => setSheetEnt(null)}
             onSave={(name) => { setSheetEnt(null); renameEntity(sheetEnt.kind, sheetEnt.key, name); }}
             onDelete={() => { setSheetEnt(null); deleteEntity(sheetEnt.kind, sheetEnt.key); }} />
@@ -684,7 +690,7 @@ export function App({ repo, sync }: { repo: Repo; sync: Sync }) {
 
       {settings && (
         <LazySettings repo={repo} sync={sync} state={syncState} onClose={() => setSettings(false)} toast={showToast}
-          topics={data.topics} people={data.people} pending={pending}
+          topics={data.topics} people={data.people} pending={pendingAll}
           onRename={renameEntity} onDelete={deleteEntity}
           onIntro={() => { setSettings(false); setIntro('full'); }}
           onShortcuts={() => { setSettings(false); setShortcuts(true); }} />

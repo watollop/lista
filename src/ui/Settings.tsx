@@ -114,7 +114,7 @@ function Account({ sync, state }: { sync: Sync; state: SyncState }) {
         <p>{tr('Entra para sincronizar este dispositivo. Solo hace falta una vez.', 'Sign in to sync this device. You only need to do it once.')}</p>
         {google && (
           <div class="row-btns">
-            <button class="btn solid" onClick={() => sync.signInWithGoogle()}>{tr('Continuar con Google', 'Continue with Google')}</button>
+            <button class="btn solid" onClick={() => sync.signInWithGoogle()}>{tr('Entrar con Google', 'Sign in with Google')}</button>
           </div>
         )}
         {google === false && <p>{tr('El acceso con Google no está activado en Supabase (ver README).', 'Google sign-in isn’t enabled in Supabase (see the README).')}</p>}

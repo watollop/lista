@@ -82,13 +82,13 @@ export function Onboarding({ onClose, signIn, extended }: Props) {
   const next = () => (last ? onClose() : setI(i + 1));
   const prev = () => setI(Math.max(0, i - 1));
   const card = useRef<HTMLDivElement>(null);
-  const primary = useRef<HTMLButtonElement>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
-  // El foco va al botón principal al abrir y vuelve a quien abrió la bienvenida al cerrar.
+  // El foco va a la tarjeta al abrir (el lector anuncia el diálogo; Intro avanza) y vuelve a quien abrió la bienvenida al cerrar.
+  // No al botón: el foco puesto por código pinta su anillo y, al tocarlo, seguía en todas las pantallas.
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
-    primary.current?.focus();
+    card.current?.focus();
     return () => before?.focus?.();
   }, []);
 
@@ -101,11 +101,13 @@ export function Onboarding({ onClose, signIn, extended }: Props) {
         const first = items[0];
         const lastItem = items[items.length - 1];
         const active = document.activeElement;
-        if (e.shiftKey && (active === first || !card.current?.contains(active))) { e.preventDefault(); lastItem.focus(); }
-        else if (!e.shiftKey && (active === lastItem || !card.current?.contains(active))) { e.preventDefault(); first.focus(); }
+        const inside = active !== card.current && !!card.current?.contains(active); // con el foco en la tarjeta, aún no en un botón
+        if (e.shiftKey && (active === first || !inside)) { e.preventDefault(); lastItem.focus(); }
+        else if (!e.shiftKey && (active === lastItem || !inside)) { e.preventDefault(); first.focus(); }
         return;
       }
       if (e.key === 'Escape') onClose();
+      else if (e.key === 'Enter' && document.activeElement === card.current) next();
       else if (e.key === 'ArrowRight') { if (!last) next(); }
       else if (e.key === 'ArrowLeft') { if (i > 0) prev(); }
       else return;
@@ -118,7 +120,7 @@ export function Onboarding({ onClose, signIn, extended }: Props) {
 
   return (
     <div class="intro" role="dialog" aria-modal="true" aria-label={tr('Cómo funciona', 'How it works')}>
-      <div class="intro-card" ref={card}
+      <div class="intro-card" ref={card} tabIndex={-1}
         onTouchStart={(e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
         onTouchEnd={(e) => {
           const t = touch.current;
@@ -156,7 +158,7 @@ export function Onboarding({ onClose, signIn, extended }: Props) {
           </span>
           <span class="row-btns">
             {slides[i].google && signIn && <button class="btn btn-google" onClick={() => { onClose(); signIn(); }}><GoogleG />{tr('Entrar con Google', 'Sign in with Google')}</button>}
-            <button class="btn solid" onClick={next} ref={primary}>{last ? (extended ? tr('Listo', 'Done') : tr('Empezar', 'Get started')) : tr('Siguiente', 'Next')}</button>
+            <button class="btn solid" onClick={next}>{last ? (extended ? tr('Listo', 'Done') : tr('Empezar', 'Get started')) : tr('Siguiente', 'Next')}</button>
           </span>
         </div>
       </div>
@@ -417,7 +419,7 @@ function PrioRepeatDemo() {
         <span class="label">{tr('Prioridad', 'Priority')}</span>
         <span class="ref-chips">
           {prio.map(([w, p]) => (
-            <span key={w} class="ref-pair"><code class="chip">{w}</code><span class={`chip ${p === 1 ? 'warn' : ''}`}><PriorityIcon p={p} /></span></span>
+            <span key={w} class="ref-pair"><code class="chip">{w}</code><span class={`chip prio ${p === 1 ? 'warn' : ''}`}><PriorityIcon p={p} /></span></span>
           ))}
         </span>
       </div>
