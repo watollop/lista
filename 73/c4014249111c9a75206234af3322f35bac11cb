@@ -1,0 +1,19 @@
+src/ui/TaskList.tsx
+  s_9a9a4b90eef5c9::t_33ce65b0db61e4 192-202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "73c4014249111c9a75206234af3322f35bac11cb",
+  "prompts": {},
+  "sessions": {
+    "s_9a9a4b90eef5c9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "04fba58b-265c-41c0-adbd-6c179f63114d",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Jordi <10385633+watollop@users.noreply.github.com>"
+    }
+  }
+}
