@@ -17,15 +17,18 @@ export function useData(repo: Repo): Data {
   useEffect(() => {
     let alive = true;
     let queued = false;
+    let latest = 0;
     const load = async () => {
       if (queued) return;
       queued = true;
       await Promise.resolve();
       queued = false;
+      // Las lecturas pueden acabar desordenadas: solo vale la última lanzada, no una foto vieja que llegue tarde.
+      const mine = ++latest;
       const [tasks, topics, people, filters, lists] = await Promise.all([
         repo.listTasks(), repo.listTopics(), repo.listPeople(), repo.listFilters(), repo.listLists(),
       ]);
-      if (alive) setData({ tasks, topics, people, filters, lists, ready: true });
+      if (alive && mine === latest) setData({ tasks, topics, people, filters, lists, ready: true });
     };
     load();
     const off = repo.subscribe(load);
