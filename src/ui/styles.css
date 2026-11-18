@@ -235,8 +235,9 @@ button.chip { min-height: 22px; }
 :where(html:not([data-look="industrial"])) .row.subtasks-collapsed { border-bottom-color: var(--subtask-color); }
 /* Deslizar a la derecha para completar: el contenido se desplaza y descubre la etiqueta. */
 .row { position: relative; touch-action: pan-y; isolation: isolate; }
-.row > .check, .row > .body { transform: translateX(var(--dx, 0px)); transition: transform .2s ease; }
-.row.swiping > .check, .row.swiping > .body { transition: none; }
+.row > .check, .row > .body { transition: transform .2s ease; }
+/* El transform solo existe mientras se desliza: en reposo no crea capas propias, que podían quedarse sin repintar al completar. */
+.row.swiping > .check, .row.swiping > .body { transform: translateX(var(--dx, 0px)); transition: none; }
 .row::before, .row::after {
   /* Fondo de la fila al deslizar: más intenso cuanto más se estira (máximo en el umbral). Detrás del contenido. */
   position: absolute; inset: 0; z-index: -1;
