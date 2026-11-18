@@ -189,6 +189,17 @@ function Row({ task, sub, section, names, today, selected, editing, onSelect, on
   useEffect(() => {
     if (selected === task.id) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
+  // Al completar, la fila cambia de clase y de sitio a la vez; Chrome puede dejar la fila con los estilos viejos
+  // (casilla naranja pero texto sin tachar) aunque la clase ya sea la nueva. Cambiar la clase y volver a ponerla fuerza recalcular.
+  const firstDone = useRef(true);
+  useLayoutEffect(() => {
+    if (firstDone.current) { firstDone.current = false; return; }
+    const el = ref.current;
+    if (!el) return;
+    el.classList.toggle('done');
+    void el.offsetHeight;
+    el.classList.toggle('done');
+  }, [task.done]);
   // Tocar una tarea con subtareas la abre entera: se despliegan sus pasos y se abre su editor. Plegar es cosa del botón de ramas.
   const activate = () => { onSelect(task.id); if (childrenCount && !expanded) onExpand?.(); onEdit(task.id); };
 
